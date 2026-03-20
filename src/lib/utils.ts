@@ -1,3 +1,12 @@
+export function formatCurrencyNoDecimals(value: number): string {
+  const formatted = new Intl.NumberFormat('pt-PT', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value);
+  const withSeparator = formatted.replace(/(\d{1,3})(?=(\d{3})+(?!\d))/g, '$1 ');
+  return withSeparator + ' €';
+}
+
 export function formatCurrency(value: number): string {
   // Smart formatting: big values (>=1000) without decimals, small values with decimals
   // Uses space as thousand separator per design requirements

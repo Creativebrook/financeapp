@@ -5,13 +5,14 @@ import { FinanceProvider, useFinance } from '@/context/FinanceContext';
 import { useSidebar } from '@/context/SidebarContext';
 import Sidebar from '@/components/Sidebar';
 import PremiumHeader from '@/components/PremiumHeader';
-import { ChevronLeft, ChevronRight, Calendar, ArrowUpCircle, ArrowDownCircle, CreditCard } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, ArrowUpCircle, ArrowDownCircle, CreditCard, X } from 'lucide-react';
 import { formatCurrency, getNextPaymentDate } from '@/lib/utils';
 
 function CalendarContent() {
   const { fixedExpenses, debts, income } = useFinance();
   const { isCollapsed } = useSidebar();
   const [currentDate, setCurrentDate] = useState(new Date(2026, 2, 1)); // March 2026
+  const [selectedDayEvents, setSelectedDayEvents] = useState<{ day: number, events: any[] } | null>(null);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -87,59 +88,11 @@ function CalendarContent() {
     return events;
   };
 
-  // Upcoming events (next 30 days)
-  const getUpcomingEvents = () => {
-    const events: { date: Date; type: string; name: string; amount: number }[] = [];
-    // Use a fixed date for SSR to avoid hydration mismatches
-    const today = new Date('2026-03-20T00:00:00Z');
-
-    // Generate events for next 30 days
-    for (let i = 0; i < 30; i++) {
-      const date = new Date(today);
-      date.setDate(date.getDate() + i);
-      const day = date.getDate();
-
-      fixedExpenses.forEach(expense => {
-        if (expense.data_pagamento === day) {
-          events.push({
-            date,
-            type: 'expense',
-            name: expense.nome,
-            amount: expense.valor,
-          });
-        }
-      });
-
-      debts.forEach(debt => {
-        if (debt.data_pagamento === day) {
-          events.push({
-            date,
-            type: 'debt',
-            name: debt.nome,
-            amount: debt.prestacao_mensal,
-          });
-        }
-      });
-
-      income.forEach(inc => {
-        if (inc.data === day) {
-          events.push({
-            date,
-            type: 'income',
-            name: inc.nome,
-            amount: inc.valor,
-          });
-        }
-      });
+  const handleDayClick = (day: number) => {
+    const events = getEventsForDay(day);
+    if (events.length > 0) {
+      setSelectedDayEvents({ day, events });
     }
-
-    return events.sort((a, b) => a.date.getTime() - b.date.getTime());
-  };
-
-  const upcomingEvents = getUpcomingEvents();
-
-  const formatDateShort = (date: Date) => {
-    return `${date.getDate()}/${date.getMonth() + 1}`;
   };
 
   const getEventIcon = (type: string) => {
@@ -164,9 +117,9 @@ function CalendarContent() {
           </div>
         </div>
 
-        <div className="grid-2" style={{ gap: '24px' }}>
-          {/* Calendar */}
-          <div className="card animate-slideUp">
+        <div className="animate-slideUp">
+          {/* Calendar Card - Full Width */}
+          <div className="card">
             <div className="card-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <button className="btn btn-icon btn-secondary" onClick={prevMonth}>
@@ -184,13 +137,14 @@ function CalendarContent() {
 
             <div className="calendar-grid">
               {dayNames.map(day => (
-                <div key={day} className="calendar-header">{day}</div>
+                <div key={day} className="calendar-day-header">{day}</div>
               ))}
               
               {calendarDays.map((day, index) => (
                 <div 
                   key={index} 
                   className={`calendar-day ${day && isToday(day) ? 'today' : ''}`}
+                  onClick={() => day && handleDayClick(day)}
                 >
                   {day && (
                     <>
@@ -230,54 +184,55 @@ function CalendarContent() {
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Upcoming Events */}
-          <div className="card animate-slideUp">
-            <div className="card-header">
-              <h3 className="card-title">Próximos 30 Dias</h3>
-              <Calendar size={20} style={{ color: 'var(--text-muted)' }} />
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '500px', overflowY: 'auto' }}>
-              {upcomingEvents.slice(0, 15).map((event, index) => (
-                <div 
-                  key={index}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '12px',
-                    background: 'var(--bg-tertiary)',
-                    borderRadius: '8px',
-                  }}
-                >
-                  {getEventIcon(event.type)}
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 500 }}>{event.name}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      {formatDateShort(event.date)}
+        {/* Day Events Modal */}
+        {selectedDayEvents && (
+          <div className="modal-overlay" onClick={() => setSelectedDayEvents(null)}>
+            <div className="modal animate-slideUp" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+              <div className="modal-header">
+                <h2 className="modal-title">
+                  Eventos de {selectedDayEvents.day} de {monthNames[month]}
+                </h2>
+                <button className="btn btn-icon btn-secondary" onClick={() => setSelectedDayEvents(null)}>
+                  <X size={20} />
+                </button>
+              </div>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '20px 0' }}>
+                {selectedDayEvents.events.map((event, index) => (
+                  <div 
+                    key={index}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '12px',
+                      background: 'var(--bg-tertiary)',
+                      borderRadius: '8px',
+                    }}
+                  >
+                    {getEventIcon(event.type)}
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 500, fontSize: '0.9375rem' }}>{event.name}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'capitalize' }}>
+                        {event.type === 'income' ? 'Rendimento' : event.type === 'debt' ? 'Dívida' : 'Despesa'}
+                      </div>
+                    </div>
+                    <div style={{ 
+                      fontFamily: 'JetBrains Mono, monospace',
+                      fontWeight: 600,
+                      color: event.type === 'income' ? 'var(--accent-success)' : 
+                             event.type === 'debt' ? 'var(--accent-warning)' : 'var(--accent-danger)'
+                    }}>
+                      {event.type === 'income' ? '+' : '-'}{formatCurrency(event.amount)}
                     </div>
                   </div>
-                  <div style={{ 
-                    fontFamily: 'JetBrains Mono, monospace',
-                    fontWeight: 600,
-                    color: event.type === 'income' ? 'var(--accent-success)' : 
-                           event.type === 'debt' ? 'var(--accent-warning)' : 'var(--accent-danger)'
-                  }}>
-                    {event.type === 'income' ? '+' : '-'}{formatCurrency(event.amount)}
-                  </div>
-                </div>
-              ))}
-
-              {upcomingEvents.length === 0 && (
-                <div className="empty-state">
-                  <Calendar size={32} style={{ opacity: 0.3, marginBottom: '8px' }} />
-                  <p style={{ fontSize: '0.875rem' }}>Sem eventos próximos</p>
-                </div>
-              )}
+                ))}
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </main>
     </div>
   );

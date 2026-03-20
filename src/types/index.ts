@@ -42,7 +42,7 @@ export interface Debt {
 }
 
 // Fixed Expense Types
-export type Frequencia = 'mensal' | 'quinzenal' | 'semanal' | 'trimestral' | 'semestral' | 'anual';
+export type Frequencia = 'mensal' | 'quinzenal' | 'semanal' | 'trimestral' | 'semestral' | 'anual' | 'unico';
 
 export interface FixedExpense {
   id: string;
@@ -72,7 +72,10 @@ export interface Income {
   nome: string;
   valor: number;
   frequencia: Frequencia;
-  data: number;
+  data: number; // Day of month for recurring
+  data_especifica?: string; // Full date for 'unico'
+  data_inicio?: string;
+  data_fim?: string;
   conta: string;
 }
 

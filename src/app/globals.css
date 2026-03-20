@@ -1100,7 +1100,17 @@ html, body {
 .calendar-day {
   background: var(--bg-card);
   padding: var(--space-sm);
-  min-height: 100px;
+  height: 110px;
+  transition: background var(--transition-fast);
+  cursor: pointer;
+}
+
+.calendar-day:hover {
+  background: var(--card-bg-elevated);
+}
+
+.calendar-day.today {
+  background: var(--bg-surface-2);
 }
 
 .calendar-day-header {
@@ -1144,6 +1154,11 @@ html, body {
 .calendar-event.expense {
   background: rgba(199, 90, 90, 0.1);
   color: #e07a7a;
+}
+
+.calendar-event.debt {
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
 }
 
 /* Page Layout */

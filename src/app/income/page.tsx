@@ -6,7 +6,7 @@ import { useSidebar } from '@/context/SidebarContext';
 import Sidebar from '@/components/Sidebar';
 import PremiumHeader from '@/components/PremiumHeader';
 import { Plus, Edit2, Trash2, DollarSign, X, TrendingUp, CalendarRange } from 'lucide-react';
-import { formatCurrency, getNextPaymentDate, formatDate } from '@/lib/utils';
+import { formatCurrency, formatCurrencyNoDecimals, getNextPaymentDate, formatDate } from '@/lib/utils';
 import { Income, Frequencia } from '@/types';
 import dynamic from 'next/dynamic';
 
@@ -23,6 +23,9 @@ function IncomeContent() {
     valor: 0,
     frequencia: 'mensal' as Frequencia,
     data: 1,
+    data_especifica: '',
+    data_inicio: '',
+    data_fim: '',
     conta: 'Montepio',
   });
 
@@ -33,6 +36,7 @@ function IncomeContent() {
       case 'mensal': return incomeItem.valor;
       case 'trimestral': return incomeItem.valor / 3;
       case 'anual': return incomeItem.valor / 12;
+      case 'unico': return incomeItem.valor / 12; // Normalized for annual planning
       default: return incomeItem.valor;
     }
   };
@@ -44,6 +48,7 @@ function IncomeContent() {
       case 'mensal': return incomeItem.valor * 12;
       case 'trimestral': return incomeItem.valor * 4;
       case 'anual': return incomeItem.valor;
+      case 'unico': return incomeItem.valor;
       default: return incomeItem.valor;
     }
   };
@@ -54,8 +59,22 @@ function IncomeContent() {
   // Calculate monthly income received so far this month
   const today = new Date();
   const currentDay = today.getDate();
+  const currentMonth = today.getMonth();
+  const currentYear = today.getFullYear();
+
   const incomeReceivedSoFar = income
-    .filter(i => i.frequencia === 'mensal' && i.data <= currentDay)
+    .filter(i => {
+      if (i.frequencia === 'mensal') {
+        return i.data <= currentDay;
+      }
+      if (i.frequencia === 'unico' && i.data_especifica) {
+        const date = new Date(i.data_especifica);
+        return date.getMonth() === currentMonth && 
+               date.getFullYear() === currentYear && 
+               date.getDate() <= currentDay;
+      }
+      return false;
+    })
     .reduce((sum, i) => sum + i.valor, 0);
   
   const monthlyProgress = totalMonthly > 0 ? (incomeReceivedSoFar / totalMonthly) * 100 : 0;
@@ -78,9 +97,13 @@ function IncomeContent() {
 
   // Sort income by next payment date
   const sortedIncome = [...income].sort((a, b) => {
-    const dateA = getNextPaymentDate(a.data).getTime();
-    const dateB = getNextPaymentDate(b.data).getTime();
-    return dateA - dateB;
+    const getSortDate = (item: Income) => {
+      if (item.frequencia === 'unico' && item.data_especifica) {
+        return new Date(item.data_especifica).getTime();
+      }
+      return getNextPaymentDate(item.data).getTime();
+    };
+    return getSortDate(a) - getSortDate(b);
   });
 
   const handleOpenModal = (incomeItem?: Income) => {
@@ -91,6 +114,9 @@ function IncomeContent() {
         valor: incomeItem.valor,
         frequencia: incomeItem.frequencia,
         data: incomeItem.data,
+        data_especifica: incomeItem.data_especifica || '',
+        data_inicio: incomeItem.data_inicio || '',
+        data_fim: incomeItem.data_fim || '',
         conta: incomeItem.conta,
       });
     } else {
@@ -100,6 +126,9 @@ function IncomeContent() {
         valor: 0,
         frequencia: 'mensal',
         data: 1,
+        data_especifica: '',
+        data_inicio: '',
+        data_fim: '',
         conta: accounts[0]?.nome || 'Montepio',
       });
     }
@@ -135,6 +164,7 @@ function IncomeContent() {
       case 'mensal': return 'Mensal';
       case 'trimestral': return 'Trimestral';
       case 'anual': return 'Anual';
+      case 'unico': return 'Único';
       default: return freq;
     }
   };
@@ -146,6 +176,7 @@ function IncomeContent() {
       case 'semanal': return 'badge-primary';
       case 'trimestral': return 'badge-warning';
       case 'anual': return 'badge-danger';
+      case 'unico': return 'badge-secondary';
       default: return '';
     }
   };
@@ -186,7 +217,7 @@ function IncomeContent() {
               </div>
               <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">Rendimento Mensal</p>
             </div>
-            <div className="card-value" style={{ color: 'var(--accent-success)', fontSize: '1.75rem', fontWeight: 700 }}>
+            <div className="card-value" style={{ color: 'var(--accent-success)', fontSize: '1.75rem', fontWeight: 700, fontFamily: 'Inter, sans-serif' }}>
               {formatCurrency(incomeReceivedSoFar)}
             </div>
             <div className="mt-4">
@@ -212,7 +243,7 @@ function IncomeContent() {
               <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">Projeção Anual</p>
             </div>
             <div className="flex items-baseline gap-2 mb-4">
-              <span className="card-value" style={{ fontSize: '1.5rem', fontWeight: 700 }}>{formatCurrency(totalAnnual)}</span>
+              <span className="card-value" style={{ fontSize: '1.5rem', fontWeight: 700, fontFamily: 'Inter, sans-serif' }}>{formatCurrency(totalAnnual)}</span>
             </div>
             <div style={{ height: '80px', width: '100%' }}>
               <AnnualIncomeProjectionChart data={annualProjectionData} tooltipStyle={tooltipStyle} />
@@ -227,11 +258,11 @@ function IncomeContent() {
               </div>
               <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">Fontes de Rendimento</p>
             </div>
-            <div className="flex items-center gap-4">
-              <div style={{ height: '80px', width: '80px', flexShrink: 0 }}>
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <div style={{ height: '100px', width: '100%' }}>
                 <IncomeSourcesPieChart data={incomeSourcesData} tooltipStyle={tooltipStyle} />
               </div>
-              <div className="flex-1 space-y-2">
+              <div className="space-y-2">
                 {incomeSourcesData.slice(0, 3).map((source, idx) => (
                   <div key={idx} className="flex justify-between items-center">
                     <span className="text-[10px] text-slate-400 truncate max-w-[80px]">{source.name}</span>
@@ -243,8 +274,8 @@ function IncomeContent() {
           </div>
         </div>
 
-        {/* Income Table */}
-        <div className="card animate-slideUp">
+        {/* Income Table (Desktop) */}
+        <div className="card animate-slideUp hidden md:block">
           <div className="table-container">
             <table className="table">
               <thead>
@@ -261,7 +292,9 @@ function IncomeContent() {
               <tbody>
                 {sortedIncome.map((incomeItem) => {
                   const peso = totalMonthly > 0 ? (calculateMonthlyEquivalent(incomeItem) / totalMonthly) * 100 : 0;
-                  const nextDate = getNextPaymentDate(incomeItem.data);
+                  const displayDate = incomeItem.frequencia === 'unico' && incomeItem.data_especifica 
+                    ? new Date(incomeItem.data_especifica)
+                    : getNextPaymentDate(incomeItem.data);
                   
                   return (
                     <tr key={incomeItem.id}>
@@ -274,8 +307,8 @@ function IncomeContent() {
                         </span>
                       </td>
                       <td style={{ textAlign: 'right' }}>
-                        <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'white' }}>
-                          +{formatCurrency(incomeItem.valor)}
+                        <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'white', fontFamily: 'Inter, sans-serif' }}>
+                          +{formatCurrencyNoDecimals(incomeItem.valor)}
                         </span>
                       </td>
                       <td style={{ textAlign: 'right' }}>
@@ -288,7 +321,7 @@ function IncomeContent() {
                       </td>
                       <td style={{ textAlign: 'right' }}>
                         <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                          {formatDate(nextDate.toISOString())}
+                          {formatDate(displayDate.toISOString())}
                         </span>
                       </td>
                       <td style={{ textAlign: 'right' }}>
@@ -324,6 +357,82 @@ function IncomeContent() {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Mobile List */}
+        <div className="md:hidden space-y-3">
+          {sortedIncome.map((incomeItem) => {
+            const peso = totalMonthly > 0 ? (calculateMonthlyEquivalent(incomeItem) / totalMonthly) * 100 : 0;
+            const displayDate = incomeItem.frequencia === 'unico' && incomeItem.data_especifica 
+              ? new Date(incomeItem.data_especifica)
+              : getNextPaymentDate(incomeItem.data);
+
+            return (
+              <div key={incomeItem.id} className="card space-y-3" style={{ padding: '16px' }}>
+                {/* Line 1: Name and Value */}
+                <div className="flex justify-between items-start mb-0">
+                  <h3 className="font-normal !text-[1rem] text-white">{incomeItem.nome}</h3>
+                  <p className="font-semibold text-[0.9rem] text-white" style={{ fontFamily: 'Inter, sans-serif' }}>
+                    +{formatCurrencyNoDecimals(incomeItem.valor)}
+                  </p>
+                </div>
+
+                {/* Line 2: Date and Frequency */}
+                <div className="flex justify-between items-center">
+                  <p className="text-[10px] text-slate-500 uppercase tracking-wider">
+                    {formatDate(displayDate.toISOString())}
+                  </p>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', padding: 0, background: 'none' }}>
+                    {getFrequencyLabel(incomeItem.frequencia)}
+                  </span>
+                </div>
+
+                {/* Line 3: Weight and Progress Bar */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] text-slate-500 uppercase">Peso no Rendimento</span>
+                    <span className="text-[10px] text-slate-400 font-bold">{peso.toFixed(1)}%</span>
+                  </div>
+                  <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-emerald-500 rounded-full" 
+                      style={{ width: `${Math.min(peso, 100)}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Line 4: Actions */}
+                <div className="pt-1">
+                  <div className="flex items-center justify-center rounded-xl border border-slate-800 bg-slate-900/30 overflow-hidden" style={{ height: '40px' }}>
+                    <button 
+                      className="flex-1 h-full flex items-center justify-center hover:bg-white/5 transition-colors"
+                      onClick={() => handleOpenModal(incomeItem)}
+                    >
+                      <Edit2 size={18} className="text-blue-400/80" />
+                    </button>
+                    <div className="w-[1px] h-6 bg-slate-800/50"></div>
+                    <button 
+                      className="flex-1 h-full flex items-center justify-center hover:bg-white/5 transition-colors"
+                      onClick={() => handleDelete(incomeItem.id)}
+                    >
+                      <Trash2 size={18} className="text-red-400/80" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+
+          {income.length === 0 && (
+            <div className="empty-state card">
+              <DollarSign size={48} style={{ opacity: 0.3, marginBottom: '16px' }} />
+              <p>Nenhum rendimento adicionado</p>
+              <button className="btn btn-primary w-full mt-4" onClick={() => handleOpenModal()}>
+                <Plus size={18} />
+                Adicionar Rendimento
+              </button>
+            </div>
+          )}
         </div>
       </main>
 
@@ -378,22 +487,35 @@ function IncomeContent() {
                     <option value="mensal">Mensal</option>
                     <option value="trimestral">Trimestral</option>
                     <option value="anual">Anual</option>
+                    <option value="unico">Único</option>
                   </select>
                 </div>
               </div>
 
               <div className="grid-2">
                 <div className="form-group">
-                  <label className="form-label">Data de Recebimento (dia)</label>
-                  <input
-                    type="number"
-                    className="form-input"
-                    value={formData.data}
-                    onChange={(e) => setFormData({ ...formData, data: parseInt(e.target.value) || 1 })}
-                    min="1"
-                    max="31"
-                    required
-                  />
+                  <label className="form-label">
+                    {formData.frequencia === 'unico' ? 'Data' : 'Dia de Recepção'}
+                  </label>
+                  {formData.frequencia === 'unico' ? (
+                    <input
+                      type="date"
+                      className="form-input"
+                      value={formData.data_especifica}
+                      onChange={(e) => setFormData({ ...formData, data_especifica: e.target.value })}
+                      required
+                    />
+                  ) : (
+                    <input
+                      type="number"
+                      className="form-input"
+                      value={formData.data}
+                      onChange={(e) => setFormData({ ...formData, data: parseInt(e.target.value) || 1 })}
+                      min="1"
+                      max="31"
+                      required
+                    />
+                  )}
                 </div>
 
                 <div className="form-group">
@@ -409,6 +531,29 @@ function IncomeContent() {
                   </select>
                 </div>
               </div>
+
+              {formData.frequencia !== 'unico' && (
+                <div className="grid-2">
+                  <div className="form-group">
+                    <label className="form-label">Data de Início (Opcional)</label>
+                    <input
+                      type="date"
+                      className="form-input"
+                      value={formData.data_inicio}
+                      onChange={(e) => setFormData({ ...formData, data_inicio: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Data de Fim (Opcional)</label>
+                    <input
+                      type="date"
+                      className="form-input"
+                      value={formData.data_fim}
+                      onChange={(e) => setFormData({ ...formData, data_fim: e.target.value })}
+                    />
+                  </div>
+                </div>
+              )}
 
               <div className="modal-actions">
                 <button type="button" className="btn btn-secondary" onClick={handleCloseModal}>
