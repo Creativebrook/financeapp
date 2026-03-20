@@ -273,23 +273,51 @@ function VariableExpensesContent() {
         </div>
 
         {/* Filter */}
-        <div className="tabs animate-slideUp" style={{ marginBottom: '24px' }}>
+        <div className="tabs animate-slideUp" style={{ marginBottom: '10px' }}>
           <div 
             className={`tab ${filterCategory === 'all' ? 'active' : ''}`}
             onClick={() => setFilterCategory('all')}
+            style={{ 
+              fontWeight: 400, 
+              textTransform: 'uppercase', 
+              fontSize: '0.8rem' 
+            }}
           >
-            Todos
+            <span>Todos:</span>
+            <span style={{ 
+              fontSize: '0.8rem', 
+              fontWeight: 700, 
+              color: filterCategory === 'all' ? '#fff' : 'var(--text-secondary)',
+              marginLeft: '4px'
+            }}>
+              {formatCurrency(totalAllExpenses)}
+            </span>
           </div>
-          {categories.map((cat) => (
-            <div 
-              key={cat}
-              className={`tab ${filterCategory === cat ? 'active' : ''}`}
-              onClick={() => setFilterCategory(cat)}
-              style={{ color: filterCategory === cat ? getCategoryColor(cat) : undefined }}
-            >
-              {cat}
-            </div>
-          ))}
+          {categories.map((cat) => {
+            const catTotal = variableExpenses.filter(e => e.categoria === cat).reduce((sum, e) => sum + e.valor, 0);
+            return (
+              <div 
+                key={cat}
+                className={`tab ${filterCategory === cat ? 'active' : ''}`}
+                onClick={() => setFilterCategory(cat)}
+                style={{ 
+                  fontWeight: 400, 
+                  textTransform: 'uppercase', 
+                  fontSize: '0.8rem'
+                }}
+              >
+                <span>{cat}:</span>
+                <span style={{ 
+                  fontSize: '0.8rem', 
+                  fontWeight: 700, 
+                  color: filterCategory === cat ? '#fff' : 'var(--text-secondary)',
+                  marginLeft: '4px'
+                }}>
+                  {formatCurrency(catTotal)}
+                </span>
+              </div>
+            );
+          })}
           
           {/* Add Category Button */}
           <button 
@@ -305,7 +333,7 @@ function VariableExpensesContent() {
               borderRadius: '8px',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
-              height: '43px', // Matches padding 10px + font height
+              height: '43px',
               minWidth: '43px',
               color: 'var(--text-primary)'
             }}

@@ -79,8 +79,9 @@ const initialVariableExpenses: VariableExpense[] = [
 ];
 
 const initialIncome: Income[] = [
-  { id: '1', nome: 'Salário', valor: 3500, frequencia: 'mensal', data: 1, conta: 'Montepio' },
-  { id: '2', nome: 'Freelance', valor: 500, frequencia: 'mensal', data: 15, conta: 'N26' },
+  { id: '1', nome: 'Clínica [CSA]', valor: 1000, frequencia: 'mensal', data: 8, conta: 'Montepio' },
+  { id: '2', nome: 'amo.CLINICS', valor: 300, frequencia: 'mensal', data: 10, conta: 'N26' },
+  { id: '3', nome: 'Las Muns', valor: 600, frequencia: 'mensal', data: 20, conta: 'Revolut Bank' },
 ];
 
 // Initial data loader function

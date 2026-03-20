@@ -5,9 +5,13 @@ import { FinanceProvider, useFinance } from '@/context/FinanceContext';
 import { useSidebar } from '@/context/SidebarContext';
 import Sidebar from '@/components/Sidebar';
 import PremiumHeader from '@/components/PremiumHeader';
-import { Plus, Edit2, Trash2, DollarSign, X, TrendingUp } from 'lucide-react';
+import { Plus, Edit2, Trash2, DollarSign, X, TrendingUp, CalendarRange } from 'lucide-react';
 import { formatCurrency, getNextPaymentDate, formatDate } from '@/lib/utils';
 import { Income, Frequencia } from '@/types';
+import dynamic from 'next/dynamic';
+
+const AnnualIncomeProjectionChart = dynamic(() => import('@/components/charts/AnnualIncomeProjectionChart'), { ssr: false });
+const IncomeSourcesPieChart = dynamic(() => import('@/components/charts/IncomeSourcesPieChart'), { ssr: false });
 
 function IncomeContent() {
   const { income, addIncomeEntry, updateIncome, deleteIncome, accounts } = useFinance();
@@ -46,6 +50,38 @@ function IncomeContent() {
 
   const totalMonthly = income.reduce((sum, i) => sum + calculateMonthlyEquivalent(i), 0);
   const totalAnnual = income.reduce((sum, i) => sum + calculateAnnualEquivalent(i), 0);
+
+  // Calculate monthly income received so far this month
+  const today = new Date();
+  const currentDay = today.getDate();
+  const incomeReceivedSoFar = income
+    .filter(i => i.frequencia === 'mensal' && i.data <= currentDay)
+    .reduce((sum, i) => sum + i.valor, 0);
+  
+  const monthlyProgress = totalMonthly > 0 ? (incomeReceivedSoFar / totalMonthly) * 100 : 0;
+
+  // Annual projection data (mock for now based on monthly income)
+  const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+  const annualProjectionData = months.map((month, i) => {
+    // Mocking some variation
+    const base = totalMonthly;
+    const currentYear = base * (1 + (Math.sin(i) * 0.1));
+    const prevYear = base * 0.9 * (1 + (Math.cos(i) * 0.1));
+    return { month, currentYear, prevYear };
+  });
+
+  // Income sources data for pie chart
+  const incomeSourcesData = income.map(i => ({
+    name: i.nome,
+    value: totalMonthly > 0 ? (calculateMonthlyEquivalent(i) / totalMonthly) * 100 : 0
+  }));
+
+  // Sort income by next payment date
+  const sortedIncome = [...income].sort((a, b) => {
+    const dateA = getNextPaymentDate(a.data).getTime();
+    const dateB = getNextPaymentDate(b.data).getTime();
+    return dateA - dateB;
+  });
 
   const handleOpenModal = (incomeItem?: Income) => {
     if (incomeItem) {
@@ -114,8 +150,16 @@ function IncomeContent() {
     }
   };
 
+  const tooltipStyle = {
+    backgroundColor: '#0f172a',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+    borderRadius: '8px',
+    fontSize: '12px',
+    color: '#fff',
+  };
+
   return (
-    <div className="app-container">
+    <div className="app-container font-inter">
       <Sidebar />
       
       <main className={`main-content ${isCollapsed ? 'sidebar-collapsed' : ''}`}>
@@ -127,52 +171,74 @@ function IncomeContent() {
             <p className="page-subtitle">Gerencie as suas fontes de rendimento</p>
           </div>
           <button className="btn btn-primary" style={{ float: 'right', marginTop: '-8px' }} onClick={() => handleOpenModal()}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M5 12h14"></path>
-              <path d="M12 5v14"></path>
-            </svg>
+            <Plus size={18} />
             Novo Rendimento
           </button>
         </div>
 
         {/* Summary Cards */}
         <div className="stats-grid" style={{ marginBottom: '24px' }}>
+          {/* Card 1: Monthly Income */}
           <div className="card animate-slideUp" style={{ background: 'linear-gradient(180deg, rgba(16, 185, 129, 0.15) 0%, transparent 100%)' }}>
-            <div className="card-header">
-              <span className="card-title">Rendimento Mensal</span>
-              <DollarSign size={20} style={{ color: 'var(--accent-success)' }} />
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-9 h-9 rounded-full bg-white/[0.03] border border-white/[0.05] flex items-center justify-center">
+                <CalendarRange size={16} className="text-slate-400" />
+              </div>
+              <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">Rendimento Mensal</p>
             </div>
-            <div className="card-value" style={{ color: 'var(--accent-success)' }}>
-              {formatCurrency(totalMonthly)}
+            <div className="card-value" style={{ color: 'var(--accent-success)', fontSize: '1.75rem', fontWeight: 700 }}>
+              {formatCurrency(incomeReceivedSoFar)}
             </div>
-            <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', marginTop: '8px' }}>
-              Equivalent mensal
+            <div className="mt-4">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-[10px] text-slate-500 uppercase">Expectável: {formatCurrency(totalMonthly)}</span>
+                <span className="text-[10px] text-slate-400 font-bold">{monthlyProgress.toFixed(0)}%</span>
+              </div>
+              <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-emerald-500 rounded-full transition-all duration-1000" 
+                  style={{ width: `${Math.min(monthlyProgress, 100)}%` }}
+                />
+              </div>
             </div>
           </div>
 
+          {/* Card 2: Annual Projection */}
           <div className="card animate-slideUp" style={{ background: 'linear-gradient(180deg, rgba(99, 102, 241, 0.15) 0%, transparent 100%)' }}>
-            <div className="card-header">
-              <span className="card-title">Rendimento Anual</span>
-              <TrendingUp size={20} style={{ color: 'var(--accent-primary)' }} />
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-9 h-9 rounded-full bg-white/[0.03] border border-white/[0.05] flex items-center justify-center">
+                <TrendingUp size={16} className="text-slate-400" />
+              </div>
+              <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">Projeção Anual</p>
             </div>
-            <div className="card-value">
-              {formatCurrency(totalAnnual)}
+            <div className="flex items-baseline gap-2 mb-4">
+              <span className="card-value" style={{ fontSize: '1.5rem', fontWeight: 700 }}>{formatCurrency(totalAnnual)}</span>
             </div>
-            <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', marginTop: '8px' }}>
-              Projeção anual
+            <div style={{ height: '80px', width: '100%' }}>
+              <AnnualIncomeProjectionChart data={annualProjectionData} tooltipStyle={tooltipStyle} />
             </div>
           </div>
 
+          {/* Card 3: Income Sources */}
           <div className="card animate-slideUp">
-            <div className="card-header">
-              <span className="card-title">Fontes de Rendimento</span>
-              <DollarSign size={20} style={{ color: 'var(--text-muted)' }} />
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-9 h-9 rounded-full bg-white/[0.03] border border-white/[0.05] flex items-center justify-center">
+                <DollarSign size={16} className="text-slate-400" />
+              </div>
+              <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">Fontes de Rendimento</p>
             </div>
-            <div className="card-value">
-              {income.length}
-            </div>
-            <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', marginTop: '8px' }}>
-              Ativas
+            <div className="flex items-center gap-4">
+              <div style={{ height: '80px', width: '80px', flexShrink: 0 }}>
+                <IncomeSourcesPieChart data={incomeSourcesData} tooltipStyle={tooltipStyle} />
+              </div>
+              <div className="flex-1 space-y-2">
+                {incomeSourcesData.slice(0, 3).map((source, idx) => (
+                  <div key={idx} className="flex justify-between items-center">
+                    <span className="text-[10px] text-slate-400 truncate max-w-[80px]">{source.name}</span>
+                    <span className="text-[10px] text-slate-500 font-bold">{source.value.toFixed(0)}%</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -186,65 +252,64 @@ function IncomeContent() {
                   <th>Nome</th>
                   <th>Frequência</th>
                   <th style={{ textAlign: 'right' }}>Valor</th>
-                  <th style={{ textAlign: 'right' }}>Equiv. Mensal</th>
-                  <th>Data Recebimento</th>
+                  <th style={{ textAlign: 'right' }}>Peso</th>
                   <th>Conta</th>
-                  <th style={{ textAlign: 'right' }}>Próximo</th>
+                  <th style={{ textAlign: 'right' }}>Data</th>
                   <th style={{ textAlign: 'right' }}>Ações</th>
                 </tr>
               </thead>
               <tbody>
-                {income.map((incomeItem) => (
-                  <tr key={incomeItem.id}>
-                    <td>
-                      <div style={{ fontWeight: 600 }}>{incomeItem.nome}</div>
-                    </td>
-                    <td>
-                      <span className={`badge ${getFrequencyBadge(incomeItem.frequencia)}`}>
-                        {getFrequencyLabel(incomeItem.frequencia)}
-                      </span>
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <span  style={{ fontWeight: 600, color: 'var(--accent-success)' }}>
-                        +{formatCurrency(incomeItem.valor)}
-                      </span>
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <span  style={{ color: 'var(--text-muted)' }}>
-                        {formatCurrency(calculateMonthlyEquivalent(incomeItem))}
-                      </span>
-                    </td>
-                    <td>
-                      <span style={{ color: 'var(--text-secondary)' }}>
-                        Dia {incomeItem.data}
-                      </span>
-                    </td>
-                    <td>
-                      <span style={{ color: 'var(--text-secondary)' }}>{incomeItem.conta}</span>
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <span style={{ fontSize: '0.8125rem' }}>
-                        {formatDate(getNextPaymentDate(incomeItem.data).toISOString())}
-                      </span>
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                        <button 
-                          className="btn btn-icon btn-secondary"
-                          onClick={() => handleOpenModal(incomeItem)}
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                        <button 
-                          className="btn btn-icon btn-danger"
-                          onClick={() => handleDelete(incomeItem.id)}
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {sortedIncome.map((incomeItem) => {
+                  const peso = totalMonthly > 0 ? (calculateMonthlyEquivalent(incomeItem) / totalMonthly) * 100 : 0;
+                  const nextDate = getNextPaymentDate(incomeItem.data);
+                  
+                  return (
+                    <tr key={incomeItem.id}>
+                      <td>
+                        <div style={{ fontWeight: 400, fontSize: '0.9rem' }}>{incomeItem.nome}</div>
+                      </td>
+                      <td>
+                        <span className={`badge ${getFrequencyBadge(incomeItem.frequencia)}`}>
+                          {getFrequencyLabel(incomeItem.frequencia)}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'white' }}>
+                          +{formatCurrency(incomeItem.valor)}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                          {peso.toFixed(1)}%
+                        </span>
+                      </td>
+                      <td>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{incomeItem.conta}</span>
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                          {formatDate(nextDate.toISOString())}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                          <button 
+                            className="btn btn-icon btn-secondary"
+                            onClick={() => handleOpenModal(incomeItem)}
+                          >
+                            <Edit2 size={16} />
+                          </button>
+                          <button 
+                            className="btn btn-icon btn-danger"
+                            onClick={() => handleDelete(incomeItem.id)}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
             
