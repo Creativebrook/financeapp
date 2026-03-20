@@ -31,7 +31,7 @@ function VariableExpensesContent() {
     categoria: 'Supermercado' as string,
   });
 
-  const [categories, setCategories] = useState<string[]>(['Supermercado', 'Combustível', 'Restaurantes', 'Compras', 'Diversos']);
+  const [categories, setCategories] = useState<string[]>(['Animais', 'Casa', 'Combustivel', 'Diversos', 'Educação', 'Lazer', 'Pessoal', 'Restaurantes', 'Saúde', 'Supermercado', 'Shopping', 'Taxas', 'Transporte']);
 
   const filteredExpenses = filterCategory === 'all' 
     ? variableExpenses 

@@ -152,7 +152,7 @@ function DebtsContent() {
         {/* Summary Cards */}
         <div className="stats-grid" style={{ marginBottom: '24px' }}>
           <div className="card animate-slideUp" style={{ 
-            background: 'linear-gradient(to right, var(--card-hero-bg-start) 0%, var(--card-hero-bg-mid) 55%, var(--card-hero-bg-end) 100%)', 
+            background: 'linear-gradient(to bottom, var(--card-hero-bg-start) 0%, var(--card-hero-bg-mid) 55%, var(--card-hero-bg-end) 100%)', 
             borderRadius: '8px', 
             border: '1px solid var(--card-border)', 
             padding: '24px' 
@@ -190,7 +190,7 @@ function DebtsContent() {
           </div>
 
           <div className="card animate-slideUp" style={{ 
-            background: 'linear-gradient(to right, var(--card-hero-bg-start) 0%, var(--card-hero-bg-mid) 55%, var(--card-hero-bg-end) 100%)', 
+            background: 'linear-gradient(to bottom, var(--card-hero-bg-start) 0%, var(--card-hero-bg-mid) 55%, var(--card-hero-bg-end) 100%)', 
             borderRadius: '8px', 
             border: '1px solid var(--card-border)', 
             padding: '24px' 
@@ -431,7 +431,7 @@ function DebtsContent() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Data de Pagamento (dia do mês)</label>
+                  <label className="form-label">Dia de Pagamento</label>
                   <input
                     type="number"
                     className="form-input"
@@ -455,6 +455,7 @@ function DebtsContent() {
                     <option value="Cartão de Crédito">Cartão de Crédito</option>
                     <option value="Empréstimo">Empréstimo</option>
                     <option value="Impostos">Impostos</option>
+                    <option value="Serviços">Serviços</option>
                     <option value="Outro">Outro</option>
                   </select>
                 </div>

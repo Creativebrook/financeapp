@@ -34,7 +34,7 @@ function AccountsContent() {
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [formData, setFormData] = useState({
     nome: '',
-    tipo: 'Conta à ordem',
+    tipo: 'Conta à Ordem',
     saldo: 0,
     iban: '',
     notas: '',
@@ -146,7 +146,7 @@ function AccountsContent() {
       setEditingAccount(null);
       setFormData({
         nome: '',
-        tipo: 'Conta à ordem',
+        tipo: 'Conta à Ordem',
         saldo: 0,
         iban: '',
         notas: '',
@@ -533,16 +533,17 @@ function AccountsContent() {
 
               <div className="form-group">
                 <label className="form-label">Tipo</label>
-                <select
-                  className="form-select"
-                  value={formData.tipo}
-                  onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
-                >
-                  <option value="Conta à ordem">Conta à ordem</option>
-                  <option value="Conta poupança">Conta poupança</option>
-                  <option value="Conta conjunta">Conta conjunta</option>
-                  <option value="Depósito a prazo">Depósito a prazo</option>
-                </select>
+                  <select
+                    className="form-select"
+                    value={formData.tipo}
+                    onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
+                  >
+                    <option value="Conta à Ordem">Conta à Ordem</option>
+                    <option value="Conta Conjunta">Conta Conjunta</option>
+                    <option value="Conta Digital">Conta Digital</option>
+                    <option value="Conta Poupança">Conta Poupança</option>
+                    <option value="Depósito a Prazo">Depósito a Prazo</option>
+                  </select>
               </div>
 
               <div className="form-group">

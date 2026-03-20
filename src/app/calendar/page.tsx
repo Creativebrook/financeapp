@@ -13,6 +13,7 @@ function CalendarContent() {
   const { isCollapsed } = useSidebar();
   const [currentDate, setCurrentDate] = useState(new Date(2026, 2, 1)); // March 2026
   const [selectedDayEvents, setSelectedDayEvents] = useState<{ day: number, events: any[] } | null>(null);
+  const [selectedDay, setSelectedDay] = useState<number | null>(20); // Default to today (20th)
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -26,10 +27,12 @@ function CalendarContent() {
 
   const prevMonth = () => {
     setCurrentDate(new Date(year, month - 1, 1));
+    setSelectedDay(null);
   };
 
   const nextMonth = () => {
     setCurrentDate(new Date(year, month + 1, 1));
+    setSelectedDay(null);
   };
 
   const isToday = (day: number) => {
@@ -90,7 +93,10 @@ function CalendarContent() {
 
   const handleDayClick = (day: number) => {
     const events = getEventsForDay(day);
-    if (events.length > 0) {
+    setSelectedDay(day);
+    
+    // Only show modal on desktop (md and up)
+    if (window.innerWidth >= 768 && events.length > 0) {
       setSelectedDayEvents({ day, events });
     }
   };
@@ -102,6 +108,8 @@ function CalendarContent() {
       default: return <ArrowDownCircle size={14} style={{ color: 'var(--accent-danger)' }} />;
     }
   };
+
+  const selectedDayEventsList = selectedDay ? getEventsForDay(selectedDay) : [];
 
   return (
     <div className="app-container">
@@ -118,21 +126,21 @@ function CalendarContent() {
         </div>
 
         <div className="animate-slideUp">
-          {/* Calendar Card - Full Width */}
-          <div className="card">
-            <div className="card-header">
+          {/* Calendar Card - Full Width on Mobile */}
+          <div className="card calendar-card-mobile" style={{ padding: 'var(--space-sm)' }}>
+            <div className="card-header" style={{ marginBottom: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <button className="btn btn-icon btn-secondary" onClick={prevMonth}>
                   <ChevronLeft size={18} />
                 </button>
-                <h3 style={{ margin: 0, minWidth: '150px', textAlign: 'center' }}>
+                <h3 style={{ margin: 0, minWidth: '150px', textAlign: 'center', fontSize: '1.1rem' }}>
                   {monthNames[month]} {year}
                 </h3>
                 <button className="btn btn-icon btn-secondary" onClick={nextMonth}>
                   <ChevronRight size={18} />
                 </button>
               </div>
-              <Calendar size={20} style={{ color: 'var(--text-muted)' }} />
+              <Calendar size={20} style={{ color: 'var(--text-muted)' }} className="hidden md:block" />
             </div>
 
             <div className="calendar-grid">
@@ -140,36 +148,52 @@ function CalendarContent() {
                 <div key={day} className="calendar-day-header">{day}</div>
               ))}
               
-              {calendarDays.map((day, index) => (
-                <div 
-                  key={index} 
-                  className={`calendar-day ${day && isToday(day) ? 'today' : ''}`}
-                  onClick={() => day && handleDayClick(day)}
-                >
-                  {day && (
-                    <>
-                      <div className="calendar-day-number">{day}</div>
-                      {getEventsForDay(day).slice(0, 3).map((event, idx) => (
-                        <div 
-                          key={idx}
-                          className={`calendar-event ${event.type}`}
-                          title={`${event.name}: ${formatCurrency(event.amount)}`}
-                        >
-                          {event.name}
+              {calendarDays.map((day, index) => {
+                const dayEvents = day ? getEventsForDay(day) : [];
+                const hasIncome = dayEvents.some(e => e.type === 'income');
+                const hasExpense = dayEvents.some(e => e.type === 'expense');
+                const hasDebt = dayEvents.some(e => e.type === 'debt');
+
+                return (
+                  <div 
+                    key={index} 
+                    className={`calendar-day ${day && isToday(day) ? 'today' : ''} ${day === selectedDay ? 'selected' : ''}`}
+                    onClick={() => day && handleDayClick(day)}
+                  >
+                    {day && (
+                      <>
+                        <div className="calendar-day-number">{day}</div>
+                        
+                        {/* Desktop: Event Names */}
+                        {dayEvents.slice(0, 3).map((event, idx) => (
+                          <div 
+                            key={idx}
+                            className={`calendar-event ${event.type}`}
+                            title={`${event.name}: ${formatCurrency(event.amount)}`}
+                          >
+                            {event.name}
+                          </div>
+                        ))}
+                        {dayEvents.length > 3 && (
+                          <div className="calendar-event" style={{ fontSize: '0.625rem', color: 'var(--text-muted)', background: 'transparent' }}>
+                            +{dayEvents.length - 3} mais
+                          </div>
+                        )}
+
+                        {/* Mobile: Dots */}
+                        <div className="calendar-dots-container md:hidden">
+                          {hasIncome && <div className="calendar-event-dot" style={{ backgroundColor: 'var(--accent-success)' }} />}
+                          {hasExpense && <div className="calendar-event-dot" style={{ backgroundColor: 'var(--accent-danger)' }} />}
+                          {hasDebt && <div className="calendar-event-dot" style={{ backgroundColor: 'var(--accent-warning)' }} />}
                         </div>
-                      ))}
-                      {getEventsForDay(day).length > 3 && (
-                        <div style={{ fontSize: '0.625rem', color: 'var(--text-muted)' }}>
-                          +{getEventsForDay(day).length - 3} mais
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              ))}
+                      </>
+                    )}
+                  </div>
+                );
+              })}
             </div>
 
-            <div style={{ display: 'flex', gap: '16px', marginTop: '16px', justifyContent: 'center' }}>
+            <div className="hidden md:flex" style={{ gap: '16px', marginTop: '16px', justifyContent: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <div style={{ width: '12px', height: '12px', borderRadius: '2px', background: 'rgba(16, 185, 129, 0.3)' }} />
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Rendimento</span>
@@ -182,6 +206,55 @@ function CalendarContent() {
                 <div style={{ width: '12px', height: '12px', borderRadius: '2px', background: 'rgba(245, 158, 11, 0.3)' }} />
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Dívida</span>
               </div>
+            </div>
+          </div>
+
+          {/* Mobile: Selected Day Events List */}
+          <div className="md:hidden mt-6 space-y-3">
+            <h4 className="text-[0.8rem] text-slate-500 uppercase tracking-widest px-1">
+              {selectedDay ? `Eventos de ${selectedDay} de ${monthNames[month]}` : 'Selecione um dia'}
+            </h4>
+            
+            <div className="space-y-2">
+              {selectedDayEventsList.map((event, index) => (
+                <div 
+                  key={index}
+                  className="card"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '12px',
+                    background: 'var(--bg-surface-2)',
+                    borderRadius: '12px',
+                    border: '1px solid var(--border-subtle)'
+                  }}
+                >
+                  {getEventIcon(event.type)}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 500, fontSize: '0.9rem', color: 'white' }}>{event.name}</div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'capitalize' }}>
+                      {event.type === 'income' ? 'Rendimento' : event.type === 'debt' ? 'Dívida' : 'Despesa'}
+                    </div>
+                  </div>
+                  <div style={{ 
+                    fontFamily: 'JetBrains Mono, monospace',
+                    fontWeight: 600,
+                    fontSize: '0.9rem',
+                    color: event.type === 'income' ? 'var(--accent-success)' : 
+                           event.type === 'debt' ? 'var(--accent-warning)' : 'var(--accent-danger)'
+                  }}>
+                    {event.type === 'income' ? '+' : '-'}{formatCurrency(event.amount)}
+                  </div>
+                </div>
+              ))}
+
+              {selectedDay && selectedDayEventsList.length === 0 && (
+                <div className="text-center py-8 opacity-40">
+                  <Calendar size={32} className="mx-auto mb-2" />
+                  <p className="text-xs">Nenhum evento para este dia</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

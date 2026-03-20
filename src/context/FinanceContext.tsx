@@ -236,7 +236,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   const refreshPrices = async (): Promise<{ failedTickers: string[] }> => {
     const updatedInvestments = [...investments];
-    const uniqueTickers = [...new Set(investments.map(i => i.ticker))];
+    const uniqueTickers = [...new Set(investments.filter(i => i.isAutoPrice).map(i => i.ticker))];
     
     const priceMap: Record<string, number> = {};
     const failedTickers: string[] = [];
@@ -251,7 +251,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     }
     
     for (const inv of updatedInvestments) {
-      if (priceMap[inv.ticker]) {
+      if (inv.isAutoPrice && priceMap[inv.ticker]) {
         inv.preco_atual = priceMap[inv.ticker];
         inv.valor_atual = inv.quantidade * inv.preco_atual;
         inv.data_atualizacao = new Date().toISOString().split('T')[0];
@@ -361,7 +361,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   };
 
   const getPlatformSummaries = (): PlatformSummary[] => {
-    const platforms: Plataforma[] = ['XTB', 'Trading212', 'Revolut Stocks', 'Revolut Cripto', 'Revolut CFD', 'Robo Advisor'];
+    const platforms: Plataforma[] = ['XTB', 'Trading212', 'Revolut Stocks', 'Revolut Cripto', 'Revolut Metals', 'Robo Advisor'];
     
     return platforms.map(plataforma => {
       const platformInvestments = investments.filter(i => i.plataforma === plataforma);

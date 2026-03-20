@@ -12,7 +12,7 @@ import { Investment, Plataforma } from '@/types';
 
 const InvestmentPlatformChart = dynamic(() => import('@/components/charts/InvestmentPlatformChart'), { ssr: false });
 
-const plataformas: Plataforma[] = ['XTB', 'Trading212', 'Revolut Stocks', 'Revolut Cripto', 'Revolut CFD', 'Robo Advisor'];
+const plataformas: Plataforma[] = ['XTB', 'Trading212', 'Revolut Stocks', 'Revolut Cripto', 'Revolut Metals', 'Robo Advisor'];
 
 const getProfitColor = (value: number) => {
   if (value > 0) return 'var(--success-400)';
@@ -139,16 +139,17 @@ function InvestmentsContent() {
     preco_atual: 0,
     posicao: 'long' as 'long' | 'short',
     alocacao_alvo: 0,
+    isAutoPrice: false,
   });
 
   const platformSummaries = getPlatformSummaries();
   
   const allPlatforms = [...platformSummaries];
-  const hasRevolutCFD = allPlatforms.some(ps => ps.plataforma === 'Revolut CFD');
+  const hasRevolutMetals = allPlatforms.some(ps => ps.plataforma === 'Revolut Metals');
   
-  if (!hasRevolutCFD) {
+  if (!hasRevolutMetals) {
     allPlatforms.push({
-      plataforma: 'Revolut CFD' as Plataforma,
+      plataforma: 'Revolut Metals' as Plataforma,
       totalValue: 0,
       totalInvested: 0,
       profitability: 0,
@@ -225,6 +226,7 @@ function InvestmentsContent() {
         preco_atual: investment.preco_atual,
         posicao: investment.posicao || 'long',
         alocacao_alvo: investment.alocacao_alvo || 0,
+        isAutoPrice: investment.isAutoPrice || false,
       });
     } else {
       setEditingInvestment(null);
@@ -238,6 +240,7 @@ function InvestmentsContent() {
         preco_atual: 0,
         posicao: 'long',
         alocacao_alvo: 0,
+        isAutoPrice: false,
       });
     }
     setShowModal(true);
@@ -258,8 +261,9 @@ function InvestmentsContent() {
       quantidade: formData.quantidade,
       preco_medio: formData.preco_medio,
       preco_atual: formData.preco_atual,
-      posicao: formData.posicao,
+      posicao: formData.plataforma === 'Revolut Metals' ? undefined : formData.posicao,
       alocacao_alvo: formData.alocacao_alvo || undefined,
+      isAutoPrice: formData.isAutoPrice,
     };
     
     if (editingInvestment) {
@@ -289,7 +293,7 @@ function InvestmentsContent() {
       case 'Trading212': return <PieChart size={16} />;
       case 'Revolut Stocks': return <TrendingUp size={16} />;
       case 'Revolut Cripto': return <Bitcoin size={16} />;
-      case 'Revolut CFD': return <TrendingDown size={16} />;
+      case 'Revolut Metals': return <TrendingUp size={16} />;
       case 'Robo Advisor': return <Wallet size={16} />;
       default: return <TrendingUp size={16} />;
     }
@@ -355,11 +359,11 @@ function InvestmentsContent() {
         <div 
           ref={platformsGridRef}
           className="platforms-grid" 
-          style={{ marginBottom: '12px', marginTop: isMobile ? '40px' : '0' }}
+          style={{ marginBottom: '30px', marginTop: isMobile ? '40px' : '0' }}
           onScroll={handleScroll}
         >
           {allPlatforms.map((ps) => {
-            const isRevolutCFD = ps.plataforma === 'Revolut CFD';
+            const isRevolutMetals = ps.plataforma === 'Revolut Metals';
             return (
               <div 
                 key={ps.plataforma}
@@ -367,7 +371,7 @@ function InvestmentsContent() {
                 style={{ 
                   cursor: 'pointer',
                   borderColor: activePlatform === ps.plataforma 
-                    ? (isRevolutCFD ? '#94a3b8' : getPlatformColor(ps.plataforma)) 
+                    ? (isRevolutMetals ? '#94a3b8' : getPlatformColor(ps.plataforma)) 
                     : 'var(--border-color)',
                   padding: 'var(--space-md)',
                   boxShadow: activePlatform === ps.plataforma ? `0 0 15px ${getPlatformColor(ps.plataforma)}60` : 'none',
@@ -381,7 +385,7 @@ function InvestmentsContent() {
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <span style={{ fontWeight: 600, color: isRevolutCFD ? '#94a3b8' : getPlatformColor(ps.plataforma) }}>{ps.plataforma}</span>
+                  <span style={{ fontWeight: 600, color: isRevolutMetals ? '#94a3b8' : getPlatformColor(ps.plataforma) }}>{ps.plataforma}</span>
                   {getPlatformIcon(ps.plataforma)}
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
@@ -810,6 +814,25 @@ function InvestmentsContent() {
                     className="form-input"
                     value={formData.ticker}
                     onChange={(e) => setFormData({ ...formData, ticker: e.target.value.toUpperCase() })}
+                    onBlur={async () => {
+                      if (formData.ticker && !formData.preco_atual) {
+                        try {
+                          const response = await fetch(`/api/price?ticker=${formData.ticker}`);
+                          if (response.ok) {
+                            const data = await response.json();
+                            if (data.price) {
+                              setFormData(prev => ({ 
+                                ...prev, 
+                                preco_atual: data.price,
+                                isAutoPrice: true 
+                              }));
+                            }
+                          }
+                        } catch (error) {
+                          console.error('Error fetching ticker price:', error);
+                        }
+                      }
+                    }}
                     placeholder="Ex: AAPL, BTC-USD"
                     required
                   />
@@ -859,26 +882,18 @@ function InvestmentsContent() {
                     type="number"
                     className="form-input"
                     value={formData.preco_atual}
-                    onChange={(e) => setFormData({ ...formData, preco_atual: parseFloat(e.target.value) || 0 })}
+                    onChange={(e) => setFormData({ 
+                      ...formData, 
+                      preco_atual: parseFloat(e.target.value) || 0,
+                      isAutoPrice: false 
+                    })}
                     step="0.01"
                     required
                   />
                 </div>
               </div>
 
-              {formData.plataforma === 'Revolut CFD' && (
-                <div className="form-group">
-                  <label className="form-label">Posição</label>
-                  <select
-                    className="form-select"
-                    value={formData.posicao}
-                    onChange={(e) => setFormData({ ...formData, posicao: e.target.value as 'long' | 'short' })}
-                  >
-                    <option value="long">Long (Compra)</option>
-                    <option value="short">Short (Venda)</option>
-                  </select>
-                </div>
-              )}
+              {/* Removed Posição field for Revolut Metals */}
 
               {formData.plataforma === 'Robo Advisor' && (
                 <div className="form-group">

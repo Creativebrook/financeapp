@@ -10,7 +10,7 @@ export interface Account {
 }
 
 // Investment Types
-export type Plataforma = 'XTB' | 'Trading212' | 'Revolut Stocks' | 'Revolut Cripto' | 'Revolut CFD' | 'Robo Advisor';
+export type Plataforma = 'XTB' | 'Trading212' | 'Revolut Stocks' | 'Revolut Cripto' | 'Revolut Metals' | 'Robo Advisor';
 
 export interface Investment {
   id: string;
@@ -25,6 +25,7 @@ export interface Investment {
   data_atualizacao: string;
   posicao?: 'long' | 'short'; // For CFDs
   alocacao_alvo?: number; // For Robo Advisor
+  isAutoPrice?: boolean;
 }
 
 // Debt Types
