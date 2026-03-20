@@ -150,7 +150,7 @@ function DebtsContent() {
         </div>
 
         {/* Summary Cards */}
-        <div className="stats-grid" style={{ marginBottom: '24px' }}>
+        <div className="stats-grid mt-[30px] md:mt-0" style={{ marginBottom: '24px' }}>
           <div className="card animate-slideUp" style={{ 
             background: 'linear-gradient(to bottom, var(--card-hero-bg-start) 0%, var(--card-hero-bg-mid) 55%, var(--card-hero-bg-end) 100%)', 
             borderRadius: '8px', 

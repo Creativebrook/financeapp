@@ -208,7 +208,7 @@ function IncomeContent() {
         </div>
 
         {/* Summary Cards */}
-        <div className="stats-grid" style={{ marginBottom: '24px' }}>
+        <div className="stats-grid mt-[30px] md:mt-0" style={{ marginBottom: '24px' }}>
           {/* Card 1: Monthly Income */}
           <div className="card animate-slideUp" style={{ background: 'linear-gradient(180deg, rgba(16, 185, 129, 0.15) 0%, transparent 100%)' }}>
             <div className="flex items-center gap-3 mb-4">
@@ -259,7 +259,7 @@ function IncomeContent() {
               <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">Fontes de Rendimento</p>
             </div>
             <div className="grid grid-cols-2 gap-4 items-center">
-              <div style={{ height: '100px', width: '100%' }}>
+              <div style={{ height: '140px', width: '100%' }}>
                 <IncomeSourcesPieChart data={incomeSourcesData} tooltipStyle={tooltipStyle} />
               </div>
               <div className="space-y-2">

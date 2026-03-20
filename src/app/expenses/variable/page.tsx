@@ -175,7 +175,7 @@ function VariableExpensesContent() {
         </div>
 
         {/* Summary Cards */}
-        <div className="stats-grid grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div className="stats-grid grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 mt-[30px] md:mt-0">
           {/* Card 1: Total Expenses This Month */}
           <div className="card animate-slideUp" style={{ padding: '24px', display: 'flex', flexDirection: 'column' }}>
             <div className="flex items-center gap-3 mb-6">

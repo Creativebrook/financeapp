@@ -33,11 +33,11 @@ const AccountsPieTooltip = ({ active, payload }: any) => {
         boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-          <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-          <span style={{ color: CHART_COLORS.text, fontSize: '12px', fontWeight: 500 }}>{name}</span>
+          <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: `var(${color})` }} />
+          <span style={{ color: '#94a3b8', fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{name}</span>
         </div>
-        <div style={{ color: CHART_COLORS.text, fontSize: '13px', fontWeight: 600, paddingLeft: '20px' }}>
-          {formatCurrency(Number(value) || 0)} ({percent}%)
+        <div style={{ color: '#f8fafc', fontSize: '14px', fontWeight: 600, paddingLeft: '18px' }}>
+          {formatCurrency(Number(value) || 0)} <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 400, marginLeft: '4px' }}>({percent}%)</span>
         </div>
       </div>
     );
@@ -58,12 +58,12 @@ export default function AccountsDistributionChart({ data }: AccountsDistribution
           paddingAngle={2}
           dataKey="value"
           cornerRadius={4}
+          stroke="none"
         >
           {data.map((entry, index) => (
             <Cell 
               key={`cell-${index}`} 
-              fill={entry.color}
-              stroke="transparent"
+              fill={`var(${entry.color})`}
               style={{ filter: 'none', outline: 'none' }}
             />
           ))}

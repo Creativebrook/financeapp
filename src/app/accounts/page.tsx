@@ -205,7 +205,7 @@ function AccountsContent() {
         </div>
 
         {/* Top Row: Two Columns */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 mt-[30px] md:mt-0">
           {/* Left: SALDO ATUAL Card - Like Dashboard BalanceCard */}
           <div 
             style={{
@@ -288,7 +288,7 @@ function AccountsContent() {
             {pieData.length > 0 ? (
               <div className="flex items-center h-[calc(100%-40px)]">
                 {/* Pie Chart on the left */}
-                <div style={{ width: '50%', height: '140px', minWidth: 0, minHeight: 0 }}>
+                <div style={{ width: '50%', height: '100%', minWidth: 0, minHeight: 0 }}>
                   <AccountsDistributionChart data={pieData} />
                 </div>
                 
