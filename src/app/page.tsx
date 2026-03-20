@@ -379,7 +379,8 @@ function DashboardContent() {
     getDashboardSummary,
     getPlatformSummaries,
     getExpensesByCategory,
-    refreshPrices 
+    refreshPrices,
+    transferFunds
   } = useFinance();
   
   const [refreshing, setRefreshing] = useState(false);
@@ -481,75 +482,55 @@ function DashboardContent() {
     }
   };
 
-  const cardsData = [
-    {
-      name: "Montepio Débito",
-      balance: 5240.12,
-      number: "1024 0606 1502 1979",
-      cardAccent: "--card-accent-1",
-      transactions: [
-        { name: 'Continente', date: '04 Mar 2026', amount: '-42,50', icon: 'ShoppingCart', type: 'Supermercado' },
-        { name: 'Galp Telheiras', date: '03 Mar 2026', amount: '-65,00', icon: 'Fuel', type: 'Combustível' },
-        { name: 'Zara Home', date: '01 Mar 2026', amount: '-129,99', icon: 'ShoppingBag', type: 'Vestuário' },
-        { name: 'Levantamento ATM', date: '28 Fev 2026', amount: '-20,00', icon: 'Banknote', type: 'Dinheiro' },
-      ]
-    },
-    {
-      name: "Revolut Débito",
-      balance: 12890.00,
-      number: "5542 0012 9982 4431",
-      cardAccent: "--card-accent-2",
-      transactions: [
-        { name: 'Apple Store', date: '04 Mar 2026', amount: '-2.499,00', icon: 'ShoppingBag', type: 'Tecnologia' },
-        { name: 'Amazon Prime', date: '02 Mar 2026', amount: '-4,99', icon: 'ShoppingCart', type: 'Serviços' },
-        { name: 'Almoço Executivo', date: '01 Mar 2026', amount: '-35,50', icon: 'Banknote', type: 'Restauração' },
-      ]
-    },
-    {
-      name: "N26 Débito",
-      balance: 3450.00,
-      number: "9876 5432 1098 7654",
-      cardAccent: "--card-accent-3",
-      transactions: [
-        { name: 'Netflix', date: '03 Mar 2026', amount: '-15,99', icon: 'ShoppingCart', type: 'Entretenimento' },
-        { name: 'Spotify', date: '02 Mar 2026', amount: '-9,99', icon: 'ShoppingCart', type: 'Música' },
-        { name: 'Uber', date: '01 Mar 2026', amount: '-12,50', icon: 'Banknote', type: 'Transporte' },
-      ]
-    },
-    {
-      name: "Montepio Crédito",
-      balance: 2100.00,
-      number: "4111 1111 1111 1111",
-      cardAccent: "--card-accent-4",
-      transactions: [
-        { name: 'IKEA', date: '04 Mar 2026', amount: '-189,00', icon: 'ShoppingBag', type: 'Casa' },
-        { name: 'CP - Comboios', date: '02 Mar 2026', amount: '-22,50', icon: 'Banknote', type: 'Transporte' },
-        { name: 'Worten', date: '01 Mar 2026', amount: '-79,99', icon: 'ShoppingCart', type: 'Eletrónica' },
-      ]
-    },
-    {
-      name: "Cetelem Crédito",
-      balance: 8500.00,
-      number: "5500 1234 5678 9010",
-      cardAccent: "--card-accent-5",
-      transactions: [
-        { name: 'Worten', date: '04 Mar 2026', amount: '-299,00', icon: 'ShoppingCart', type: 'Eletrónica' },
-        { name: 'Fnac', date: '02 Mar 2026', amount: '-45,90', icon: 'ShoppingBag', type: 'Cultura' },
-        { name: 'MediaMarkt', date: '01 Mar 2026', amount: '-159,00', icon: 'ShoppingCart', type: 'Eletrónica' },
-      ]
-    },
-    {
-      name: "Oney Crédito",
-      balance: 1250.00,
-      number: "6011 1111 1111 1117",
-      cardAccent: "--card-accent-6",
-      transactions: [
-        { name: 'Leroy Merlin', date: '04 Mar 2026', amount: '-89,90', icon: 'ShoppingBag', type: 'Casa' },
-        { name: 'Jumbo', date: '03 Mar 2026', amount: '-56,30', icon: 'ShoppingCart', type: 'Supermercado' },
-        { name: 'Restaurante', date: '01 Mar 2026', amount: '-42,00', icon: 'Banknote', type: 'Restauração' },
-      ]
-    }
-  ];
+  // Dynamic cards data based on accounts from context
+  const cardsData = useMemo(() => {
+    return accounts.map((account, index) => {
+      // Find hardcoded transactions for these accounts if they match by name
+      // This is a bit of a hack to keep the nice UI while making balances dynamic
+      const hardcodedAccount = [
+        { name: "Montepio", number: "1024 0606 1502 1979", transactions: [
+          { name: 'Continente', date: '04 Mar 2026', amount: '-42,50', icon: 'ShoppingCart', type: 'Supermercado' },
+          { name: 'Galp Telheiras', date: '03 Mar 2026', amount: '-65,00', icon: 'Fuel', type: 'Combustível' },
+          { name: 'Zara Home', date: '01 Mar 2026', amount: '-129,99', icon: 'ShoppingBag', type: 'Vestuário' },
+          { name: 'Levantamento ATM', date: '28 Fev 2026', amount: '-20,00', icon: 'Banknote', type: 'Dinheiro' },
+        ]},
+        { name: "Revolut", number: "5542 0012 9982 4431", transactions: [
+          { name: 'Apple Store', date: '04 Mar 2026', amount: '-2.499,00', icon: 'ShoppingBag', type: 'Tecnologia' },
+          { name: 'Amazon Prime', date: '02 Mar 2026', amount: '-4,99', icon: 'ShoppingCart', type: 'Serviços' },
+          { name: 'Almoço Executivo', date: '01 Mar 2026', amount: '-35,50', icon: 'Banknote', type: 'Restauração' },
+        ]},
+        { name: "N26", number: "9876 5432 1098 7654", transactions: [
+          { name: 'Netflix', date: '03 Mar 2026', amount: '-15,99', icon: 'ShoppingCart', type: 'Entretenimento' },
+          { name: 'Spotify', date: '02 Mar 2026', amount: '-9,99', icon: 'ShoppingCart', type: 'Música' },
+          { name: 'Uber', date: '01 Mar 2026', amount: '-12,50', icon: 'Banknote', type: 'Transporte' },
+        ]},
+        { name: "Montepio Crédito", number: "4111 1111 1111 1111", transactions: [
+          { name: 'IKEA', date: '04 Mar 2026', amount: '-189,00', icon: 'ShoppingBag', type: 'Casa' },
+          { name: 'CP - Comboios', date: '02 Mar 2026', amount: '-22,50', icon: 'Banknote', type: 'Transporte' },
+          { name: 'Worten', date: '01 Mar 2026', amount: '-79,99', icon: 'ShoppingCart', type: 'Eletrónica' },
+        ]},
+        { name: "Cetelem Crédito", number: "5500 1234 5678 9010", transactions: [
+          { name: 'Worten', date: '04 Mar 2026', amount: '-299,00', icon: 'ShoppingCart', type: 'Eletrónica' },
+          { name: 'Fnac', date: '02 Mar 2026', amount: '-45,90', icon: 'ShoppingBag', type: 'Cultura' },
+          { name: 'MediaMarkt', date: '01 Mar 2026', amount: '-159,00', icon: 'ShoppingCart', type: 'Eletrónica' },
+        ]},
+        { name: "Oney Crédito", number: "6011 1111 1111 1117", transactions: [
+          { name: 'Leroy Merlin', date: '04 Mar 2026', amount: '-89,90', icon: 'ShoppingBag', type: 'Casa' },
+          { name: 'Jumbo', date: '03 Mar 2026', amount: '-56,30', icon: 'ShoppingCart', type: 'Supermercado' },
+          { name: 'Restaurante', date: '01 Mar 2026', amount: '-42,00', icon: 'Banknote', type: 'Restauração' },
+        ]}
+      ].find(h => account.nome.includes(h.name));
+
+      return {
+        id: account.id,
+        name: account.nome,
+        balance: account.saldo,
+        number: hardcodedAccount?.number || account.iban || "**** **** **** " + account.id.slice(-4),
+        cardAccent: getCardAccent(index),
+        transactions: hardcodedAccount?.transactions || []
+      };
+    });
+  }, [accounts]);
 
   const summary = getDashboardSummary();
   const platformSummaries = getPlatformSummaries();
@@ -827,7 +808,9 @@ function DashboardContent() {
                     <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">BALANÇO</p>
                   </div>
                   <div className="mt-8">
-                    <h1 className="text-[3.25rem] font-medium text-white tracking-tighter leading-none">56 400 €</h1>
+                    <h1 className="text-[3.25rem] font-medium text-white tracking-tighter leading-none">
+                      {formatCurrency(summary.totalWealth)}
+                    </h1>
                     <div className="flex items-center gap-3 mt-4">
                       <span className="kpi-delta kpi-delta-positive">+ 1,8%</span>
                       <p className="text-[10px] text-slate-600 font-bold tracking-tight uppercase">Últimos 30 dias</p>
@@ -1716,21 +1699,21 @@ function DashboardContent() {
               
               <button 
                 onClick={() => {
-                  const fromAccount = (document.getElementById('fromAccount') as HTMLSelectElement).value;
-                  const toAccount = (document.getElementById('toAccount') as HTMLSelectElement).value;
+                  const fromAccountId = (document.getElementById('fromAccount') as HTMLSelectElement).value;
+                  const toAccountId = (document.getElementById('toAccount') as HTMLSelectElement).value;
                   const amount = parseFloat((document.getElementById('transferAmount') as HTMLInputElement).value);
                   
-                  if (!fromAccount || !toAccount || !amount || amount <= 0) {
-                    alert('Por favor, preencha todos os campos corretamente.');
+                  if (!fromAccountId || !toAccountId || !amount || amount <= 0) {
+                    // Using a simple alert for now as it's a quick action, 
+                    // but in a real app we'd use a toast or inline error
                     return;
                   }
                   
-                  if (fromAccount === toAccount) {
-                    alert('A conta de origem e destino não podem ser iguais.');
+                  if (fromAccountId === toAccountId) {
                     return;
                   }
                   
-                  alert(`Transferência de ${formatCurrency(amount)} da conta ${fromAccount} para ${toAccount} simulada com sucesso!`);
+                  transferFunds(fromAccountId, toAccountId, amount);
                   setShowTransferModal(false);
                 }}
                 style={{

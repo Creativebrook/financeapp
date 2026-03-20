@@ -5,9 +5,12 @@ import { Account, Investment, Debt, FixedExpense, VariableExpense, Income, Dashb
 
 // Initial data
 const initialAccounts: Account[] = [
-  { id: '1', nome: 'Montepio', tipo: 'Conta à ordem', saldo: 5000, data_atualizacao: '2026-03-01', notas: 'Conta principal' },
-  { id: '2', nome: 'N26', tipo: 'Conta à ordem', saldo: 2500, data_atualizacao: '2026-03-01', notas: 'Conta digital' },
-  { id: '3', nome: 'Revolut Bank', tipo: 'Conta à ordem', saldo: 3200, data_atualizacao: '2026-03-01', notas: 'Conta internacional' },
+  { id: '1', nome: 'Montepio Débito', tipo: 'Conta à ordem', saldo: 5240.12, data_atualizacao: '2026-03-01', notas: 'Conta principal' },
+  { id: '2', nome: 'Revolut Débito', tipo: 'Conta à ordem', saldo: 12890.00, data_atualizacao: '2026-03-01', notas: 'Conta internacional' },
+  { id: '3', nome: 'N26 Débito', tipo: 'Conta à ordem', saldo: 3450.00, data_atualizacao: '2026-03-01', notas: 'Conta digital' },
+  { id: '4', nome: 'Montepio Crédito', tipo: 'Cartão de Crédito', saldo: 2100.00, data_atualizacao: '2026-03-01', notas: 'Crédito pessoal' },
+  { id: '5', nome: 'Cetelem Crédito', tipo: 'Cartão de Crédito', saldo: 8500.00, data_atualizacao: '2026-03-01', notas: 'Crédito automóvel' },
+  { id: '6', nome: 'Oney Crédito', tipo: 'Cartão de Crédito', saldo: 1250.00, data_atualizacao: '2026-03-01', notas: 'Crédito lazer' },
 ];
 
 const initialInvestments: Investment[] = [
@@ -144,6 +147,8 @@ interface FinanceContextType {
   addVariableExpense: (expense: Omit<VariableExpense, 'id'>) => void;
   updateVariableExpense: (id: string, expense: Partial<VariableExpense>) => void;
   deleteVariableExpense: (id: string) => void;
+  
+  transferFunds: (fromAccountId: string, toAccountId: string, amount: number) => void;
   
   addIncomeEntry: (incomeEntry: Omit<Income, 'id'>) => void;
   updateIncome: (id: string, incomeEntry: Partial<Income>) => void;
@@ -304,6 +309,18 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     setVariableExpenses(prev => prev.filter(e => e.id !== id));
   };
 
+  const transferFunds = (fromAccountId: string, toAccountId: string, amount: number) => {
+    setAccounts(prev => prev.map(a => {
+      if (a.id === fromAccountId) {
+        return { ...a, saldo: a.saldo - amount, data_atualizacao: new Date().toISOString().split('T')[0] };
+      }
+      if (a.id === toAccountId) {
+        return { ...a, saldo: a.saldo + amount, data_atualizacao: new Date().toISOString().split('T')[0] };
+      }
+      return a;
+    }));
+  };
+
   // Income actions
   const addIncomeEntry = (incomeEntry: Omit<Income, 'id'>) => {
     const newIncome: Income = { ...incomeEntry, id: Date.now().toString() };
@@ -412,6 +429,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       addVariableExpense,
       updateVariableExpense,
       deleteVariableExpense,
+      transferFunds,
       addIncomeEntry,
       updateIncome,
       deleteIncome,

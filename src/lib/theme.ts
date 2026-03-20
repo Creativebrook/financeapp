@@ -131,12 +131,12 @@ export function getPieChartColor(index: number): string {
 // ============================================
 
 export const CARD_ACCENTS = [
-  'var(--card-accent-1)', // #f59e0b - Amber
-  'var(--card-accent-2)', // #6f6af8 - Purple
-  'var(--card-accent-3)', // #14b8a6 - Teal
-  'var(--card-accent-4)', // #94a3b8 - Slate
-  'var(--card-accent-5)', // #22c55e - Green
-  'var(--card-accent-6)', // #ef4444 - Red
+  '--card-accent-1', // #f59e0b - Amber
+  '--card-accent-2', // #6f6af8 - Purple
+  '--card-accent-3', // #14b8a6 - Teal
+  '--card-accent-4', // #94a3b8 - Slate
+  '--card-accent-5', // #22c55e - Green
+  '--card-accent-6', // #ef4444 - Red
 ] as const;
 
 // Get accent by index (wraps around)
