@@ -340,7 +340,7 @@ html, body {
   display: flex;
   flex-direction: column;
   z-index: 100;
-  transition: transform var(--transition-normal), width var(--transition-normal);
+  transition: transform var(--transition-normal);
 }
 
 @media (max-width: 1024px) {

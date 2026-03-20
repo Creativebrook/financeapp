@@ -85,6 +85,25 @@ const initialIncome: Income[] = [
 
 // Initial data loader function
 function getInitialData() {
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('financeflow_data');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return {
+          accounts: Array.isArray(parsed.accounts) ? parsed.accounts : initialAccounts,
+          investments: Array.isArray(parsed.investments) ? parsed.investments : initialInvestments,
+          debts: Array.isArray(parsed.debts) ? parsed.debts : initialDebts,
+          fixedExpenses: Array.isArray(parsed.fixedExpenses) ? parsed.fixedExpenses : initialFixedExpenses,
+          variableExpenses: Array.isArray(parsed.variableExpenses) ? parsed.variableExpenses.filter((e: any) => e && e.id) : initialVariableExpenses,
+          income: Array.isArray(parsed.income) ? parsed.income : initialIncome,
+        };
+      } catch (e) {
+        console.error('Error parsing saved finance data:', e);
+      }
+    }
+  }
+  
   return {
     accounts: initialAccounts,
     investments: initialInvestments,

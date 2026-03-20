@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { SidebarProvider } from "@/context/SidebarContext";
-import { FinanceProvider } from "@/context/FinanceContext";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -37,9 +36,7 @@ export default function RootLayout({
     <html lang="pt">
       <body className={`${inter.variable} ${jetbrainsMono.variable}`}>
         <SidebarProvider>
-          <FinanceProvider>
-            {children}
-          </FinanceProvider>
+          {children}
         </SidebarProvider>
       </body>
     </html>

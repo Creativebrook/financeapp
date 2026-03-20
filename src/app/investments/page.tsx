@@ -993,5 +993,9 @@ function PieChart({ size }: { size: number }) {
 }
 
 export default function InvestmentsPage() {
-  return <InvestmentsContent />;
+  return (
+    <FinanceProvider>
+      <InvestmentsContent />
+    </FinanceProvider>
+  );
 }

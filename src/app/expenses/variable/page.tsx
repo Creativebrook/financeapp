@@ -8,7 +8,7 @@ import Sidebar from '@/components/Sidebar';
 import PremiumHeader from '@/components/PremiumHeader';
 import { Plus, Edit2, Trash2, PiggyBank, X, BarChart3, ReceiptEuro, CalendarRange, Layers2 } from 'lucide-react';
 import { formatCurrency, formatDate, getCategoryColor } from '@/lib/utils';
-import { VariableExpense, CategoriaDespesa } from '@/types';
+import { VariableExpense } from '@/types';
 import { getPieChartColor } from '@/lib/theme';
 
 const VariableExpensesCategoryPieChart = dynamic(() => import('@/components/charts/VariableExpensesCategoryPieChart'), { ssr: false });
@@ -19,23 +19,26 @@ function VariableExpensesContent() {
   const { variableExpenses, addVariableExpense, updateVariableExpense, deleteVariableExpense, accounts, income } = useFinance();
   const { isCollapsed } = useSidebar();
   const [showModal, setShowModal] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
   const [editingExpense, setEditingExpense] = useState<VariableExpense | null>(null);
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [formData, setFormData] = useState({
     nome: '',
     valor: 0,
-    data: new Date().toISOString().split('T')[0],
+    data: '2026-03-20',
     conta: 'Montepio',
-    categoria: 'Supermercado' as CategoriaDespesa,
+    categoria: 'Supermercado' as string,
   });
 
-  const categories: CategoriaDespesa[] = ['Supermercado', 'Combustível', 'Restaurantes', 'Compras', 'Diversos'];
+  const [categories, setCategories] = useState<string[]>(['Supermercado', 'Combustível', 'Restaurantes', 'Compras', 'Diversos']);
 
   const filteredExpenses = filterCategory === 'all' 
     ? variableExpenses 
     : variableExpenses.filter(e => e.categoria === filterCategory);
 
-  const totalExpenses = filteredExpenses.reduce((sum, e) => sum + e.valor, 0);
+  const totalFilteredExpenses = filteredExpenses.reduce((sum, e) => sum + e.valor, 0);
+  const totalAllExpenses = variableExpenses.reduce((sum, e) => sum + e.valor, 0);
 
   // Calculate monthly income
   const monthlyIncome = income.reduce((sum, inc) => {
@@ -50,11 +53,13 @@ function VariableExpensesContent() {
     }
   }, 0);
 
-  const variablePercentage = monthlyIncome > 0 ? (totalExpenses / monthlyIncome) * 100 : 0;
+  const variablePercentage = monthlyIncome > 0 ? (totalAllExpenses / monthlyIncome) * 100 : 0;
 
   // Calculate daily expenses for the current and previous month
-  const currentMonth = new Date().getMonth();
-  const currentYear = new Date().getFullYear();
+  // Use a fixed date for SSR to avoid hydration mismatches
+  const fixedDate = new Date('2026-03-20T00:00:00Z');
+  const currentMonth = fixedDate.getMonth();
+  const currentYear = fixedDate.getFullYear();
   
   // Previous month logic
   const prevMonthDate = new Date(currentYear, currentMonth - 1, 1);
@@ -67,6 +72,7 @@ function VariableExpensesContent() {
     const day = i + 1;
     
     const currentValue = variableExpenses.filter(e => {
+      if (!e || !e.data) return false;
       const expenseDate = new Date(e.data);
       return expenseDate.getDate() === day && 
              expenseDate.getMonth() === currentMonth && 
@@ -74,6 +80,7 @@ function VariableExpensesContent() {
     }).reduce((sum, e) => sum + e.valor, 0);
     
     const previousValue = variableExpenses.filter(e => {
+      if (!e || !e.data) return false;
       const expenseDate = new Date(e.data);
       return expenseDate.getDate() === day && 
              expenseDate.getMonth() === prevMonth && 
@@ -88,7 +95,7 @@ function VariableExpensesContent() {
     return {
       name: cat,
       value: value,
-      percent: totalExpenses > 0 ? ((value / totalExpenses) * 100).toFixed(1) : 0
+      percent: totalAllExpenses > 0 ? ((value / totalAllExpenses) * 100).toFixed(1) : 0
     };
   }).sort((a, b) => b.value - a.value);
 
@@ -98,7 +105,7 @@ function VariableExpensesContent() {
     .map(e => ({
       name: e.nome,
       value: e.valor,
-      percent: totalExpenses > 0 ? ((e.valor / totalExpenses) * 100).toFixed(1) : 0
+      percent: totalAllExpenses > 0 ? ((e.valor / totalAllExpenses) * 100).toFixed(1) : 0
     }));
 
   const handleOpenModal = (expense?: VariableExpense) => {
@@ -181,17 +188,17 @@ function VariableExpensesContent() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0px', flex: 1, justifyContent: 'space-between' }}>
               <div style={{ marginTop: '-12px' }}>
                 <div className="text-3xl font-bold text-white mb-3" style={{ fontFamily: 'Inter, sans-serif' }}>
-                  {formatCurrency(totalExpenses)}
+                  {formatCurrency(totalAllExpenses)}
                 </div>
                 <div className="w-full h-1.5 bg-white/[0.03] rounded-full overflow-hidden border border-white/[0.02] mb-2">
                   <div className="h-full rounded-full" style={{ 
-                    width: `${Math.min(100, variablePercentage)}%`,
+                    width: `${Math.min(100, (totalAllExpenses / (monthlyIncome || 1)) * 100)}%`,
                     background: 'linear-gradient(to right, var(--danger-500), var(--danger-400))'
                   }}></div>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-[9px] text-slate-600 uppercase tracking-wider">vs Income Mensal</span>
-                  <span className="text-[10px] font-semibold" style={{ color: 'var(--danger-400)' }}>{variablePercentage.toFixed(1)}%</span>
+                  <span className="text-[10px] font-semibold" style={{ color: 'var(--danger-400)' }}>{((totalAllExpenses / (monthlyIncome || 1)) * 100).toFixed(1)}%</span>
                 </div>
               </div>
 
@@ -212,7 +219,7 @@ function VariableExpensesContent() {
             </div>
             
             <div style={{ height: '180px', width: '100%', position: 'relative' }}>
-              <VariableExpensesCategoryPieChart data={categoryData} total={totalExpenses} />
+              <VariableExpensesCategoryPieChart data={categoryData} total={totalAllExpenses} />
             </div>
 
             <div style={{ 
@@ -243,7 +250,7 @@ function VariableExpensesContent() {
             </div>
             
             <div style={{ height: '180px', width: '100%', position: 'relative' }}>
-              <VariableExpensesTopExpensesChart data={topExpensesData} total={totalExpenses} />
+              <VariableExpensesTopExpensesChart data={topExpensesData} total={totalAllExpenses} />
             </div>
 
             <div style={{ 
@@ -283,50 +290,74 @@ function VariableExpensesContent() {
               {cat}
             </div>
           ))}
+          
+          {/* Add Category Button */}
+          <button 
+            className="tab"
+            style={{ 
+              border: '1px solid var(--border-color)', 
+              background: 'rgba(255, 255, 255, 0.05)', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              padding: '0 16px',
+              marginLeft: '4px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              height: '43px', // Matches padding 10px + font height
+              minWidth: '43px',
+              color: 'var(--text-primary)'
+            }}
+            onClick={() => setShowCategoryModal(true)}
+          >
+            <Plus size={18} />
+          </button>
         </div>
 
         {/* Expenses Table */}
-        <div className="card animate-slideUp">
+        <div className="card animate-slideUp hidden md:block">
           <div className="table-container">
             <table className="table">
               <thead>
                 <tr>
-                  <th>Data</th>
                   <th>Nome</th>
                   <th>Categoria</th>
-                  <th>Conta</th>
                   <th style={{ textAlign: 'right' }}>Valor</th>
+                  <th>Conta</th>
+                  <th>Data</th>
                   <th style={{ textAlign: 'right' }}>Ações</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredExpenses.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()).map((expense) => (
+                {[...filteredExpenses].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()).map((expense) => (
                   <tr key={expense.id}>
                     <td>
-                      <span style={{ color: 'var(--text-secondary)' }}>
-                        {formatDate(expense.data)}
-                      </span>
-                    </td>
-                    <td>
-                      <div style={{ fontWeight: 600 }}>{expense.nome}</div>
+                      <div style={{ fontWeight: 400, fontSize: '0.9rem' }}>{expense.nome}</div>
                     </td>
                     <td>
                       <span 
                         className="badge"
                         style={{ 
                           background: `${getCategoryColor(expense.categoria)}20`,
-                          color: getCategoryColor(expense.categoria)
+                          color: getCategoryColor(expense.categoria),
+                          fontSize: '0.75rem'
                         }}
                       >
                         {expense.categoria}
                       </span>
                     </td>
-                    <td>
-                      <span style={{ color: 'var(--text-secondary)' }}>{expense.conta}</span>
-                    </td>
                     <td style={{ textAlign: 'right' }}>
-                      <span  style={{ fontWeight: 600, color: 'var(--accent-danger)' }}>
+                      <span  style={{ fontWeight: 600, fontSize: '0.9rem', color: 'white' }}>
                         -{formatCurrency(expense.valor)}
+                      </span>
+                    </td>
+                    <td>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{expense.conta}</span>
+                    </td>
+                    <td>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                        {formatDate(expense.data)}
                       </span>
                     </td>
                     <td style={{ textAlign: 'right' }}>
@@ -361,6 +392,88 @@ function VariableExpensesContent() {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Mobile List */}
+        <div className="md:hidden space-y-3">
+          {[...filteredExpenses].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()).map((expense) => {
+            const categoryWeight = categoryData.find(c => c.name === expense.categoria)?.percent || 0;
+
+            return (
+              <div key={expense.id} className="card space-y-2" style={{ backgroundColor: 'var(--card-bg)', borderRadius: '16px', border: '1px solid var(--card-border)', padding: 'var(--space-md)' }}>
+                {/* Line 1: Name and Value */}
+                <div className="flex justify-between items-start mb-[3px]">
+                  <div>
+                    <h3 className="font-normal !text-[0.9rem] text-white leading-tight">{expense.nome}</h3>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold !text-[0.9rem] text-white leading-tight">-{formatCurrency(expense.valor)}</p>
+                  </div>
+                </div>
+
+                {/* Line 2: Date and Category */}
+                <div className="flex justify-between items-center">
+                  <p className="text-[10px] text-slate-500 uppercase tracking-wider">
+                    {formatDate(expense.data)}
+                  </p>
+                  <span 
+                    className="badge"
+                    style={{ 
+                      background: `${getCategoryColor(expense.categoria)}20`,
+                      color: getCategoryColor(expense.categoria),
+                      fontSize: '10px',
+                      padding: 0
+                    }}
+                  >
+                    {expense.categoria}
+                  </span>
+                </div>
+
+                {/* Line 3: Progress Bar (Category Weight) */}
+                <div className="flex items-center gap-3">
+                  <p className="text-[10px] text-slate-500 uppercase tracking-wider whitespace-nowrap">
+                    PESO: {categoryWeight}%
+                  </p>
+                  <div className="flex-1 h-1.5 bg-slate-800/50 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full rounded-full" 
+                      style={{ 
+                        width: `${categoryWeight}%`,
+                        backgroundColor: getCategoryColor(expense.categoria),
+                        boxShadow: `0 0 8px ${getCategoryColor(expense.categoria)}40`
+                      }}
+                    ></div>
+                  </div>
+                </div>
+
+                {/* Line 4: Actions */}
+                <div className="pt-1">
+                  <div className="flex items-center justify-center rounded-xl border border-slate-800 bg-slate-900/30 overflow-hidden" style={{ height: '40px' }}>
+                    <button 
+                      className="flex-1 h-full flex items-center justify-center hover:bg-white/5 transition-colors"
+                      onClick={() => handleOpenModal(expense)}
+                    >
+                      <Edit2 size={18} className="text-blue-400/80" />
+                    </button>
+                    <div className="w-[1px] h-6 bg-slate-800/50"></div>
+                    <button 
+                      className="flex-1 h-full flex items-center justify-center hover:bg-white/5 transition-colors"
+                      onClick={() => handleDelete(expense.id)}
+                    >
+                      <Trash2 size={18} className="text-red-400/80" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+
+          {filteredExpenses.length === 0 && (
+            <div className="empty-state card p-8 text-center">
+              <PiggyBank size={48} className="mx-auto opacity-20 mb-4" />
+              <p className="text-slate-400">Nenhuma despesa variável encontrada</p>
+            </div>
+          )}
         </div>
       </main>
 
@@ -421,7 +534,7 @@ function VariableExpensesContent() {
                   <select
                     className="form-select"
                     value={formData.categoria}
-                    onChange={(e) => setFormData({ ...formData, categoria: e.target.value as CategoriaDespesa })}
+                    onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
                   >
                     {categories.map((cat) => (
                       <option key={cat} value={cat}>{cat}</option>
@@ -455,10 +568,62 @@ function VariableExpensesContent() {
           </div>
         </div>
       )}
+      {/* Add Category Modal */}
+      {showCategoryModal && (
+        <div className="modal-overlay" onClick={() => setShowCategoryModal(false)}>
+          <div className="modal animate-slideUp" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+            <div className="modal-header">
+              <h2 className="modal-title">Nova Categoria</h2>
+              <button className="btn btn-icon btn-secondary" onClick={() => setShowCategoryModal(false)}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6">
+              <div className="form-group">
+                <label className="form-label">Nome da Categoria</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  placeholder="Ex: Lazer, Saúde..."
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button 
+                  className="btn btn-secondary flex-1" 
+                  onClick={() => setShowCategoryModal(false)}
+                >
+                  Cancelar
+                </button>
+                <button 
+                  className="btn btn-primary flex-1"
+                  onClick={() => {
+                    if (newCategoryName && !categories.includes(newCategoryName)) {
+                      setCategories([...categories, newCategoryName]);
+                      setNewCategoryName('');
+                      setShowCategoryModal(false);
+                    }
+                  }}
+                >
+                  Adicionar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 export default function VariableExpensesPage() {
-  return <VariableExpensesContent />;
+  return (
+    <FinanceProvider>
+      <VariableExpensesContent />
+    </FinanceProvider>
+  );
 }

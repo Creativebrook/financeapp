@@ -13,7 +13,7 @@ import { formatCurrency } from '@/lib/utils';
 
 // Custom tooltip for Category pie chart
 const CategoryPieTooltip = ({ active, payload }: any) => {
-  if (active && payload && payload.length) {
+  if (active && payload && payload.length && payload[0].payload) {
     const data = payload[0];
     const name = data.name;
     const value = data.value;

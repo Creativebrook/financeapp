@@ -63,7 +63,7 @@ export interface VariableExpense {
   valor: number;
   data: string;
   conta: string;
-  categoria: CategoriaDespesa;
+  categoria: string;
 }
 
 // Income Types

@@ -22,7 +22,8 @@ function DebtsContent() {
 
   const calculatePayoffDate = (debt: Debt): string => {
     const months = calculateMonthsRemaining(debt);
-    const payoffDate = new Date();
+    // Use a fixed date for SSR to avoid hydration mismatches
+    const payoffDate = new Date('2026-03-20T00:00:00Z');
     payoffDate.setMonth(payoffDate.getMonth() + months);
     return formatDate(payoffDate.toISOString());
   };
@@ -52,7 +53,8 @@ function DebtsContent() {
   });
 
   const maxMonths = debts.length > 0 ? Math.max(...debts.map(d => calculateMonthsRemaining(d))) : 0;
-  const latestPayoffDate = new Date();
+  // Use a fixed date for SSR to avoid hydration mismatches
+  const latestPayoffDate = new Date('2026-03-20T00:00:00Z');
   latestPayoffDate.setMonth(latestPayoffDate.getMonth() + maxMonths);
   const formattedPayoffDate = formatDate(latestPayoffDate.toISOString());
 
@@ -511,5 +513,9 @@ function DebtsContent() {
 }
 
 export default function DebtsPage() {
-  return <DebtsContent />;
+  return (
+    <FinanceProvider>
+      <DebtsContent />
+    </FinanceProvider>
+  );
 }

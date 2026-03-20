@@ -69,48 +69,51 @@ const CustomLegend = () => {
 
 export default function VariableExpensesDailyChart({ data }: VariableExpensesDailyChartProps) {
   return (
-    <ResponsiveContainer width="100%" height={210}>
-      <BarChart
-        data={data}
-        margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-        barSize={6}
-      >
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
-        <XAxis 
-          dataKey="day" 
-          axisLine={false}
-          tickLine={false}
-          tick={{ fill: CHART_COLORS.textMuted, fontSize: 10 }}
-          ticks={[1, 5, 10, 15, 20, 25, 30]}
-        />
-        <YAxis 
-          axisLine={false}
-          tickLine={false}
-          tick={{ fill: CHART_COLORS.textMuted, fontSize: 10 }}
-          hide
-        />
-        <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-        
-        {/* Previous Month Bar (Gray) */}
-        <Bar 
-          name="previous"
-          dataKey="previousValue" 
-          stackId="a"
-          fill="rgba(255, 255, 255, 0.1)"
-          radius={[0, 0, 0, 0]}
-          animationDuration={1500}
-        />
-        
-        {/* Current Month Bar (Color) */}
-        <Bar 
-          name="current"
-          dataKey="currentValue" 
-          stackId="a"
-          fill="rgba(59, 130, 246, 0.6)"
-          radius={[2, 2, 0, 0]}
-          animationDuration={1500}
-        />
-      </BarChart>
-    </ResponsiveContainer>
+    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart
+          data={data}
+          margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+          barSize={6}
+        >
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
+          <XAxis 
+            dataKey="day" 
+            axisLine={false}
+            tickLine={false}
+            tick={{ fill: CHART_COLORS.textMuted, fontSize: 10 }}
+            ticks={[1, 5, 10, 15, 20, 25, 30]}
+          />
+          <YAxis 
+            axisLine={false}
+            tickLine={false}
+            tick={{ fill: CHART_COLORS.textMuted, fontSize: 10 }}
+            hide
+          />
+          <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
+          
+          {/* Previous Month Bar (Gray) */}
+          <Bar 
+            name="previous"
+            dataKey="previousValue" 
+            stackId="a"
+            fill="rgba(255, 255, 255, 0.1)"
+            radius={[0, 0, 0, 0]}
+            animationDuration={1500}
+          />
+          
+          {/* Current Month Bar (Color) */}
+          <Bar 
+            name="current"
+            dataKey="currentValue" 
+            stackId="a"
+            fill="rgba(59, 130, 246, 0.6)"
+            radius={[2, 2, 0, 0]}
+            animationDuration={1500}
+          />
+        </BarChart>
+      </ResponsiveContainer>
+      <CustomLegend />
+    </div>
   );
 }

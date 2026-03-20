@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { FinanceProvider, useFinance } from '@/context/FinanceContext';
 import Sidebar from '@/components/Sidebar';
-import PremiumHeader from '@/components/PremiumHeader';
 import { 
   Wallet, 
   TrendingUp, 
@@ -600,7 +599,9 @@ function DashboardContent() {
 
   // Filter variable expenses by time range
   const getFilteredExpensesByCategory = () => {
-    const now = new Date();
+    // Use a fixed date for SSR to avoid hydration mismatch
+    // In a real app, you'd update this in useEffect if needed
+    const now = new Date('2026-03-20T00:00:00Z'); 
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth();
     
@@ -610,6 +611,7 @@ function DashboardContent() {
     // If 'this_month' is selected, check if there's data - if not, fallback to 'last_month'
     if (expensesTimeRange === 'this_month') {
       const thisMonthData = variableExpenses.filter(expense => {
+        if (!expense || !expense.data) return false;
         const expenseDate = new Date(expense.data);
         return expenseDate.getFullYear() === currentYear && expenseDate.getMonth() === currentMonth;
       });
@@ -619,6 +621,7 @@ function DashboardContent() {
     }
     
     const filtered = variableExpenses.filter(expense => {
+      if (!expense || !expense.data) return false;
       const expenseDate = new Date(expense.data);
       
       switch (effectiveTimeRange) {
@@ -715,8 +718,83 @@ function DashboardContent() {
       <Sidebar />
       
       <main className={`main-content ${isCollapsed ? 'sidebar-collapsed' : ''}`}>
-        <PremiumHeader onRefresh={handleRefresh} />
+        {/* Premium Header - Desktop */}
+        <header className="premium-header">
+          <div className="premium-header-left">
+            <Link href="/" className="premium-header-logo-link">
+              <div className="premium-header-logo">
+                <TrendingUpIcon size={20} strokeWidth={2.5} />
+              </div>
+            </Link>
+            <div className="premium-header-info">
+              <h1 className="premium-header-title">Finance 360º</h1>
+              <p className="premium-header-subtitle">
+                <span className="subtitle-label">Finance and portfolio overview</span>
+              </p>
+            </div>
+          </div>
+          <div className="premium-header-right">
+            <button 
+              className="premium-header-btn"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              title="Atualizar dados"
+            >
+              <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
+            </button>
+            <button 
+              className="premium-header-btn"
+              onClick={() => setShowNotifications(!showNotifications)}
+              title="Notificações"
+            >
+              <Bell size={16} />
+            </button>
+          </div>
+        </header>
         
+        {/* Mobile Header */}
+        <header className="mobile-header">
+          <div className="mobile-header-left">
+            <Link href="/" className="mobile-header-logo-link" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div className="mobile-header-logo">
+                <TrendingUpIcon size={18} strokeWidth={2.5} />
+              </div>
+              <div className="mobile-header-info">
+                <h1 className="mobile-header-title">Finance 360º</h1>
+                <p className="mobile-header-subtitle">
+                  <span className="subtitle-label">Finance and portfolio overview</span>
+                </p>
+              </div>
+            </Link>
+          </div>
+          <div className="mobile-header-right">
+            <button 
+              className="mobile-header-btn"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              title="Atualizar dados"
+            >
+              <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+            </button>
+            <button 
+              className="mobile-header-btn"
+              onClick={() => setShowNotifications(!showNotifications)}
+              title="Notificações"
+            >
+              <Bell size={14} />
+            </button>
+            <button 
+              className="mobile-header-btn"
+              onClick={() => setIsMobileOpen(!isMobileOpen)}
+              aria-label="Toggle menu"
+            >
+              {isMobileOpen ? <X size={18} /> : <Menu size={18} />}
+            </button>
+          </div>
+        </header>
+        
+
+
         {/* NOVO DASHBOARD LAYOUT - 2 COLUNAS */}
         <div className="flex flex-col xl:flex-row gap-8 items-stretch mt-[5%] xl:mt-0">
           
@@ -1681,5 +1759,9 @@ function DashboardContent() {
 }
 
 export default function Home() {
-  return <DashboardContent />;
+  return (
+    <FinanceProvider>
+      <DashboardContent />
+    </FinanceProvider>
+  );
 }

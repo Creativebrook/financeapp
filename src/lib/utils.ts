@@ -58,13 +58,15 @@ export function formatDateShort(dateString: string): string {
 
 export function getDayOfMonth(day: number): string {
   const days = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
-  const date = new Date();
+  // Use a fixed date for SSR to avoid hydration mismatches
+  const date = new Date('2026-03-20T00:00:00Z');
   date.setDate(day);
   return days[date.getDay()];
 }
 
 export function getNextPaymentDate(dataPagamento: number): Date {
-  const today = new Date();
+  // Use a fixed date for SSR to avoid hydration mismatches
+  const today = new Date('2026-03-20T00:00:00Z');
   const currentDay = today.getDate();
   const currentMonth = today.getMonth();
   const currentYear = today.getFullYear();

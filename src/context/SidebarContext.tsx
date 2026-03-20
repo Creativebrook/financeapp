@@ -16,47 +16,37 @@ const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
 const STORAGE_KEY = 'financeflow_sidebar_collapsed';
 
 export function SidebarProvider({ children }: { children: ReactNode }) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  // Initialize with undefined to avoid SSR mismatch - will be set on mount
+  const [isCollapsed, setIsCollapsed] = useState<boolean | undefined>(undefined);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
+  const isFirstRender = useRef(true);
 
+  // Load from localStorage on mount
   useEffect(() => {
-    setIsMounted(true);
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored !== null) {
-        setIsCollapsed(stored === 'true');
-      }
-    } catch (e) {
-      console.error('Error reading from localStorage:', e);
-    }
+    const stored = localStorage.getItem(STORAGE_KEY);
+    setIsCollapsed(stored === 'true');
+    isFirstRender.current = false;
   }, []);
 
+  // Save to localStorage when state changes (skip first render to avoid overwriting on mount)
+  useEffect(() => {
+    if (isCollapsed !== undefined && !isFirstRender.current) {
+      localStorage.setItem(STORAGE_KEY, String(isCollapsed));
+    }
+  }, [isCollapsed]);
+
   const toggleCollapsed = () => {
-    setIsCollapsed(prev => {
-      const next = !prev;
-      try {
-        localStorage.setItem(STORAGE_KEY, String(next));
-      } catch (e) {
-        console.error('Error writing to localStorage:', e);
-      }
-      return next;
-    });
+    setIsCollapsed(prev => prev === undefined ? false : !prev);
   };
 
   const setCollapsed = (collapsed: boolean) => {
     setIsCollapsed(collapsed);
-    try {
-      localStorage.setItem(STORAGE_KEY, String(collapsed));
-    } catch (e) {
-      console.error('Error writing to localStorage:', e);
-    }
   };
 
   return (
     <SidebarContext.Provider
       value={{
-        isCollapsed: isMounted ? isCollapsed : false,
+        isCollapsed: isCollapsed ?? false,
         toggleCollapsed,
         setCollapsed,
         isMobileOpen,

@@ -78,10 +78,12 @@ function AccountsContent() {
 
   // Calculate average variable expenses (last 3 months)
   const calculateMonthlyVariableExpenses = () => {
-    const now = new Date();
+    // Use a fixed date for SSR to avoid hydration mismatches
+    const now = new Date('2026-03-20T00:00:00Z');
     const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, 1);
     
     const filteredExpenses = variableExpenses.filter(exp => {
+      if (!exp || !exp.data) return false;
       const expDate = new Date(exp.data);
       return expDate >= threeMonthsAgo && expDate <= now;
     });
@@ -91,6 +93,7 @@ function AccountsContent() {
     // Group by month
     const monthlyTotals: { [key: string]: number } = {};
     filteredExpenses.forEach(exp => {
+      if (!exp.data) return;
       const monthKey = exp.data.substring(0, 7); // YYYY-MM
       monthlyTotals[monthKey] = (monthlyTotals[monthKey] || 0) + exp.valor;
     });
@@ -593,5 +596,9 @@ function AccountsContent() {
 }
 
 export default function AccountsPage() {
-  return <AccountsContent />;
+  return (
+    <FinanceProvider>
+      <AccountsContent />
+    </FinanceProvider>
+  );
 }

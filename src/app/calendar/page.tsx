@@ -32,7 +32,8 @@ function CalendarContent() {
   };
 
   const isToday = (day: number) => {
-    const today = new Date();
+    // Use a fixed date for SSR to avoid hydration mismatches
+    const today = new Date('2026-03-20T00:00:00Z');
     return day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
   };
 
@@ -89,7 +90,8 @@ function CalendarContent() {
   // Upcoming events (next 30 days)
   const getUpcomingEvents = () => {
     const events: { date: Date; type: string; name: string; amount: number }[] = [];
-    const today = new Date();
+    // Use a fixed date for SSR to avoid hydration mismatches
+    const today = new Date('2026-03-20T00:00:00Z');
 
     // Generate events for next 30 days
     for (let i = 0; i < 30; i++) {
@@ -282,5 +284,9 @@ function CalendarContent() {
 }
 
 export default function CalendarPage() {
-  return <CalendarContent />;
+  return (
+    <FinanceProvider>
+      <CalendarContent />
+    </FinanceProvider>
+  );
 }
