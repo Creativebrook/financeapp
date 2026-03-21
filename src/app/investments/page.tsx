@@ -524,7 +524,7 @@ function InvestmentsContent() {
                 ))}
               </select>
             ) : (
-              <div className="no-scrollbar" style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
                 {allWallets.map((wallet) => (
                   <button
                     key={wallet}
