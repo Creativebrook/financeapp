@@ -7,7 +7,7 @@ import { useSidebar } from '@/context/SidebarContext';
 import Sidebar from '@/components/Sidebar';
 import PremiumHeader from '@/components/PremiumHeader';
 import { Plus, Edit2, Trash2, Receipt, X, Calendar, ReceiptEuro, CalendarRange, Layers2 } from 'lucide-react';
-import { formatCurrency, getNextPaymentDate, formatDate, getPlatformColor, getCategoryColor } from '@/lib/utils';
+import { formatCurrency, getNextPaymentDate, formatDate, getPlatformColor, getCategoryColor, getFrequencyColor } from '@/lib/utils';
 import { getPieChartColor } from '@/lib/theme';
 import { FixedExpense, Frequencia } from '@/types';
 
@@ -41,6 +41,48 @@ function FixedExpensesContent() {
   };
 
   const totalMonthly = fixedExpenses.reduce((sum, e) => sum + calculateMonthlyEquivalent(e), 0);
+  
+  // Calculate annual expenses up to current date
+  const calculateAnnualSoFar = () => {
+    const today = new Date('2026-03-20T00:00:00Z');
+    const currentMonth = today.getMonth(); // 0-indexed
+    const currentDay = today.getDate();
+    
+    return fixedExpenses.reduce((sum, e) => {
+      let occurrences = 0;
+      switch (e.frequencia) {
+        case 'mensal':
+          // Paid every month. If current day >= payment day, it's paid this month too.
+          occurrences = currentMonth + (currentDay >= e.data_pagamento ? 1 : 0);
+          break;
+        case 'quinzenal':
+          // Paid twice a month.
+          occurrences = (currentMonth * 2) + (currentDay >= e.data_pagamento ? 1 : 0) + (currentDay >= e.data_pagamento + 15 ? 1 : 0);
+          break;
+        case 'semanal':
+          // Paid 4 times a month roughly.
+          occurrences = (currentMonth * 4) + Math.floor(currentDay / 7);
+          break;
+        case 'trimestral':
+          // Paid every 3 months. Assuming Jan, Apr, Jul, Oct.
+          const quarters = [0, 3, 6, 9];
+          occurrences = quarters.filter(m => m < currentMonth || (m === currentMonth && currentDay >= e.data_pagamento)).length;
+          break;
+        case 'semestral':
+          // Paid every 6 months. Assuming Jan, Jul.
+          const semesters = [0, 6];
+          occurrences = semesters.filter(m => m < currentMonth || (m === currentMonth && currentDay >= e.data_pagamento)).length;
+          break;
+        case 'anual':
+          // Paid once a year. Assuming Jan.
+          occurrences = (0 < currentMonth || (0 === currentMonth && currentDay >= e.data_pagamento)) ? 1 : 0;
+          break;
+      }
+      return sum + (e.valor * occurrences);
+    }, 0);
+  };
+
+  const totalAnnualSoFar = calculateAnnualSoFar();
   const totalAnnualValue = totalMonthly * 12;
 
   // Calculate monthly income
@@ -58,7 +100,13 @@ function FixedExpensesContent() {
 
   const annualIncome = monthlyIncome * 12;
   const monthlyPercentage = monthlyIncome > 0 ? (totalMonthly / monthlyIncome) * 100 : 0;
-  const annualPercentage = annualIncome > 0 ? (totalAnnualValue / annualIncome) * 100 : 0;
+  const annualPercentage = annualIncome > 0 ? (totalAnnualSoFar / annualIncome) * 100 : 0;
+
+  const sortedExpenses = [...fixedExpenses].sort((a, b) => {
+    const dateA = getNextPaymentDate(a.data_pagamento).getTime();
+    const dateB = getNextPaymentDate(b.data_pagamento).getTime();
+    return dateA - dateB;
+  });
 
   const expensesByCategory = fixedExpenses.reduce((acc, e) => {
     acc[e.categoria] = (acc[e.categoria] || 0) + calculateMonthlyEquivalent(e);
@@ -203,10 +251,10 @@ function FixedExpensesContent() {
               {/* Annual Section */}
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-[10px] text-slate-500 uppercase tracking-[0.1em]">Despesa Anual</span>
+                  <span className="text-[10px] text-slate-500 uppercase tracking-[0.1em]">Despesa Anual (YTD)</span>
                 </div>
                 <div className="text-2xl font-bold text-white mb-3" style={{ fontFamily: 'Inter, sans-serif' }}>
-                  {formatCurrency(totalAnnualValue)}
+                  {formatCurrency(totalAnnualSoFar)}
                 </div>
                 <div className="w-full h-1.5 bg-white/[0.03] rounded-full overflow-hidden border border-white/[0.02] mb-2">
                   <div className="h-full rounded-full" style={{ 
@@ -215,7 +263,7 @@ function FixedExpensesContent() {
                   }}></div>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-[9px] text-slate-600 uppercase tracking-wider">vs Income Anual</span>
+                  <span className="text-[9px] text-slate-600 uppercase tracking-wider">vs Income Anual Esperado</span>
                   <span className="text-[10px] font-semibold" style={{ color: 'var(--warning-400)' }}>{annualPercentage.toFixed(1)}%</span>
                 </div>
               </div>
@@ -243,7 +291,7 @@ function FixedExpensesContent() {
             }}>
               {frequencyData.map((entry, index) => (
                 <div key={index} className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: getPieChartColor(index) }} />
+                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: getFrequencyColor(entry.name) }} />
                   <div className="flex justify-between items-center flex-1 min-w-0">
                     <span className="text-[10px] text-slate-400 truncate mr-2">{entry.name}</span>
                     <span className="text-[10px] text-slate-500 font-medium">{entry.percent}%</span>
@@ -272,9 +320,9 @@ function FixedExpensesContent() {
               gap: '8px 16px', 
               marginTop: '16px' 
             }}>
-              {categoryData.slice(0, 6).map((entry, index) => (
+              {categoryData.slice(0, 8).map((entry, index) => (
                 <div key={index} className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: getPieChartColor(index) }} />
+                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: getCategoryColor(entry.name) }} />
                   <div className="flex justify-between items-center flex-1 min-w-0">
                     <span className="text-[10px] text-slate-400 truncate mr-2">{entry.name}</span>
                     <span className="text-[10px] text-slate-500 font-medium">{entry.percent}%</span>
@@ -291,44 +339,54 @@ function FixedExpensesContent() {
             <table className="table">
               <thead>
                 <tr>
-                  <th>Nome</th>
-                  <th>Frequência</th>
-                  <th style={{ textAlign: 'right' }}>Valor</th>
-                  <th>Data</th>
-                  <th>Conta</th>
-                  <th>Categoria</th>
-                  <th style={{ textAlign: 'right' }}>Ações</th>
+                  <th style={{ textAlign: 'left' }}>Nome</th>
+                  <th style={{ textAlign: 'left' }}>Frequência</th>
+                  <th style={{ textAlign: 'left' }}>Valor</th>
+                  <th style={{ textAlign: 'left' }}>Data</th>
+                  <th style={{ textAlign: 'left' }}>Conta</th>
+                  <th style={{ textAlign: 'left' }}>Categoria</th>
+                  <th style={{ textAlign: 'left' }}>Ações</th>
                 </tr>
               </thead>
               <tbody>
-                {fixedExpenses.map((expense) => (
+                {sortedExpenses.map((expense) => (
                   <tr key={expense.id}>
-                    <td>
+                    <td style={{ textAlign: 'left' }}>
                       <div style={{ fontWeight: 400, fontSize: '0.9rem' }}>{expense.nome}</div>
                     </td>
-                    <td>
+                    <td style={{ textAlign: 'left' }}>
                       <span className={`badge ${getFrequencyBadge(expense.frequencia)}`}>
                         {expense.frequencia}
                       </span>
                     </td>
-                    <td style={{ textAlign: 'right' }}>
+                    <td style={{ textAlign: 'left' }}>
                       <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>
                         {formatCurrency(expense.valor)}
                       </span>
                     </td>
-                    <td>
+                    <td style={{ textAlign: 'left' }}>
                       <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
                         {formatDate(getNextPaymentDate(expense.data_pagamento).toISOString())}
                       </span>
                     </td>
-                    <td>
+                    <td style={{ textAlign: 'left' }}>
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{expense.conta}</span>
                     </td>
-                    <td>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{expense.categoria}</span>
+                    <td style={{ textAlign: 'left' }}>
+                      <span 
+                        style={{ 
+                          background: `${getCategoryColor(expense.categoria)}20`,
+                          color: getCategoryColor(expense.categoria),
+                          fontSize: '0.75rem',
+                          borderRadius: '4px',
+                          padding: '2px 8px'
+                        }}
+                      >
+                        {expense.categoria}
+                      </span>
                     </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                    <td style={{ textAlign: 'left' }}>
+                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-start' }}>
                         <button 
                           className="btn btn-icon btn-secondary"
                           onClick={() => handleOpenModal(expense)}
@@ -363,7 +421,7 @@ function FixedExpensesContent() {
 
         {/* Mobile List */}
         <div className="md:hidden space-y-3">
-          {fixedExpenses.map((expense) => {
+          {sortedExpenses.map((expense) => {
             const weight = totalMonthly > 0 ? (calculateMonthlyEquivalent(expense) / totalMonthly) * 100 : 0;
 
             return (
@@ -499,15 +557,18 @@ function FixedExpensesContent() {
                     value={formData.categoria}
                     onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
                   >
-                    <option value="Subscrição">Subscrição</option>
-                    <option value="Seguro">Seguro</option>
-                    <option value="Saúde">Saúde</option>
+                    <option value="Desporto">Desporto</option>
+                    <option value="Educação">Educação</option>
                     <option value="Família">Família</option>
-                    <option value="Imposto">Imposto</option>
-                    <option value="Associação">Associação</option>
+                    <option value="Habitação">Habitação</option>
+                    <option value="Impostos">Impostos</option>
+                    <option value="Saúde">Saúde</option>
+                    <option value="Seguros">Seguros</option>
+                    <option value="Serviços">Serviços</option>
+                    <option value="Subscrição">Subscrição</option>
                     <option value="Tecnologia">Tecnologia</option>
-                    <option value="Telecomunicações">Telecomunicações</option>
-                    <option value="Outro">Outro</option>
+                    <option value="Transportes">Transportes</option>
+                    <option value="Outros">Outros</option>
                   </select>
                 </div>
               </div>

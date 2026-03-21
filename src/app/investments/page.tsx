@@ -171,6 +171,13 @@ function InvestmentsContent() {
     filteredInvestments = filteredInvestments.filter(i => i.carteira === activeWallet);
   }
   
+  // Sort by profitability percentage descending
+  filteredInvestments.sort((a, b) => {
+    const profitA = calculateProfitabilityPercent(a.valor_atual, a.preco_medio, a.quantidade);
+    const profitB = calculateProfitabilityPercent(b.valor_atual, b.preco_medio, b.quantidade);
+    return profitB - profitA;
+  });
+  
   const platformTotal = filteredInvestments.reduce((sum, i) => sum + i.valor_atual, 0);
   const platformInvested = filteredInvestments.reduce((sum, i) => sum + (i.quantidade * i.preco_medio), 0);
   const platformProfitability = platformTotal - platformInvested;
@@ -304,7 +311,10 @@ function InvestmentsContent() {
       <Sidebar />
       
       <main className={`main-content ${isCollapsed ? 'sidebar-collapsed' : ''}`}>
-        <PremiumHeader pageName="Investimentos" />
+        <PremiumHeader 
+          pageName="Investimentos" 
+          style={{ marginBottom: 'var(--space-md)' }}
+        />
         
         {refreshMessage && (
           <div 
@@ -680,13 +690,13 @@ function InvestmentsContent() {
                   <tr>
                     <th>TICKER</th>
                     <th>NOME</th>
-                    <th style={{ textAlign: 'right' }}>QTD</th>
-                    <th style={{ textAlign: 'right' }}>P. MÉDIO</th>
-                    <th style={{ textAlign: 'right' }}>COTAÇÃO</th>
-                    <th style={{ textAlign: 'right' }}>TOTAL</th>
-                    <th style={{ textAlign: 'right' }}>RENT (%)</th>
-                    <th style={{ textAlign: 'right' }}>PESO (%)</th>
-                    <th style={{ textAlign: 'right' }}>Ações</th>
+                    <th>QTD</th>
+                    <th>P. MÉDIO</th>
+                    <th>COTAÇÃO</th>
+                    <th>TOTAL</th>
+                    <th>RENT (%)</th>
+                    <th>PESO (%)</th>
+                    <th>Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -703,19 +713,19 @@ function InvestmentsContent() {
                         <td>
                           <span style={{ fontWeight: 500, fontSize: '0.8rem', color: 'var(--text-muted)' }}>{investment.nome}</span>
                         </td>
-                        <td style={{ textAlign: 'right' }}>
+                        <td>
                           <span style={{ fontWeight: 500, fontSize: '0.8rem', color: 'var(--text-muted)' }}>{formatNumber(investment.quantidade)}</span>
                         </td>
-                        <td style={{ textAlign: 'right' }}>
+                        <td>
                           <span style={{ fontWeight: 500, fontSize: '0.8rem', color: 'var(--text-muted)' }}>{formatCurrency(investment.preco_medio)}</span>
                         </td>
-                        <td style={{ textAlign: 'right' }}>
+                        <td>
                           <span style={{ fontWeight: 500, fontSize: '0.8rem', color: 'var(--text-muted)' }}>{formatCurrency(investment.preco_atual)}</span>
                         </td>
-                        <td style={{ textAlign: 'right' }}>
+                        <td>
                           <span style={{ fontWeight: 600, letterSpacing: 'normal' }}>{formatCurrency(investment.valor_atual)}</span>
                         </td>
-                        <td style={{ textAlign: 'right' }}>
+                        <td>
                           <div>
                             <span style={{ fontWeight: 600, letterSpacing: 'normal', color: getProfitColor(profitability) }}>
                               {profitability >= 0 ? '+' : ''}{formatCurrency(profitability)}
@@ -727,15 +737,15 @@ function InvestmentsContent() {
                             </div>
                           </div>
                         </td>
-                        <td style={{ textAlign: 'right' }}>
+                        <td>
                           <span className="badge badge-info">
                             {activePlatform === 'Robo Advisor' 
                               ? `${investment.alocacao_alvo || 0}%` 
                               : `${weightPercent.toFixed(1).replace('.', ',')}%`}
                           </span>
                         </td>
-                        <td style={{ textAlign: 'right' }}>
-                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                        <td>
+                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-start' }}>
                             <button className="btn btn-icon btn-secondary" onClick={() => handleOpenModal(investment)}>
                               <Edit2 size={16} />
                             </button>

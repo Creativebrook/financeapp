@@ -120,6 +120,15 @@ export function getPlatformColor(plataforma: string): string {
   return palette[index];
 }
 
+export function getFrequencyColor(frequencia: string): string {
+  const freq = frequencia.toLowerCase();
+  if (freq === 'mensal' || freq === 'quinzenal' || freq === 'semanal') return '#8186d4'; // badge-primary
+  if (freq === 'trimestral') return '#e8c06a'; // badge-warning
+  if (freq === 'semestral') return '#5fc4e0'; // badge-info
+  if (freq === 'anual') return '#4ecaa3'; // badge-success
+  return 'var(--text-muted)';
+}
+
 export function getCategoryColor(categoria: string): string {
   // Using fixed palette for consistent category colors
   const categoryIndex: Record<string, number> = {
@@ -129,8 +138,24 @@ export function getCategoryColor(categoria: string): string {
     'Compras': 3,
     'Diversos': 4,
     'Outros': 5,
+    'Desporto': 6,
+    'Educação': 7,
+    'Família': 8,
+    'Habitação': 9,
+    'Impostos': 10,
+    'Saúde': 11,
+    'Seguros': 12,
+    'Serviços': 13,
+    'Subscrição': 14,
+    'Tecnologia': 15,
+    'Transportes': 16,
+    'Outro': 5,
+    'Imposto': 10,
+    'Seguro': 12,
+    'Telecomunicações': 13,
+    'Associação': 13,
   };
-  const index = categoryIndex[categoria] ?? 0;
+  const index = categoryIndex[categoria] ?? 5; // Default to 'Outros' color
   const palette = [
     'var(--chart-cat-1)',  // Supermercado - Green
     'var(--chart-cat-3)',  // Combustível - Amber
@@ -138,6 +163,17 @@ export function getCategoryColor(categoria: string): string {
     'var(--chart-cat-6)',  // Compras - Violet
     'var(--chart-cat-5)',  // Diversos - Cyan
     'var(--chart-cat-2)',  // Outros - Purple
+    'var(--chart-cat-7)',  // Desporto
+    'var(--chart-cat-8)',  // Educação
+    'var(--chart-cat-9)',  // Família
+    'var(--chart-cat-10)', // Habitação
+    '#e05a6f',             // Impostos (Reddish)
+    '#39d8a0',             // Saúde (Greenish)
+    '#f2b84b',             // Seguros (Amber)
+    '#5b78c7',             // Serviços (Blue)
+    '#6f6af8',             // Subscrição (Violet)
+    '#2ea8c9',             // Tecnologia (Cyan)
+    '#8b7cf6',             // Transportes (Purple)
   ];
-  return palette[index];
+  return palette[index] || palette[5];
 }

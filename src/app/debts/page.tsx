@@ -43,6 +43,8 @@ function DebtsContent() {
   });
 
   const totalDebt = debts.reduce((sum, d) => sum + d.valor_total, 0);
+  const totalInitialDebt = debts.reduce((sum, d) => sum + (d.valor_inicial || d.valor_total), 0);
+  const debtPercentage = totalInitialDebt > 0 ? (totalDebt / totalInitialDebt) * 100 : 0;
   const totalMonthly = debts.reduce((sum, d) => sum + d.prestacao_mensal, 0);
   const taxaEsforco = monthlyIncome > 0 ? (totalMonthly / monthlyIncome) * 100 : 0;
   
@@ -138,7 +140,7 @@ function DebtsContent() {
         <div className="page-header animate-fadeIn" style={{ paddingBottom: '20px' }}>
           <div style={{ float: 'left' }}>
             <h1 className="page-title" style={{ fontSize: '1.5rem', lineHeight: 0.5 }}>Dívidas</h1>
-            <p className="page-subtitle">Gerencie as suas dívidas e préstamos</p>
+            <p className="page-subtitle">Gerencie as suas dívidas e empréstimos</p>
           </div>
           <button className="btn btn-primary" style={{ float: 'right', marginTop: '-8px' }} onClick={() => handleOpenModal()}>
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -172,16 +174,16 @@ function DebtsContent() {
                   {formatCurrency(totalDebt)}
                 </h2>
                 <div style={{ backgroundColor: 'rgba(111, 106, 248, 0.1)', border: '1px solid rgba(111, 106, 248, 0.2)', borderRadius: '4px', padding: '2px 8px', fontSize: '0.7rem', color: '#6f6af8', fontWeight: 600 }}>
-                  100%
+                  {debtPercentage.toFixed(1)}%
                 </div>
               </div>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 500 }}>
-                TOTAL: {formatCurrency(totalDebt)}
+                TOTAL INICIAL: {formatCurrency(totalInitialDebt)}
               </div>
             </div>
 
             <div style={{ width: '100%', height: '6px', backgroundColor: 'rgba(255, 255, 255, 0.05)', borderRadius: '3px', overflow: 'hidden', marginBottom: '16px' }}>
-              <div style={{ width: '100%', height: '100%', backgroundColor: '#6f6af8', borderRadius: '3px' }}></div>
+              <div style={{ width: `${debtPercentage}%`, height: '100%', backgroundColor: '#6f6af8', borderRadius: '3px' }}></div>
             </div>
 
             <div className="text-[0.6rem] md:text-[0.75rem]" style={{ color: 'var(--text-secondary)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -233,11 +235,12 @@ function DebtsContent() {
                   <tr>
                     <th>NOME</th>
                     <th>CATEGORIA</th>
-                    <th style={{ textAlign: 'right' }}>TOTAL</th>
-                    <th style={{ textAlign: 'right' }}>PRESTAÇÃO</th>
+                    <th>TOTAL</th>
+                    <th>PRESTAÇÃO</th>
+                    <th>PESO</th>
                     <th>DATA</th>
                     <th>CONTA</th>
-                    <th style={{ textAlign: 'right' }}>Ações</th>
+                    <th>Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -254,13 +257,18 @@ function DebtsContent() {
                       <td>
                         <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{debt.categoria}</span>
                       </td>
-                      <td style={{ textAlign: 'right' }}>
+                      <td>
                         <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--accent-danger)' }}>
                           {formatCurrency(debt.valor_total)}
                         </span>
                       </td>
-                      <td style={{ textAlign: 'right' }}>
+                      <td>
                         <span style={{ fontSize: '0.9rem' }}>{formatCurrency(debt.prestacao_mensal)}</span>
+                      </td>
+                      <td>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                          {monthlyIncome > 0 ? ((debt.prestacao_mensal / monthlyIncome) * 100).toFixed(1) : 0}%
+                        </span>
                       </td>
                       <td>
                         <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '-5px' }}>
@@ -270,8 +278,8 @@ function DebtsContent() {
                       <td>
                         <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{debt.conta}</span>
                       </td>
-                      <td style={{ textAlign: 'right' }}>
-                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                      <td>
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-start' }}>
                           <button 
                             className="btn btn-icon btn-secondary"
                             onClick={() => handleOpenModal(debt)}

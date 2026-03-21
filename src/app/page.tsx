@@ -674,19 +674,19 @@ function DashboardContent() {
   };
 
   const upcomingPayments = [
-    ...fixedExpenses.map(e => ({
+    ...fixedExpenses.filter(e => e && e.nome).map(e => ({
       type: 'fixed' as const,
       name: e.nome,
       amount: e.valor,
       date: getNextPaymentDate(e.data_pagamento),
     })),
-    ...debts.map(d => ({
+    ...debts.filter(d => d && d.nome).map(d => ({
       type: 'debt' as const,
       name: d.nome,
       amount: d.prestacao_mensal,
       date: getNextPaymentDate(d.data_pagamento),
     })),
-    ...income.map(i => ({
+    ...income.filter(i => i && i.nome).map(i => ({
       type: 'income' as const,
       name: i.nome,
       amount: i.valor,

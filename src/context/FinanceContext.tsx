@@ -92,12 +92,12 @@ function getInitialData() {
       try {
         const parsed = JSON.parse(saved);
         return {
-          accounts: Array.isArray(parsed.accounts) ? parsed.accounts : initialAccounts,
-          investments: Array.isArray(parsed.investments) ? parsed.investments : initialInvestments,
-          debts: Array.isArray(parsed.debts) ? parsed.debts : initialDebts,
-          fixedExpenses: Array.isArray(parsed.fixedExpenses) ? parsed.fixedExpenses : initialFixedExpenses,
+          accounts: Array.isArray(parsed.accounts) ? parsed.accounts.filter((a: any) => a && a.id) : initialAccounts,
+          investments: Array.isArray(parsed.investments) ? parsed.investments.filter((i: any) => i && i.id) : initialInvestments,
+          debts: Array.isArray(parsed.debts) ? parsed.debts.filter((d: any) => d && d.id) : initialDebts,
+          fixedExpenses: Array.isArray(parsed.fixedExpenses) ? parsed.fixedExpenses.filter((e: any) => e && e.id) : initialFixedExpenses,
           variableExpenses: Array.isArray(parsed.variableExpenses) ? parsed.variableExpenses.filter((e: any) => e && e.id) : initialVariableExpenses,
-          income: Array.isArray(parsed.income) ? parsed.income : initialIncome,
+          income: Array.isArray(parsed.income) ? parsed.income.filter((i: any) => i && i.id) : initialIncome,
         };
       } catch (e) {
         console.error('Error parsing saved finance data:', e);

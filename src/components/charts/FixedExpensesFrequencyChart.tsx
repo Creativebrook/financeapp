@@ -8,8 +8,8 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from 'recharts';
-import { CHART_COLORS, getPieChartColor } from '@/lib/theme';
-import { formatCurrency } from '@/lib/utils';
+import { CHART_COLORS } from '@/lib/theme';
+import { formatCurrency, getFrequencyColor } from '@/lib/utils';
 
 // Custom tooltip for Frequency pie chart
 const FrequencyPieTooltip = ({ active, payload }: any) => {
@@ -17,8 +17,7 @@ const FrequencyPieTooltip = ({ active, payload }: any) => {
     const data = payload[0];
     const name = data.name;
     const value = data.value;
-    const index = data.payload.index;
-    const color = getPieChartColor(index);
+    const color = getFrequencyColor(name);
     
     return (
       <div style={{
@@ -50,22 +49,19 @@ interface FixedExpensesFrequencyChartProps {
 export default function FixedExpensesFrequencyChart({ data, total }: FixedExpensesFrequencyChartProps) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
-  // Add index to data for color mapping
-  const chartData = data.map((entry, index) => ({ ...entry, index }));
-
   return (
     <ResponsiveContainer width="100%" height="100%">
       <PieChart>
         <defs>
-          {chartData.map((entry, index) => (
+          {data.map((entry, index) => (
             <linearGradient key={index} id={`freq-gradient-${index}`} x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor={getPieChartColor(index)} stopOpacity={0.9} />
-              <stop offset="100%" stopColor={getPieChartColor(index)} stopOpacity={0.6} />
+              <stop offset="0%" stopColor={getFrequencyColor(entry.name)} stopOpacity={0.9} />
+              <stop offset="100%" stopColor={getFrequencyColor(entry.name)} stopOpacity={0.6} />
             </linearGradient>
           ))}
         </defs>
         <Pie
-          data={chartData}
+          data={data}
           cx="50%"
           cy="50%"
           innerRadius={50}
@@ -77,7 +73,7 @@ export default function FixedExpensesFrequencyChart({ data, total }: FixedExpens
           onMouseEnter={(_, index) => setHoveredIndex(index)}
           onMouseLeave={() => setHoveredIndex(null)}
         >
-          {chartData.map((entry, index) => (
+          {data.map((entry, index) => (
             <Cell 
               key={`cell-${index}`} 
               fill={`url(#freq-gradient-${index})`}

@@ -64,6 +64,7 @@ function IncomeContent() {
 
   const incomeReceivedSoFar = income
     .filter(i => {
+      if (!i) return false;
       if (i.frequencia === 'mensal') {
         return i.data <= currentDay;
       }
@@ -259,7 +260,7 @@ function IncomeContent() {
               <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">Fontes de Rendimento</p>
             </div>
             <div className="grid grid-cols-2 gap-4 items-center">
-              <div style={{ height: '140px', width: '100%' }}>
+              <div style={{ height: '180px', width: '100%' }}>
                 <IncomeSourcesPieChart data={incomeSourcesData} tooltipStyle={tooltipStyle} />
               </div>
               <div className="space-y-2">

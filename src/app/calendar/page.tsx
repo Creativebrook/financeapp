@@ -57,6 +57,7 @@ function CalendarContent() {
 
     // Fixed expenses
     fixedExpenses.forEach(expense => {
+      if (!expense) return;
       if (expense.data_pagamento === day) {
         events.push({
           type: 'expense',
@@ -68,6 +69,7 @@ function CalendarContent() {
 
     // Debts
     debts.forEach(debt => {
+      if (!debt) return;
       if (debt.data_pagamento === day) {
         events.push({
           type: 'debt',
@@ -79,6 +81,7 @@ function CalendarContent() {
 
     // Income
     income.forEach(inc => {
+      if (!inc) return;
       if (inc.data === day) {
         events.push({
           type: 'income',

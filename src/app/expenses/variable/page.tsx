@@ -31,14 +31,22 @@ function VariableExpensesContent() {
     categoria: 'Supermercado' as string,
   });
 
-  const [categories, setCategories] = useState<string[]>(['Animais', 'Casa', 'Combustivel', 'Diversos', 'Educação', 'Lazer', 'Pessoal', 'Restaurantes', 'Saúde', 'Supermercado', 'Shopping', 'Taxas', 'Transporte']);
+  const [categories, setCategories] = useState<string[]>(['Animais', 'Casa', 'Combustível', 'Diversos', 'Educação', 'Lazer', 'Pessoal', 'Restaurantes', 'Saúde', 'Supermercado', 'Shopping', 'Taxas', 'Transporte']);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  const sortedExpenses = [...variableExpenses].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
 
   const filteredExpenses = filterCategory === 'all' 
-    ? variableExpenses 
-    : variableExpenses.filter(e => e.categoria === filterCategory);
+    ? sortedExpenses 
+    : sortedExpenses.filter(e => e.categoria === filterCategory);
 
   const totalFilteredExpenses = filteredExpenses.reduce((sum, e) => sum + e.valor, 0);
   const totalAllExpenses = variableExpenses.reduce((sum, e) => sum + e.valor, 0);
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredExpenses.length / itemsPerPage);
+  const paginatedExpenses = filteredExpenses.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   // Calculate monthly income
   const monthlyIncome = income.reduce((sum, inc) => {
@@ -90,21 +98,28 @@ function VariableExpensesContent() {
     return { day, currentValue, previousValue };
   });
 
-  const categoryData = categories.map(cat => {
-    const value = variableExpenses.filter(e => e.categoria === cat).reduce((sum, e) => sum + e.valor, 0);
-    return {
-      name: cat,
-      value: value,
-      percent: totalAllExpenses > 0 ? ((value / totalAllExpenses) * 100).toFixed(1) : 0
-    };
-  }).sort((a, b) => b.value - a.value);
+  // Derive categories that actually have expenses
+  const categoriesWithExpenses = Array.from(new Set(variableExpenses.map(e => e.categoria)))
+    .filter(cat => cat && cat.trim() !== '');
+
+  const categoryData = categoriesWithExpenses
+    .map(cat => {
+      const value = variableExpenses.filter(e => e.categoria === cat).reduce((sum, e) => sum + e.valor, 0);
+      return {
+        name: cat,
+        value: value,
+        percent: totalAllExpenses > 0 ? ((value / totalAllExpenses) * 100).toFixed(1) : 0
+      };
+    })
+    .filter(cat => cat.value > 0)
+    .sort((a, b) => b.value - a.value);
 
   const topExpensesData = [...variableExpenses]
     .sort((a, b) => b.valor - a.valor)
-    .slice(0, 6)
+    .slice(0, 8)
     .map(e => ({
       name: e.nome,
-      value: e.valor,
+      value: Math.round(e.valor),
       percent: totalAllExpenses > 0 ? ((e.valor / totalAllExpenses) * 100).toFixed(1) : 0
     }));
 
@@ -224,13 +239,13 @@ function VariableExpensesContent() {
 
             <div style={{ 
               display: 'grid', 
-              gridTemplateColumns: '1fr', 
-              gap: '8px', 
+              gridTemplateColumns: '1fr 1fr', 
+              gap: '8px 16px', 
               marginTop: '16px' 
             }}>
               {categoryData.slice(0, 8).map((entry, index) => (
                 <div key={index} className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: getPieChartColor(index) }} />
+                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: getCategoryColor(entry.name) }} />
                   <div className="flex justify-between items-center flex-1 min-w-0">
                     <span className="text-[10px] text-slate-400 truncate mr-2">{entry.name}</span>
                     <span className="text-[10px] text-slate-500 font-medium">{entry.percent}%</span>
@@ -255,8 +270,8 @@ function VariableExpensesContent() {
 
             <div style={{ 
               display: 'grid', 
-              gridTemplateColumns: '1fr', 
-              gap: '8px', 
+              gridTemplateColumns: '1fr 1fr', 
+              gap: '8px 16px', 
               marginTop: '16px' 
             }}>
               {topExpensesData.map((entry, index) => (
@@ -264,7 +279,7 @@ function VariableExpensesContent() {
                   <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: getPieChartColor(index) }} />
                   <div className="flex justify-between items-center flex-1 min-w-0">
                     <span className="text-[10px] text-slate-400 truncate mr-2">{entry.name}</span>
-                    <span className="text-[10px] text-slate-500 font-medium">{formatCurrency(entry.value)}</span>
+                    <span className="text-[10px] text-slate-500 font-medium">{formatCurrency(entry.value).split(',')[0]}€</span>
                   </div>
                 </div>
               ))}
@@ -274,15 +289,18 @@ function VariableExpensesContent() {
 
         {/* Filter */}
         <div className="tabs animate-slideUp" style={{ marginBottom: '10px' }}>
-          <div 
-            className={`tab ${filterCategory === 'all' ? 'active' : ''}`}
-            onClick={() => setFilterCategory('all')}
-            style={{ 
-              fontWeight: 400, 
-              textTransform: 'uppercase', 
-              fontSize: '0.8rem' 
-            }}
-          >
+            <div 
+              className={`tab ${filterCategory === 'all' ? 'active' : ''}`}
+              onClick={() => {
+                setFilterCategory('all');
+                setCurrentPage(1);
+              }}
+              style={{ 
+                fontWeight: 400, 
+                textTransform: 'uppercase', 
+                fontSize: '0.8rem' 
+              }}
+            >
             <span>Todos:</span>
             <span style={{ 
               fontSize: '0.8rem', 
@@ -299,7 +317,10 @@ function VariableExpensesContent() {
               <div 
                 key={cat}
                 className={`tab ${filterCategory === cat ? 'active' : ''}`}
-                onClick={() => setFilterCategory(cat)}
+                onClick={() => {
+                  setFilterCategory(cat);
+                  setCurrentPage(1);
+                }}
                 style={{ 
                   fontWeight: 400, 
                   textTransform: 'uppercase', 
@@ -349,47 +370,47 @@ function VariableExpensesContent() {
             <table className="table">
               <thead>
                 <tr>
-                  <th>Nome</th>
-                  <th>Categoria</th>
-                  <th style={{ textAlign: 'right' }}>Valor</th>
-                  <th>Conta</th>
-                  <th>Data</th>
-                  <th style={{ textAlign: 'right' }}>Ações</th>
+                  <th style={{ textAlign: 'left' }}>Nome</th>
+                  <th style={{ textAlign: 'left' }}>Categoria</th>
+                  <th style={{ textAlign: 'left' }}>Valor</th>
+                  <th style={{ textAlign: 'left' }}>Conta</th>
+                  <th style={{ textAlign: 'left' }}>Data</th>
+                  <th style={{ textAlign: 'left' }}>Ações</th>
                 </tr>
               </thead>
               <tbody>
-                {[...filteredExpenses].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()).map((expense) => (
+                {paginatedExpenses.map((expense) => (
                   <tr key={expense.id}>
-                    <td>
+                    <td style={{ textAlign: 'left' }}>
                       <div style={{ fontWeight: 400, fontSize: '0.9rem' }}>{expense.nome}</div>
                     </td>
-                    <td>
+                    <td style={{ textAlign: 'left' }}>
                       <span 
-                        className="badge"
                         style={{ 
                           background: `${getCategoryColor(expense.categoria)}20`,
                           color: getCategoryColor(expense.categoria),
-                          fontSize: '0.75rem'
+                          fontSize: '0.75rem',
+                          borderRadius: '4px'
                         }}
                       >
                         {expense.categoria}
                       </span>
                     </td>
-                    <td style={{ textAlign: 'right' }}>
+                    <td style={{ textAlign: 'left' }}>
                       <span  style={{ fontWeight: 600, fontSize: '0.9rem', color: 'white' }}>
                         -{formatCurrency(expense.valor)}
                       </span>
                     </td>
-                    <td>
+                    <td style={{ textAlign: 'left' }}>
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{expense.conta}</span>
                     </td>
-                    <td>
+                    <td style={{ textAlign: 'left' }}>
                       <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
                         {formatDate(expense.data)}
                       </span>
                     </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                    <td style={{ textAlign: 'left' }}>
+                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-start' }}>
                         <button 
                           className="btn btn-icon btn-secondary"
                           onClick={() => handleOpenModal(expense)}
@@ -408,6 +429,59 @@ function VariableExpensesContent() {
                 ))}
               </tbody>
             </table>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'center', 
+                alignItems: 'center', 
+                gap: '8px', 
+                marginTop: '24px',
+                padding: '0 16px 16px'
+              }}>
+                <button 
+                  className="btn btn-secondary"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  style={{ padding: '4px 12px', fontSize: '0.8rem' }}
+                >
+                  Anterior
+                </button>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '6px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.8rem',
+                        cursor: 'pointer',
+                        border: '1px solid var(--border-color)',
+                        background: currentPage === page ? 'var(--accent-primary)' : 'transparent',
+                        color: currentPage === page ? 'white' : 'var(--text-secondary)',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
+                <button 
+                  className="btn btn-secondary"
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  style={{ padding: '4px 12px', fontSize: '0.8rem' }}
+                >
+                  Próximo
+                </button>
+              </div>
+            )}
             
             {filteredExpenses.length === 0 && (
               <div className="empty-state">
@@ -424,7 +498,7 @@ function VariableExpensesContent() {
 
         {/* Mobile List */}
         <div className="md:hidden space-y-3">
-          {[...filteredExpenses].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()).map((expense) => {
+          {paginatedExpenses.map((expense) => {
             const categoryWeight = categoryData.find(c => c.name === expense.categoria)?.percent || 0;
 
             return (

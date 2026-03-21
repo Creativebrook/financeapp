@@ -8,9 +8,10 @@ import { useSidebar } from '@/context/SidebarContext';
 interface PremiumHeaderProps {
   pageName?: string;
   onRefresh?: () => void;
+  style?: React.CSSProperties;
 }
 
-export default function PremiumHeader({ pageName, onRefresh }: PremiumHeaderProps) {
+export default function PremiumHeader({ pageName, onRefresh, style }: PremiumHeaderProps) {
   const [refreshing, setRefreshing] = useState(false);
   const { isMobileOpen, setIsMobileOpen } = useSidebar();
 
@@ -25,7 +26,7 @@ export default function PremiumHeader({ pageName, onRefresh }: PremiumHeaderProp
   return (
     <>
       {/* Premium Header - Desktop */}
-      <header className="premium-header">
+      <header className="premium-header" style={style}>
         <div className="premium-header-left">
           <Link href="/" className="premium-header-logo-link">
             <div className="premium-header-logo">

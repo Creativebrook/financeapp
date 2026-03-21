@@ -288,7 +288,7 @@ function AccountsContent() {
             {pieData.length > 0 ? (
               <div className="flex items-center h-[calc(100%-40px)]">
                 {/* Pie Chart on the left */}
-                <div style={{ width: '50%', height: '100%', minWidth: 0, minHeight: 0 }}>
+                <div style={{ width: '50%', height: '180px', minWidth: 0, minHeight: 0 }}>
                   <AccountsDistributionChart data={pieData} />
                 </div>
                 

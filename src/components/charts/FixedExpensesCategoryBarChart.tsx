@@ -10,8 +10,8 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts';
-import { CHART_COLORS, getPieChartColor } from '@/lib/theme';
-import { formatCurrency } from '@/lib/utils';
+import { CHART_COLORS } from '@/lib/theme';
+import { formatCurrency, getCategoryColor } from '@/lib/utils';
 
 // Custom tooltip for Category bar chart
 const CategoryBarTooltip = ({ active, payload }: any) => {
@@ -19,8 +19,7 @@ const CategoryBarTooltip = ({ active, payload }: any) => {
     const data = payload[0].payload;
     const name = data.name;
     const value = data.value;
-    const index = data.index;
-    const color = getPieChartColor(index);
+    const color = getCategoryColor(name);
     
     return (
       <div style={{
@@ -49,11 +48,10 @@ interface FixedExpensesCategoryBarChartProps {
 }
 
 export default function FixedExpensesCategoryBarChart({ data }: FixedExpensesCategoryBarChartProps) {
-  // Add index to data for color mapping and limit to top 6 to avoid clutter
+  // Limit to top 8 to avoid clutter
   const chartData = data
     .sort((a, b) => b.value - a.value)
-    .slice(0, 6)
-    .map((entry, index) => ({ ...entry, index }));
+    .slice(0, 8);
 
   return (
     <ResponsiveContainer width="100%" height="100%">
@@ -81,7 +79,7 @@ export default function FixedExpensesCategoryBarChart({ data }: FixedExpensesCat
           {chartData.map((entry, index) => (
             <Cell 
               key={`cell-${index}`} 
-              fill={getPieChartColor(entry.index)} 
+              fill={getCategoryColor(entry.name)} 
             />
           ))}
         </Bar>

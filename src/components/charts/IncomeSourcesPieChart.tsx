@@ -52,8 +52,8 @@ export default function IncomeSourcesPieChart({ data, tooltipStyle }: IncomeSour
           data={data}
           cx="50%"
           cy="50%"
-          innerRadius={25}
-          outerRadius={40}
+          innerRadius={50}
+          outerRadius={80}
           paddingAngle={5}
           dataKey="value"
           stroke="none"
