@@ -5,7 +5,7 @@ import { Account, Investment, Debt, FixedExpense, VariableExpense, Income, Dashb
 
 // Initial data
 const initialAccounts: Account[] = [
-  { id: '1', nome: 'Montepio', tipo: 'Conta à ordem', saldo: 1900.00, data_atualizacao: '2026-03-01', notas: 'Conta principal' },
+  { id: '1', nome: 'Montepio', tipo: 'Conta à ordem', saldo: 100.00, data_atualizacao: '2026-03-01', notas: 'Conta principal' },
   { id: '2', nome: 'N26', tipo: 'Conta à ordem', saldo: 0.00, data_atualizacao: '2026-03-01', notas: 'Conta digital' },
   { id: '3', nome: 'Revolut', tipo: 'Conta à ordem', saldo: 2044.00, data_atualizacao: '2026-03-01', notas: 'Conta internacional' },
 ];
@@ -98,6 +98,7 @@ function getInitialData() {
           fixedExpenses: Array.isArray(parsed.fixedExpenses) ? parsed.fixedExpenses.filter((e: any) => e && e.id) : initialFixedExpenses,
           variableExpenses: Array.isArray(parsed.variableExpenses) ? parsed.variableExpenses.filter((e: any) => e && e.id) : initialVariableExpenses,
           income: Array.isArray(parsed.income) ? parsed.income.filter((i: any) => i && i.id) : initialIncome,
+          customWallets: Array.isArray(parsed.customWallets) ? parsed.customWallets : [],
         };
       } catch (e) {
         console.error('Error parsing saved finance data:', e);
@@ -112,6 +113,7 @@ function getInitialData() {
     fixedExpenses: initialFixedExpenses,
     variableExpenses: initialVariableExpenses,
     income: initialIncome,
+    customWallets: [],
   };
 }
 
@@ -123,15 +125,19 @@ interface FinanceContextType {
   fixedExpenses: FixedExpense[];
   variableExpenses: VariableExpense[];
   income: Income[];
+  customWallets: string[];
   
   addAccount: (account: Omit<Account, 'id' | 'data_atualizacao'>) => void;
   updateAccount: (id: string, account: Partial<Account>) => void;
   deleteAccount: (id: string) => void;
   
-  addInvestment: (investment: Omit<Investment, 'id' | 'data_atualizacao' | 'valor_atual'>) => void;
+  addInvestment: (investment: Omit<Investment, 'id' | 'data_atualizacao' | 'valor_atual'>, accountId?: string) => void;
   updateInvestment: (id: string, investment: Partial<Investment>) => void;
   deleteInvestment: (id: string) => void;
   refreshPrices: () => Promise<{ failedTickers: string[] }>;
+  
+  addCustomWallet: (name: string) => void;
+  deleteCustomWallet: (name: string) => void;
   
   addDebt: (debt: Omit<Debt, 'id'>) => void;
   updateDebt: (id: string, debt: Partial<Debt>) => void;
@@ -167,12 +173,13 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [fixedExpenses, setFixedExpenses] = useState<FixedExpense[]>(() => initialData.fixedExpenses);
   const [variableExpenses, setVariableExpenses] = useState<VariableExpense[]>(() => initialData.variableExpenses);
   const [income, setIncome] = useState<Income[]>(() => initialData.income);
+  const [customWallets, setCustomWallets] = useState<string[]>(() => initialData.customWallets || []);
 
   // Save to localStorage on change
   useEffect(() => {
-    const data = { accounts, investments, debts, fixedExpenses, variableExpenses, income };
+    const data = { accounts, investments, debts, fixedExpenses, variableExpenses, income, customWallets };
     localStorage.setItem('financeflow_data', JSON.stringify(data));
-  }, [accounts, investments, debts, fixedExpenses, variableExpenses, income]);
+  }, [accounts, investments, debts, fixedExpenses, variableExpenses, income, customWallets]);
 
   // Account actions
   const addAccount = (account: Omit<Account, 'id' | 'data_atualizacao'>) => {
@@ -195,14 +202,23 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   };
 
   // Investment actions
-  const addInvestment = (investment: Omit<Investment, 'id' | 'data_atualizacao' | 'valor_atual'>) => {
+  const addInvestment = (investment: Omit<Investment, 'id' | 'data_atualizacao' | 'valor_atual'>, accountId?: string) => {
     const newInvestment: Investment = {
       ...investment,
       id: Date.now().toString(),
       valor_atual: investment.quantidade * investment.preco_atual,
       data_atualizacao: new Date().toISOString().split('T')[0],
     };
+    
     setInvestments(prev => [...prev, newInvestment]);
+
+    // Deduct from account if specified
+    if (accountId) {
+      const amount = investment.quantidade * investment.preco_medio;
+      setAccounts(prev => prev.map(a => 
+        a.id === accountId ? { ...a, saldo: a.saldo - amount, data_atualizacao: new Date().toISOString().split('T')[0] } : a
+      ));
+    }
   };
 
   const updateInvestment = (id: string, investment: Partial<Investment>) => {
@@ -219,6 +235,16 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   const deleteInvestment = (id: string) => {
     setInvestments(prev => prev.filter(i => i.id !== id));
+  };
+
+  // Custom Wallet actions
+  const addCustomWallet = (name: string) => {
+    if (!name.trim()) return;
+    setCustomWallets(prev => [...new Set([...prev, name.trim()])]);
+  };
+
+  const deleteCustomWallet = (name: string) => {
+    setCustomWallets(prev => prev.filter(w => w !== name));
   };
 
   // Server API - Fetch current price via Next.js API route
@@ -433,6 +459,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       getDashboardSummary,
       getPlatformSummaries,
       getExpensesByCategory,
+      customWallets,
+      addCustomWallet,
+      deleteCustomWallet,
     }}>
       {children}
     </FinanceContext.Provider>

@@ -40,7 +40,24 @@ function FixedExpensesContent() {
     }
   };
 
-  const totalMonthly = fixedExpenses.reduce((sum, e) => sum + calculateMonthlyEquivalent(e), 0);
+  // Calculate actual expenses that occurred this month so far (March 2026)
+  const calculateMonthlySoFar = () => {
+    const today = new Date('2026-03-20T00:00:00Z');
+    const currentDay = today.getDate();
+    
+    return fixedExpenses.reduce((sum, e) => {
+      // Only count monthly expenses that have passed their payment day
+      if (e.frequencia === 'mensal' && e.data_pagamento <= currentDay) {
+        return sum + e.valor;
+      }
+      // For other frequencies, we assume they are not due this month unless specified.
+      // The user says they count 5 expenses totaling 590, which matches the monthly ones so far.
+      return sum;
+    }, 0);
+  };
+
+  const totalMonthly = calculateMonthlySoFar();
+  const totalMonthlyEquivalent = fixedExpenses.reduce((sum, e) => sum + calculateMonthlyEquivalent(e), 0);
   
   // Calculate annual expenses up to current date
   const calculateAnnualSoFar = () => {

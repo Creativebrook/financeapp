@@ -6,7 +6,7 @@ import { FinanceProvider, useFinance } from '@/context/FinanceContext';
 import { useSidebar } from '@/context/SidebarContext';
 import Sidebar from '@/components/Sidebar';
 import PremiumHeader from '@/components/PremiumHeader';
-import { Plus, Edit2, Trash2, RefreshCw, X, TrendingUp, TrendingDown, Wallet, Bitcoin, BarChart3 } from 'lucide-react';
+import { Plus, Edit2, Trash2, RefreshCw, X, TrendingUp, TrendingDown, Wallet, Bitcoin, BarChart3, User } from 'lucide-react';
 import { formatCurrency, formatPercentVariation, formatNumber, getPlatformColor, calculateProfitability, calculateProfitabilityPercent } from '@/lib/utils';
 import { Investment, Plataforma } from '@/types';
 
@@ -70,7 +70,17 @@ const getChartDomain = (currentValue: number, investedValue: number): [number, n
 };
 
 function InvestmentsContent() {
-  const { investments, addInvestment, updateInvestment, deleteInvestment, refreshPrices, getPlatformSummaries } = useFinance();
+  const { 
+    accounts, 
+    investments, 
+    addInvestment, 
+    updateInvestment, 
+    deleteInvestment, 
+    refreshPrices, 
+    getPlatformSummaries,
+    customWallets,
+    addCustomWallet
+  } = useFinance();
   const { isCollapsed } = useSidebar();
   const [activePlatform, setActivePlatform] = useState<Plataforma>('XTB');
   const [activeWallet, setActiveWallet] = useState<string>('');
@@ -140,6 +150,7 @@ function InvestmentsContent() {
     posicao: 'long' as 'long' | 'short',
     alocacao_alvo: 0,
     isAutoPrice: false,
+    accountId: '',
   });
 
   const platformSummaries = getPlatformSummaries();
@@ -164,7 +175,7 @@ function InvestmentsContent() {
   // Get unique wallets for Trading212
   const wallets = [...new Set(investments.filter(i => i.plataforma === 'Trading212' && i.carteira).map(i => i.carteira as string))];
   const defaultWallets = ['Growth Predict', 'NextGen Leaders', 'Top Active Gainers', 'Best Dividend Yield', 'Diversified ETF Core', 'S&P500 Safe Stocks', 'Tech Europe 2030', 'Moonshot Profile'];
-  const allWallets: string[] = [...new Set([...defaultWallets, ...wallets])].sort();
+  const allWallets: string[] = [...new Set([...defaultWallets, ...wallets, ...customWallets])].sort();
   
   // Filter by wallet if Trading212 is selected and wallet is set
   if (activePlatform === 'Trading212' && activeWallet) {
@@ -234,6 +245,7 @@ function InvestmentsContent() {
         posicao: investment.posicao || 'long',
         alocacao_alvo: investment.alocacao_alvo || 0,
         isAutoPrice: investment.isAutoPrice || false,
+        accountId: '',
       });
     } else {
       setEditingInvestment(null);
@@ -248,6 +260,7 @@ function InvestmentsContent() {
         posicao: 'long',
         alocacao_alvo: 0,
         isAutoPrice: false,
+        accountId: '',
       });
     }
     setShowModal(true);
@@ -276,7 +289,7 @@ function InvestmentsContent() {
     if (editingInvestment) {
       updateInvestment(editingInvestment.id, investmentData);
     } else {
-      addInvestment(investmentData);
+      addInvestment(investmentData, formData.accountId || undefined);
     }
     handleCloseModal();
   };
@@ -511,7 +524,7 @@ function InvestmentsContent() {
                 ))}
               </select>
             ) : (
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+              <div className="no-scrollbar" style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', alignItems: 'center' }}>
                 {allWallets.map((wallet) => (
                   <button
                     key={wallet}
@@ -584,6 +597,11 @@ function InvestmentsContent() {
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
                           <span style={{ color: 'white', fontSize: '1.2rem', fontWeight: 700, letterSpacing: '-0.02em' }}>{investment.ticker}</span>
+                          {investment.isAutoPrice ? (
+                            <RefreshCw size={14} className="text-accent-primary" title="Automático (yFinance)" />
+                          ) : (
+                            <User size={14} className="text-text-muted" title="Manual" />
+                          )}
                           <span style={{ 
                             background: 'rgba(255, 255, 255, 0.1)', 
                             color: 'rgba(255, 255, 255, 0.7)', 
@@ -720,7 +738,14 @@ function InvestmentsContent() {
                           <span style={{ fontWeight: 500, fontSize: '0.8rem', color: 'var(--text-muted)' }}>{formatCurrency(investment.preco_medio)}</span>
                         </td>
                         <td>
-                          <span style={{ fontWeight: 500, fontSize: '0.8rem', color: 'var(--text-muted)' }}>{formatCurrency(investment.preco_atual)}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontWeight: 500, fontSize: '0.8rem', color: 'var(--text-muted)' }}>{formatCurrency(investment.preco_atual)}</span>
+                            {investment.isAutoPrice ? (
+                              <RefreshCw size={12} className="text-accent-primary" title="Automático (yFinance)" />
+                            ) : (
+                              <User size={12} className="text-text-muted" title="Manual" />
+                            )}
+                          </div>
                         </td>
                         <td>
                           <span style={{ fontWeight: 600, letterSpacing: 'normal' }}>{formatCurrency(investment.valor_atual)}</span>
@@ -805,16 +830,36 @@ function InvestmentsContent() {
                 {formData.plataforma === 'Trading212' && (
                   <div className="form-group">
                     <label className="form-label">Carteira (Pie)</label>
-                    <input
-                      type="text"
-                      className="form-input"
+                    <select
+                      className="form-select"
                       value={formData.carteira}
                       onChange={(e) => setFormData({ ...formData, carteira: e.target.value })}
-                      placeholder="Ex: Tech Growth"
-                    />
+                    >
+                      <option value="">Selecionar Carteira</option>
+                      {allWallets.map(wallet => (
+                        <option key={wallet} value={wallet}>{wallet}</option>
+                      ))}
+                    </select>
                   </div>
                 )}
               </div>
+
+              {!editingInvestment && (
+                <div className="form-group">
+                  <label className="form-label">Conta de Origem</label>
+                  <select
+                    className="form-select"
+                    value={formData.accountId}
+                    onChange={(e) => setFormData({ ...formData, accountId: e.target.value })}
+                    required
+                  >
+                    <option value="">Selecionar Conta</option>
+                    {accounts.map(acc => (
+                      <option key={acc.id} value={acc.id}>{acc.nome} ({formatCurrency(acc.saldo)})</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div className="grid-2">
                 <div className="form-group">
@@ -887,7 +932,22 @@ function InvestmentsContent() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Preço Atual (€)</label>
+                  <label className="form-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    Preço Atual (€)
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.7rem', fontWeight: 400 }}>
+                      {formData.isAutoPrice ? (
+                        <>
+                          <RefreshCw size={10} className="text-accent-primary" />
+                          <span className="text-accent-primary">Automático</span>
+                        </>
+                      ) : (
+                        <>
+                          <User size={10} className="text-text-muted" />
+                          <span className="text-text-muted">Manual</span>
+                        </>
+                      )}
+                    </span>
+                  </label>
                   <input
                     type="number"
                     className="form-input"
@@ -944,7 +1004,9 @@ function InvestmentsContent() {
             <form onSubmit={(e) => {
               e.preventDefault();
               if (newWalletName.trim()) {
-                setActiveWallet(newWalletName.trim());
+                const name = newWalletName.trim();
+                addCustomWallet(name);
+                setActiveWallet(name);
                 setNewWalletName('');
                 setShowWalletModal(false);
               }

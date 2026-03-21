@@ -37,12 +37,15 @@ function VariableExpensesContent() {
 
   const sortedExpenses = [...variableExpenses].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
 
+  // Calculate current month expenses (March 2026)
+  const currentMonthExpenses = variableExpenses.filter(e => e && e.data && e.data.startsWith('2026-03'));
+  
   const filteredExpenses = filterCategory === 'all' 
     ? sortedExpenses 
     : sortedExpenses.filter(e => e.categoria === filterCategory);
 
   const totalFilteredExpenses = filteredExpenses.reduce((sum, e) => sum + e.valor, 0);
-  const totalAllExpenses = variableExpenses.reduce((sum, e) => sum + e.valor, 0);
+  const totalAllExpenses = currentMonthExpenses.reduce((sum, e) => sum + e.valor, 0);
 
   // Pagination logic
   const totalPages = Math.ceil(filteredExpenses.length / itemsPerPage);

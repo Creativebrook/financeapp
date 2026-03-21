@@ -66,70 +66,83 @@ function AccountsContent() {
 
   // Calculate "Real-time" current balance based on day of month
   const calculateCurrentMonthProgress = () => {
-    const now = new Date('2026-03-21T00:00:00Z');
+    const now = new Date('2026-03-20T00:00:00Z');
     const currentDay = now.getDate();
     
-    // 1. Income received so far
+    // Calculate totals so far
     const incomeSoFar = income.reduce((sum, inc) => {
       if (inc && inc.data <= currentDay) return sum + inc.valor;
       return sum;
     }, 0);
 
-    // 2. Fixed expenses paid so far
     const fixedSoFar = fixedExpenses.reduce((sum, exp) => {
-      if (!exp) return sum;
-      if (exp.frequencia === 'mensal' && exp.data_pagamento <= currentDay) return sum + exp.valor;
-      // For non-monthly, we assume they are paid on their specific day if it's this month
-      // Simplified: just check if the day has passed
-      if (exp.data_pagamento <= currentDay) {
-        // We only count it if it's due this month (simplified logic)
-        // For this demo, we'll just count monthly ones that passed
-        if (exp.frequencia === 'mensal') return sum + exp.valor;
-      }
+      if (exp && exp.frequencia === 'mensal' && exp.data_pagamento <= currentDay) return sum + exp.valor;
       return sum;
     }, 0);
 
-    // 3. Variable expenses so far (already in the list for this month)
     const variableSoFar = variableExpenses
       .filter(exp => exp && exp.data && exp.data.startsWith('2026-03'))
       .reduce((sum, exp) => sum + (exp?.valor || 0), 0);
 
-    // 4. Debt payments so far
     const debtsSoFar = debts.reduce((sum, d) => {
       if (d && d.data_pagamento <= currentDay) return sum + d.prestacao_mensal;
       return sum;
     }, 0);
 
-    // Starting balance (sum of accounts at start of month)
-    // We'll estimate this by taking current total balance and reversing the flow
-    const totalCurrentBalance = accounts.reduce((sum, a) => sum + a.saldo, 0);
-    
-    // The user wants the "SALDO ATUAL" card to be coherent.
-    // Let's use the sum of accounts as the base, but show the progress.
+    // Calculate per-account balances
+    const accountBalances = accounts.map(account => {
+      const accIncomeSoFar = income
+        .filter(inc => inc.conta === account.nome && inc.data <= currentDay)
+        .reduce((sum, inc) => sum + inc.valor, 0);
+
+      const accFixed = fixedExpenses
+        .filter(exp => exp.conta === account.nome && exp.frequencia === 'mensal' && exp.data_pagamento <= currentDay)
+        .reduce((sum, exp) => sum + exp.valor, 0);
+        
+      const accVariable = variableExpenses
+        .filter(exp => exp.conta === account.nome && exp.data && exp.data.startsWith('2026-03'))
+        .reduce((sum, exp) => sum + exp.valor, 0);
+        
+      const accDebts = debts
+        .filter(d => d.conta === account.nome && d.data_pagamento <= currentDay)
+        .reduce((sum, d) => sum + d.prestacao_mensal, 0);
+        
+      const accountBase = account.saldo + accIncomeSoFar;
+      const realTimeBalance = accountBase - (accFixed + accVariable + accDebts);
+
+      return {
+        ...account,
+        accountBase,
+        realTimeBalance
+      };
+    });
+
+    const saldoInicialSoFar = accountBalances.reduce((sum, a) => sum + a.accountBase, 0);
+    const totalExpensesSoFar = fixedSoFar + variableSoFar + debtsSoFar;
+    const saldoAtual = saldoInicialSoFar - totalExpensesSoFar;
+
     return {
-      totalCurrentBalance,
+      saldoInicialSoFar,
+      saldoAtual,
       incomeSoFar,
-      expensesSoFar: fixedSoFar + variableSoFar + debtsSoFar,
-      totalMonthlyIncome
+      expensesSoFar: totalExpensesSoFar,
+      accountBalances
     };
   };
 
-  const { totalCurrentBalance, incomeSoFar, expensesSoFar } = calculateCurrentMonthProgress();
-  
-  // The user says the card shows 531.50 but should be 1900 + 2044.
-  // I will make the main value the totalCurrentBalance.
+  const { saldoInicialSoFar, saldoAtual, incomeSoFar, expensesSoFar, accountBalances } = calculateCurrentMonthProgress();
   
   // Calculate percentages for the KPI
-  const currentPercentage = totalMonthlyIncome > 0 ? Math.round(((incomeSoFar - expensesSoFar) / totalMonthlyIncome) * 100) : 0;
+  const currentPercentage = saldoInicialSoFar > 0 ? Math.round((saldoAtual / saldoInicialSoFar) * 100) : 0;
   const previousPercentage = 45; // Mocked
   
-  // Calculate balance by bank
-  const balanceByBank = accounts.reduce((acc, account) => {
+  // Calculate balance by bank for the chart
+  const balanceByBank = accountBalances.reduce((acc, account) => {
     const existing = acc.find(b => b.name === account.nome);
     if (existing) {
-      existing.value += account.saldo;
+      existing.value += account.realTimeBalance;
     } else {
-      acc.push({ name: account.nome, value: account.saldo });
+      acc.push({ name: account.nome, value: account.realTimeBalance });
     }
     return acc;
   }, [] as { name: string; value: number }[]);
@@ -137,7 +150,7 @@ function AccountsContent() {
   // Add percentage and color to each bank
   const pieData = balanceByBank.map((bank, index) => ({
     ...bank,
-    percent: totalCurrentBalance > 0 ? Math.round((bank.value / totalCurrentBalance) * 100) : 0,
+    percent: saldoAtual > 0 ? Math.round((bank.value / saldoAtual) * 100) : 0,
     color: getCategoryColor(bank.name), // Using consistent colors
   }));
 
@@ -240,12 +253,12 @@ function AccountsContent() {
             
             <div className="mt-2">
               <div className="flex items-baseline gap-2">
-                <h4 className="text-2xl font-bold text-white tracking-tight" style={{ fontFamily: 'Inter, sans-serif' }}>{formatCurrency(totalCurrentBalance)}</h4>
+                <h4 className="text-2xl font-bold text-white tracking-tight" style={{ fontFamily: 'Inter, sans-serif' }}>{formatCurrency(saldoAtual)}</h4>
                 <span className="kpi-delta" style={{ 
                   color: getPercentageColor(currentPercentage), 
                   background: getPercentageColor(currentPercentage) ? `color-mix(in srgb, ${getPercentageColor(currentPercentage)} 14%, transparent)` : 'transparent' 
                 }}>{currentPercentage}%</span>
-                <span className="ml-auto text-[10px] text-slate-600 uppercase tracking-tighter">total income: {formatCurrency(totalMonthlyIncome)}</span>
+                <span className="ml-auto text-[10px] text-slate-600 uppercase tracking-tighter">saldo inicial: {formatCurrency(saldoInicialSoFar)}</span>
               </div>
               {/* Current month bar */}
               <div className="w-full h-2 bg-white/[0.03] rounded-full mt-4 overflow-hidden border border-white/[0.02]">
@@ -260,7 +273,7 @@ function AccountsContent() {
               </div>
               <div className="flex justify-between items-center mt-2">
                 <div className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 rounded-full" style={{ background: getCurrentMonthColor(currentPercentage) }}></div>
+                  <div className="w-2 h-2 rounded-full" style={{ background: getPercentageColor(currentPercentage) }}></div>
                   <span className="text-[9px] text-slate-400 uppercase tracking-wide">ESTE MÊS</span>
                 </div>
                 <div className="flex items-center gap-1.5">
@@ -333,7 +346,7 @@ function AccountsContent() {
                 <tr>
                   <th style={{ textAlign: 'left' }}>Nome</th>
                   <th style={{ textAlign: 'left' }}>Tipo</th>
-                  <th style={{ textAlign: 'left' }}>Income</th>
+                  <th style={{ textAlign: 'left' }}>Base</th>
                   <th style={{ textAlign: 'left' }}>Saldo</th>
                   <th style={{ textAlign: 'left' }}>Últ. Mov.</th>
                   <th className="hidden md:table-cell" style={{ textAlign: 'left' }}>Notas</th>
@@ -341,9 +354,8 @@ function AccountsContent() {
                 </tr>
               </thead>
               <tbody>
-                  {accounts.map((account) => {
-                    const accountIncome = getAccountIncome(account.nome);
-                    const accountPercent = totalMonthlyIncome > 0 ? Math.round((account.saldo / totalMonthlyIncome) * 100) : 0;
+                  {accountBalances.map((account) => {
+                    const accountPercent = saldoInicialSoFar > 0 ? Math.round((account.realTimeBalance / saldoInicialSoFar) * 100) : 0;
                     const percentColor = getPercentageColor(accountPercent);
                     
                     return (
@@ -363,7 +375,7 @@ function AccountsContent() {
                             fontWeight: 500, 
                             color: 'var(--text-secondary)' 
                           }}>
-                            {formatCurrency(accountIncome)}
+                            {formatCurrency(account.accountBase)}
                           </span>
                         </td>
                         <td style={{ textAlign: 'left' }}>
@@ -372,7 +384,7 @@ function AccountsContent() {
                             fontWeight: 600, 
                             color: percentColor 
                           }}>
-                            {formatCurrency(account.saldo)}
+                            {formatCurrency(account.realTimeBalance)}
                           </span>
                         </td>
                         <td style={{ textAlign: 'left' }}>
@@ -421,10 +433,10 @@ function AccountsContent() {
 
           {/* Mobile Card View */}
           <div className="md:hidden">
-            {accounts.length > 0 ? (
+            {accountBalances.length > 0 ? (
               <div style={{ padding: '0' }}>
-                {accounts.map((account, index) => {
-                  const accountPercent = totalMonthlyIncome > 0 ? Math.round((account.saldo / totalMonthlyIncome) * 100) : 0;
+                {accountBalances.map((account, index) => {
+                  const accountPercent = saldoInicialSoFar > 0 ? Math.round((account.realTimeBalance / saldoInicialSoFar) * 100) : 0;
                   const percentColor = getPercentageColor(accountPercent);
                   // Simulate previous month percentage (deterministic)
                   const prevMonthPercent = Math.max(0, accountPercent - (accountPercent > 50 ? 8 : accountPercent > 20 ? 12 : 10));
@@ -461,7 +473,7 @@ function AccountsContent() {
                           </button>
                         </div>
                       </div>
-                      {/* Row 2: Saldo + % (left) + Últ. Mov. (right) */}
+                      {/* Row 2: Saldo + % (left) + Base (right) */}
                       <div className="flex justify-between items-center" style={{ padding: '8px 16px 16px' }}>
                         <div>
                           <span style={{ 
@@ -470,7 +482,7 @@ function AccountsContent() {
                             fontSize: '1.1rem',
                             color: percentColor 
                           }}>
-                            {formatCurrency(account.saldo)}
+                            {formatCurrency(account.realTimeBalance)}
                           </span>
                           <span style={{ 
                             marginLeft: '8px',
@@ -484,13 +496,14 @@ function AccountsContent() {
                           </span>
                         </div>
                         <div style={{ textAlign: 'right' }}>
-                          <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
-                            {formatDate(account.data_atualizacao)}
-                          </span>
+                          <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>Base</div>
+                          <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                            {formatCurrency(account.accountBase)}
+                          </div>
                         </div>
                       </div>
                       {/* Separator */}
-                      {index < accounts.length - 1 && (
+                      {index < accountBalances.length - 1 && (
                         <div style={{ 
                           borderTop: '1px solid var(--border-subtle)',
                           margin: '0 16px'
