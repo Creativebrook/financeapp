@@ -37,21 +37,21 @@ const initialDebts: Debt[] = [
   { id: '2', nome: 'Cartão Cetelem', valor_total: 3000, valor_inicial: 4500, prestacao_mensal: 125, data_pagamento: 20, conta: 'N26', categoria: 'Cartão de Crédito' },
   { id: '3', nome: 'Crédito Automóvel', valor_total: 15000, valor_inicial: 25000, prestacao_mensal: 350, data_pagamento: 5, conta: 'Montepio', categoria: 'Empréstimo' },
   { id: '4', nome: 'Crédito Pessoal Cetelem', valor_total: 8000, valor_inicial: 12000, prestacao_mensal: 200, data_pagamento: 25, conta: 'N26', categoria: 'Empréstimo' },
-  { id: '5', nome: 'Finanças', valor_total: 500, valor_inicial: 1000, prestacao_mensal: 50, data_pagamento: 10, conta: 'Revolut Bank', categoria: 'Impostos' },
+  { id: '5', nome: 'Finanças', valor_total: 500, valor_inicial: 1000, prestacao_mensal: 50, data_pagamento: 10, conta: 'Revolut', categoria: 'Impostos' },
   { id: '6', nome: 'Segurança Social', valor_total: 200, valor_inicial: 200, prestacao_mensal: 200, data_pagamento: 1, conta: 'Montepio', categoria: 'Impostos' },
 ];
 
 const initialFixedExpenses: FixedExpense[] = [
-  { id: '1', nome: 'Seguro automóvel', valor: 300, frequencia: 'trimestral', data_pagamento: 15, conta: 'Montepio', categoria: 'Seguro' },
+  { id: '1', nome: 'Seguro automóvel', valor: 300, frequencia: 'trimestral', data_pagamento: 15, conta: 'Montepio', categoria: 'Seguros' },
   { id: '2', nome: 'Pensão de alimentos', valor: 500, frequencia: 'mensal', data_pagamento: 1, conta: 'Montepio', categoria: 'Família' },
-  { id: '3', nome: 'IUC', valor: 50, frequencia: 'anual', data_pagamento: 1, conta: 'N26', categoria: 'Imposto' },
-  { id: '4', nome: 'ACP', valor: 60, frequencia: 'anual', data_pagamento: 1, conta: 'N26', categoria: 'Associação' },
-  { id: '5', nome: 'ChatGPT', valor: 20, frequencia: 'mensal', data_pagamento: 10, conta: 'Revolut Bank', categoria: 'Subscrição' },
+  { id: '3', nome: 'IUC', valor: 50, frequencia: 'anual', data_pagamento: 1, conta: 'N26', categoria: 'Impostos' },
+  { id: '4', nome: 'ACP', valor: 60, frequencia: 'anual', data_pagamento: 1, conta: 'N26', categoria: 'Outros' },
+  { id: '5', nome: 'ChatGPT', valor: 20, frequencia: 'mensal', data_pagamento: 10, conta: 'Revolut', categoria: 'Subscrição' },
   { id: '6', nome: 'Ginásio', valor: 40, frequencia: 'mensal', data_pagamento: 3, conta: 'N26', categoria: 'Saúde' },
-  { id: '7', nome: 'Canva', valor: 15, frequencia: 'mensal', data_pagamento: 18, conta: 'Revolut Bank', categoria: 'Subscrição' },
-  { id: '8', nome: 'Freepik', valor: 15, frequencia: 'mensal', data_pagamento: 18, conta: 'Revolut Bank', categoria: 'Subscrição' },
+  { id: '7', nome: 'Canva', valor: 15, frequencia: 'mensal', data_pagamento: 18, conta: 'Revolut', categoria: 'Subscrição' },
+  { id: '8', nome: 'Freepik', valor: 15, frequencia: 'mensal', data_pagamento: 18, conta: 'Revolut', categoria: 'Subscrição' },
   { id: '9', nome: 'Domínio + alojamento', valor: 100, frequencia: 'anual', data_pagamento: 1, conta: 'N26', categoria: 'Tecnologia' },
-  { id: '10', nome: 'Telemóveis', valor: 50, frequencia: 'mensal', data_pagamento: 24, conta: 'Montepio', categoria: 'Telecomunicações' },
+  { id: '10', nome: 'Telemóveis', valor: 50, frequencia: 'mensal', data_pagamento: 24, conta: 'Montepio', categoria: 'Serviços' },
 ];
 
 const initialVariableExpenses: VariableExpense[] = [
@@ -61,27 +61,27 @@ const initialVariableExpenses: VariableExpense[] = [
   { id: '3', nome: 'Supermercado Lidl', valor: 85, data: '2026-02-20', conta: 'N26', categoria: 'Supermercado' },
   { id: '4', nome: 'Combustível Galp', valor: 60, data: '2026-02-03', conta: 'Montepio', categoria: 'Combustível' },
   { id: '5', nome: 'Combustível BP', valor: 55, data: '2026-02-15', conta: 'N26', categoria: 'Combustível' },
-  { id: '6', nome: 'Restaurante Sushi', valor: 45, data: '2026-02-08', conta: 'Revolut Bank', categoria: 'Restaurantes' },
+  { id: '6', nome: 'Restaurante Sushi', valor: 45, data: '2026-02-08', conta: 'Revolut', categoria: 'Restaurantes' },
   { id: '7', nome: 'Restaurante Italiano', valor: 35, data: '2026-02-14', conta: 'N26', categoria: 'Restaurantes' },
-  { id: '8', nome: 'Restaurante Hambúrguer', valor: 25, data: '2026-02-22', conta: 'Revolut Bank', categoria: 'Restaurantes' },
+  { id: '8', nome: 'Restaurante Hambúrguer', valor: 25, data: '2026-02-22', conta: 'Revolut', categoria: 'Restaurantes' },
   { id: '9', nome: 'Roupa Zara', valor: 85, data: '2026-02-10', conta: 'N26', categoria: 'Compras' },
-  { id: '10', nome: 'Eletrónica Amazon', valor: 120, data: '2026-02-18', conta: 'Revolut Bank', categoria: 'Compras' },
+  { id: '10', nome: 'Eletrónica Amazon', valor: 120, data: '2026-02-18', conta: 'Revolut', categoria: 'Compras' },
   { id: '11', nome: 'Cabeleireiro', valor: 35, data: '2026-02-25', conta: 'Montepio', categoria: 'Diversos' },
   { id: '12', nome: 'Farmácia', valor: 25, data: '2026-02-28', conta: 'N26', categoria: 'Diversos' },
   
   // Março 2026 (Mês atual)
   { id: '13', nome: 'Supermercado Pingo Doce', valor: 95, data: '2026-03-02', conta: 'Montepio', categoria: 'Supermercado' },
   { id: '14', nome: 'Combustível Repsol', valor: 70, data: '2026-03-05', conta: 'N26', categoria: 'Combustível' },
-  { id: '15', nome: 'Jantar Amigos', valor: 40, data: '2026-03-08', conta: 'Revolut Bank', categoria: 'Restaurantes' },
+  { id: '15', nome: 'Jantar Amigos', valor: 40, data: '2026-03-08', conta: 'Revolut', categoria: 'Restaurantes' },
   { id: '16', nome: 'Farmácia Wells', valor: 15, data: '2026-03-12', conta: 'Montepio', categoria: 'Diversos' },
-  { id: '17', nome: 'Uber Eats', valor: 22, data: '2026-03-15', conta: 'Revolut Bank', categoria: 'Restaurantes' },
+  { id: '17', nome: 'Uber Eats', valor: 22, data: '2026-03-15', conta: 'Revolut', categoria: 'Restaurantes' },
   { id: '18', nome: 'Supermercado Mercadona', valor: 110, data: '2026-03-17', conta: 'N26', categoria: 'Supermercado' },
 ];
 
 const initialIncome: Income[] = [
   { id: '1', nome: 'Clínica [CSA]', valor: 1000, frequencia: 'mensal', data: 8, conta: 'Montepio' },
-  { id: '2', nome: 'amo.CLINICS', valor: 300, frequencia: 'mensal', data: 10, conta: 'N26' },
-  { id: '3', nome: 'Las Muns', valor: 600, frequencia: 'mensal', data: 20, conta: 'Revolut Bank' },
+  { id: '2', nome: 'amo.CLINICS', valor: 300, frequencia: 'mensal', data: 10, conta: 'Montepio' },
+  { id: '3', nome: 'Las Muns', valor: 600, frequencia: 'mensal', data: 20, conta: 'Montepio' },
 ];
 
 // Initial data loader function

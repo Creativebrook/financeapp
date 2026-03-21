@@ -154,6 +154,9 @@ export function getCategoryColor(categoria: string): string {
     'Seguro': 12,
     'Telecomunicações': 13,
     'Associação': 13,
+    'Montepio': 0,
+    'Revolut': 1,
+    'N26': 2,
   };
   const index = categoryIndex[categoria] ?? 5; // Default to 'Outros' color
   const palette = [
