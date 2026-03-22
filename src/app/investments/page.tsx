@@ -598,9 +598,13 @@ function InvestmentsContent() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
                           <span style={{ color: 'white', fontSize: '1.2rem', fontWeight: 700, letterSpacing: '-0.02em' }}>{investment.ticker}</span>
                           {investment.isAutoPrice ? (
-                            <RefreshCw size={14} className="text-accent-primary" title="Automático (yFinance)" />
+                            <span title="Automático (yFinance)">
+                              <RefreshCw size={14} className="text-accent-primary" />
+                            </span>
                           ) : (
-                            <User size={14} className="text-text-muted" title="Manual" />
+                            <span title="Manual">
+                              <User size={14} className="text-text-muted" />
+                            </span>
                           )}
                           <span style={{ 
                             background: 'rgba(255, 255, 255, 0.1)', 
@@ -741,9 +745,13 @@ function InvestmentsContent() {
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <span style={{ fontWeight: 500, fontSize: '0.8rem', color: 'var(--text-muted)' }}>{formatCurrency(investment.preco_atual)}</span>
                             {investment.isAutoPrice ? (
-                              <RefreshCw size={12} className="text-accent-primary" title="Automático (yFinance)" />
+                              <span title="Automático (yFinance)">
+                                <RefreshCw size={12} className="text-accent-primary" />
+                              </span>
                             ) : (
-                              <User size={12} className="text-text-muted" title="Manual" />
+                              <span title="Manual">
+                                <User size={12} className="text-text-muted" />
+                              </span>
                             )}
                           </div>
                         </td>
