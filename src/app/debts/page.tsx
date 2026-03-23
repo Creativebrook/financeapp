@@ -205,9 +205,9 @@ function DebtsContent() {
           </button>
         </div>
 
-        {/* Summary Cards */}
-        <div className="stats-grid mt-[30px] md:mt-0" style={{ marginBottom: '24px' }}>
-          <div className="card animate-slideUp" style={{ 
+        {/* Summary Cards - Four Columns with Spans */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-[30px] md:mt-0" style={{ marginBottom: '24px' }}>
+          <div className="card animate-slideUp lg:col-span-2" style={{ 
             background: 'linear-gradient(to bottom, var(--card-hero-bg-start) 0%, var(--card-hero-bg-mid) 55%, var(--card-hero-bg-end) 100%)', 
             borderRadius: '8px', 
             border: '1px solid var(--card-border)', 
@@ -245,7 +245,7 @@ function DebtsContent() {
             </div>
           </div>
 
-          <div className="card animate-slideUp" style={{ 
+          <div className="card animate-slideUp lg:col-span-1" style={{ 
             background: 'linear-gradient(to bottom, var(--card-hero-bg-start) 0%, var(--card-hero-bg-mid) 55%, var(--card-hero-bg-end) 100%)', 
             borderRadius: '8px', 
             border: '1px solid var(--card-border)', 
@@ -278,8 +278,8 @@ function DebtsContent() {
             </div>
           </div>
 
-          {/* Card 3: Credit Cards */}
-          <div className="card animate-slideUp" style={{ 
+          {/* Card 3: Credit Cards (1 column) */}
+          <div className="card animate-slideUp lg:col-span-1" style={{ 
             background: 'linear-gradient(to bottom, var(--card-hero-bg-start) 0%, var(--card-hero-bg-mid) 55%, var(--card-hero-bg-end) 100%)', 
             borderRadius: '8px', 
             border: '1px solid var(--card-border)', 

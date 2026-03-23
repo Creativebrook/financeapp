@@ -27,6 +27,7 @@ function IncomeContent() {
     data_inicio: '',
     data_fim: '',
     conta: 'Montepio',
+    isExtra: false,
   });
 
   const calculateMonthlyEquivalent = (incomeItem: Income): number => {
@@ -53,7 +54,7 @@ function IncomeContent() {
     }
   };
 
-  const totalMonthly = income.reduce((sum, i) => sum + calculateMonthlyEquivalent(i), 0);
+  const totalMonthly = income.filter(i => !i.isExtra).reduce((sum, i) => sum + calculateMonthlyEquivalent(i), 0);
   const totalAnnual = income.reduce((sum, i) => sum + calculateAnnualEquivalent(i), 0);
 
   // Calculate monthly income received so far this month
@@ -63,6 +64,24 @@ function IncomeContent() {
   const currentYear = today.getFullYear();
 
   const incomeReceivedSoFar = income
+    .filter(i => !i.isExtra)
+    .filter(i => {
+      if (!i) return false;
+      if (i.frequencia === 'mensal') {
+        return i.data <= currentDay;
+      }
+      if (i.frequencia === 'unico' && i.data_especifica) {
+        const date = new Date(i.data_especifica);
+        return date.getMonth() === currentMonth && 
+               date.getFullYear() === currentYear && 
+               date.getDate() <= currentDay;
+      }
+      return false;
+    })
+    .reduce((sum, i) => sum + i.valor, 0);
+
+  const extraIncomeReceived = income
+    .filter(i => i.isExtra)
     .filter(i => {
       if (!i) return false;
       if (i.frequencia === 'mensal') {
@@ -79,6 +98,7 @@ function IncomeContent() {
     .reduce((sum, i) => sum + i.valor, 0);
   
   const monthlyProgress = totalMonthly > 0 ? (incomeReceivedSoFar / totalMonthly) * 100 : 0;
+  const extraProgress = totalMonthly > 0 ? (extraIncomeReceived / totalMonthly) * 100 : 0;
 
   // Annual projection data (mock for now based on monthly income)
   const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
@@ -119,6 +139,7 @@ function IncomeContent() {
         data_inicio: incomeItem.data_inicio || '',
         data_fim: incomeItem.data_fim || '',
         conta: incomeItem.conta,
+        isExtra: incomeItem.isExtra || false,
       });
     } else {
       setEditingIncome(null);
@@ -131,6 +152,7 @@ function IncomeContent() {
         data_inicio: '',
         data_fim: '',
         conta: accounts[0]?.nome || 'Montepio',
+        isExtra: false,
       });
     }
     setShowModal(true);
@@ -219,19 +241,36 @@ function IncomeContent() {
               <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">Rendimento Mensal</p>
             </div>
             <div className="card-value" style={{ color: 'var(--accent-success)', fontSize: '1.75rem', fontWeight: 700, fontFamily: 'Inter, sans-serif' }}>
-              {formatCurrency(incomeReceivedSoFar)}
+              {formatCurrency(incomeReceivedSoFar + extraIncomeReceived)}
             </div>
-            <div className="mt-4">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-[10px] text-slate-500 uppercase">Expectável: {formatCurrency(totalMonthly)}</span>
-                <span className="text-[10px] text-slate-400 font-bold">{monthlyProgress.toFixed(0)}%</span>
+            <div className="mt-4 space-y-4">
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-[10px] text-slate-500 uppercase">Expectável: {formatCurrency(totalMonthly)}</span>
+                  <span className="text-[10px] text-slate-400 font-bold">{monthlyProgress.toFixed(0)}%</span>
+                </div>
+                <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-emerald-500 rounded-full transition-all duration-1000" 
+                    style={{ width: `${Math.min(monthlyProgress, 100)}%` }}
+                  />
+                </div>
               </div>
-              <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-emerald-500 rounded-full transition-all duration-1000" 
-                  style={{ width: `${Math.min(monthlyProgress, 100)}%` }}
-                />
-              </div>
+
+              {extraIncomeReceived > 0 && (
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-[10px] text-slate-500 uppercase">Income Extra: {formatCurrency(extraIncomeReceived)}</span>
+                    <span className="text-[10px] text-indigo-400 font-bold">+{extraProgress.toFixed(0)}%</span>
+                  </div>
+                  <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-indigo-500 rounded-full transition-all duration-1000" 
+                      style={{ width: `${Math.min(extraProgress, 100)}%` }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -246,7 +285,7 @@ function IncomeContent() {
             <div className="flex items-baseline gap-2 mb-4">
               <span className="card-value" style={{ fontSize: '1.5rem', fontWeight: 700, fontFamily: 'Inter, sans-serif' }}>{formatCurrency(totalAnnual)}</span>
             </div>
-            <div style={{ height: '80px', width: '100%' }}>
+            <div style={{ height: '140px', width: '100%' }}>
               <AnnualIncomeProjectionChart data={annualProjectionData} tooltipStyle={tooltipStyle} />
             </div>
           </div>
@@ -555,6 +594,18 @@ function IncomeContent() {
                   </div>
                 </div>
               )}
+
+              <div className="form-group">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="w-4 h-4 rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-slate-900"
+                    checked={formData.isExtra}
+                    onChange={(e) => setFormData({ ...formData, isExtra: e.target.checked })}
+                  />
+                  <span className="text-sm text-slate-300">Este rendimento é extra (não expectável)</span>
+                </label>
+              </div>
 
               <div className="modal-actions">
                 <button type="button" className="btn btn-secondary" onClick={handleCloseModal}>

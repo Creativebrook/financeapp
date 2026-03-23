@@ -253,10 +253,11 @@ function AccountsContent() {
           </button>
         </div>
 
-        {/* Top Row: Three Columns */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6 mt-[30px] md:mt-0">
-          {/* Left: SALDO ATUAL Card - Like Dashboard BalanceCard */}
+        {/* Top Row: Four Columns with Spans */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6 mt-[30px] md:mt-0">
+          {/* Left: SALDO ATUAL Card - Like Dashboard BalanceCard (1 column) */}
           <div 
+            className="lg:col-span-1"
             style={{
               backgroundColor: 'var(--card-bg)',
               borderRadius: '8px',
@@ -314,8 +315,9 @@ function AccountsContent() {
             </div>
           </div>
 
-          {/* Middle: Evolution Chart - Evolução de Saldos (Last 3 months) */}
+          {/* Middle: Evolution Chart - Evolução de Saldos (Last 3 months) (2 columns) */}
           <div 
+            className="lg:col-span-2"
             style={{
               backgroundColor: 'var(--card-bg)',
               borderRadius: '8px',
@@ -335,7 +337,7 @@ function AccountsContent() {
             </div>
             
             {evolutionData.length > 0 ? (
-              <div className="h-[calc(100%-40px)] mt-2">
+              <div className="h-[180px] mt-2">
                 <AccountsEvolutionChart 
                   data={evolutionData} 
                   accountNames={accountNames} 
@@ -343,14 +345,15 @@ function AccountsContent() {
                 />
               </div>
             ) : (
-              <div className="flex items-center justify-center h-[calc(100%-40px)] text-slate-500 text-sm">
+              <div className="flex items-center justify-center h-[180px] text-slate-500 text-sm">
                 Sem dados disponíveis
               </div>
             )}
           </div>
 
-          {/* Right: CARTÕES DE DÉBITO Card - Similar to Dashboard "OS MEUS CARTÕES" */}
+          {/* Right: CARTÕES DE DÉBITO Card - Similar to Dashboard "OS MEUS CARTÕES" (1 column) */}
           <div 
+            className="lg:col-span-1"
             style={{
               backgroundColor: 'var(--card-bg)',
               borderRadius: '8px',

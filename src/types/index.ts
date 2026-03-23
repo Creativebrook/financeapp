@@ -78,6 +78,7 @@ export interface Income {
   data_inicio?: string;
   data_fim?: string;
   conta: string;
+  isExtra?: boolean;
 }
 
 // Calendar Event Types

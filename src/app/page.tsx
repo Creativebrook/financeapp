@@ -1545,7 +1545,7 @@ function DashboardContent() {
                 <div className="w-9 h-9 rounded-full bg-white/[0.03] border border-white/[0.05] flex items-center justify-center">
                   <Calendar size={16} className="text-slate-600" />
                 </div>
-                <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">PRÓXIMOS PAGAMENTOS</p>
+                <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">PRÓXIMOS MOVIMENTOS</p>
               </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
