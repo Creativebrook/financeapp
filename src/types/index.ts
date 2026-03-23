@@ -56,7 +56,7 @@ export interface FixedExpense {
 }
 
 // Variable Expense Types
-export type CategoriaDespesa = 'Supermercado' | 'Combustível' | 'Restaurantes' | 'Compras' | 'Diversos';
+export type CategoriaDespesa = 'Supermercado' | 'Combustível' | 'Restaurantes' | 'Compras' | 'Diversos' | 'Transferência' | 'Investimento';
 
 export interface VariableExpense {
   id: string;
@@ -93,6 +93,8 @@ export interface CalendarEvent {
 // Dashboard Summary Types
 export interface DashboardSummary {
   totalWealth: number;
+  totalAccounts: number;
+  totalBase: number;
   totalInvestments: number;
   totalDebts: number;
   monthlyCashflow: number;

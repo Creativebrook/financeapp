@@ -5,8 +5,9 @@ import { FinanceProvider, useFinance } from '@/context/FinanceContext';
 import { useSidebar } from '@/context/SidebarContext';
 import Sidebar from '@/components/Sidebar';
 import PremiumHeader from '@/components/PremiumHeader';
-import { Plus, Edit2, Trash2, CreditCard, X, AlertCircle, Calendar, Banknote, CalendarCheck } from 'lucide-react';
+import { Plus, Edit2, Trash2, CreditCard, X, AlertCircle, Calendar, Banknote, CalendarCheck, ChevronLeft, ChevronRight, Eye, Trash } from 'lucide-react';
 import { formatCurrency, getNextPaymentDate, formatDate } from '@/lib/utils';
+import { getCardAccent } from '@/lib/theme';
 import { Debt } from '@/types';
 
 function DebtsContent() {
@@ -14,6 +15,16 @@ function DebtsContent() {
   const { isCollapsed } = useSidebar();
   const summary = getDashboardSummary();
   const monthlyIncome = summary.monthlyIncome;
+  const [activeCardIndex, setActiveCardIndex] = useState(0);
+  const [showCreditCardModal, setShowCreditCardModal] = useState(false);
+  const [creditCardFormData, setCreditCardFormData] = useState({
+    nome: '',
+    valor_total: 0,
+    valor_inicial: 0,
+    taxa_juro: 0,
+  });
+
+  const creditCards = debts.filter(d => d.categoria === 'Cartão de Crédito');
 
   const calculateMonthsRemaining = (debt: Debt): number => {
     if (debt.prestacao_mensal === 0) return 0;
@@ -29,6 +40,8 @@ function DebtsContent() {
   };
   
   const [showModal, setShowModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [debtToDelete, setDebtToDelete] = useState<string | null>(null);
   const [editingDebt, setEditingDebt] = useState<Debt | null>(null);
   const [formData, setFormData] = useState({
     nome: '',
@@ -82,15 +95,18 @@ function DebtsContent() {
       });
     } else {
       setEditingDebt(null);
+      const defaultCategory = 'Cartão de Crédito';
+      const firstCreditCard = creditCards[0];
+      
       setFormData({
         nome: '',
         valor_total: 0,
         valor_inicial: 0,
         prestacao_mensal: 0,
         data_pagamento: 1,
-        conta: accounts[0]?.nome || 'Montepio',
-        categoria: 'Cartão de Crédito',
-        taxa_juro: 0,
+        conta: firstCreditCard ? firstCreditCard.nome : (accounts[0]?.nome || 'Montepio'),
+        categoria: defaultCategory,
+        taxa_juro: firstCreditCard ? (firstCreditCard.taxa_juro || 0) : 0,
         data_fim: '',
       });
     }
@@ -100,6 +116,37 @@ function DebtsContent() {
   const handleCloseModal = () => {
     setShowModal(false);
     setEditingDebt(null);
+  };
+
+  const handleOpenCreditCardModal = () => {
+    setCreditCardFormData({
+      nome: '',
+      valor_total: 0,
+      valor_inicial: 0,
+      taxa_juro: 0,
+    });
+    setShowCreditCardModal(true);
+  };
+
+  const handleCloseCreditCardModal = () => {
+    setShowCreditCardModal(false);
+  };
+
+  const handleCreditCardSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const debtData = {
+      nome: creditCardFormData.nome,
+      valor_total: creditCardFormData.valor_total,
+      valor_inicial: creditCardFormData.valor_inicial,
+      prestacao_mensal: 0, // Default for credit card added this way
+      data_pagamento: 1, // Default for credit card added this way
+      conta: accounts[0]?.nome || 'Montepio',
+      categoria: 'Cartão de Crédito',
+      taxa_juro: creditCardFormData.taxa_juro || undefined,
+    };
+    
+    addDebt(debtData);
+    handleCloseCreditCardModal();
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -125,8 +172,15 @@ function DebtsContent() {
   };
 
   const handleDelete = (id: string) => {
-    if (confirm('Tem certeza que deseja eliminar esta dívida?')) {
-      deleteDebt(id);
+    setDebtToDelete(id);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = () => {
+    if (debtToDelete) {
+      deleteDebt(debtToDelete);
+      setShowDeleteModal(false);
+      setDebtToDelete(null);
     }
   };
 
@@ -222,6 +276,99 @@ function DebtsContent() {
             <div className="text-[0.6rem] md:text-[0.75rem]" style={{ color: 'var(--text-secondary)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               TAXA DE ESFORÇO: <span style={{ color: getEffortColor(taxaEsforco) }}>{taxaEsforco.toFixed(1)}%</span>
             </div>
+          </div>
+
+          {/* Card 3: Credit Cards */}
+          <div className="card animate-slideUp" style={{ 
+            background: 'linear-gradient(to bottom, var(--card-hero-bg-start) 0%, var(--card-hero-bg-mid) 55%, var(--card-hero-bg-end) 100%)', 
+            borderRadius: '8px', 
+            border: '1px solid var(--card-border)', 
+            padding: '24px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            minHeight: '240px'
+          }}>
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-white/[0.03] border border-white/[0.05] flex items-center justify-center">
+                  <CreditCard size={16} className="text-slate-400" />
+                </div>
+                <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">CARTÕES DE CRÉDITO</p>
+              </div>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => handleOpenCreditCardModal()}
+                  className="w-8 h-8 rounded-full bg-white/[0.03] border border-white/[0.08] flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/[0.1] transition-all"
+                >
+                  <Plus size={16} />
+                </button>
+                {creditCards.length > 0 && (
+                  <>
+                    <button 
+                      onClick={() => setActiveCardIndex(activeCardIndex === 0 ? creditCards.length - 1 : activeCardIndex - 1)}
+                      className="w-8 h-8 rounded-full bg-white/[0.03] border border-white/[0.08] flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/[0.1] transition-all"
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                    <button 
+                      onClick={() => setActiveCardIndex(activeCardIndex === creditCards.length - 1 ? 0 : activeCardIndex + 1)}
+                      className="w-8 h-8 rounded-full bg-white/[0.03] border border-white/[0.08] flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/[0.1] transition-all"
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {creditCards.length > 0 ? (
+              <div
+                className="w-full aspect-[1.58/1] rounded-md p-6 relative overflow-hidden border-l-[3px] transition-all duration-500"
+                style={{
+                  backgroundColor: 'var(--bg-surface-2)',
+                  borderLeftColor: `var(${getCardAccent(accounts.length + activeCardIndex)})`,
+                  backgroundImage: `linear-gradient(90deg, color-mix(in srgb, var(${getCardAccent(accounts.length + activeCardIndex)}) 8%, transparent), transparent 40%)`,
+                  boxShadow: `0 0 18px color-mix(in srgb, var(${getCardAccent(accounts.length + activeCardIndex)}) 25%, transparent)`
+                }}
+              >
+                <div className="flex justify-between items-start relative z-10">
+                  <span className="text-white font-black italic text-xl tracking-tighter opacity-90">{creditCards[activeCardIndex].nome.split(' ')[0]}</span>
+                  <button 
+                    onClick={() => handleDelete(creditCards[activeCardIndex].id)}
+                    className="text-white/40 hover:text-white/80 transition-colors"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+                <div className="mt-4 relative z-10">
+                  <p className="text-[10px] text-white/50 font-bold uppercase tracking-[0.2em]">{creditCards[activeCardIndex].nome}</p>
+                  <div className="flex items-center gap-3 mt-2">
+                    <h4 className="text-2xl font-bold text-white tracking-tight">{formatCurrency(creditCards[activeCardIndex].valor_total)}</h4>
+                    <div style={{ 
+                      backgroundColor: 'rgba(255, 255, 255, 0.1)', 
+                      borderRadius: '4px', 
+                      padding: '2px 6px', 
+                      fontSize: '0.7rem', 
+                      color: 'white', 
+                      fontWeight: 600 
+                    }}>
+                      {creditCards[activeCardIndex].valor_inicial > 0 
+                        ? ((creditCards[activeCardIndex].valor_total / creditCards[activeCardIndex].valor_inicial) * 100).toFixed(1) 
+                        : 0}%
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-auto pt-4 relative z-10">
+                  <p className="text-sm text-white/90 font-mono tracking-[0.3em]">**** **** **** {creditCards[activeCardIndex].id.slice(-4)}</p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-slate-500">
+                <CreditCard size={32} className="mb-2 opacity-20" />
+                <p className="text-[10px] uppercase tracking-widest">Sem cartões registados</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -374,7 +521,120 @@ function DebtsContent() {
       </main>
 
       {/* Modal */}
-      {showModal && (
+        {/* Delete Confirmation Modal */}
+        {showDeleteModal && (
+          <div className="modal-overlay">
+            <div className="modal-content animate-scaleIn" style={{ maxWidth: '400px' }}>
+              <div className="modal-header">
+                <h3 className="modal-title">Confirmar Eliminação</h3>
+                <button className="modal-close" onClick={() => setShowDeleteModal(false)}>
+                  <X size={20} />
+                </button>
+              </div>
+              
+              <div className="modal-body">
+                <div className="flex flex-col items-center text-center py-4">
+                  <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
+                    <AlertCircle size={32} className="text-red-500" />
+                  </div>
+                  <p className="text-white font-medium mb-2">Tem a certeza que deseja eliminar?</p>
+                  <p className="text-slate-400 text-sm">Esta ação não pode ser desfeita e os dados serão removidos permanentemente.</p>
+                </div>
+              </div>
+              
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setShowDeleteModal(false)}>
+                  Cancelar
+                </button>
+                <button 
+                  type="button" 
+                  className="btn btn-danger" 
+                  onClick={confirmDelete}
+                >
+                  Eliminar permanentemente
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Credit Card Modal */}
+        {showCreditCardModal && (
+          <div className="modal-overlay">
+            <div className="modal-content animate-scaleIn" style={{ maxWidth: '450px' }}>
+              <div className="modal-header">
+                <h3 className="modal-title">Adicionar Cartão de Crédito</h3>
+                <button className="modal-close" onClick={handleCloseCreditCardModal}>
+                  <X size={20} />
+                </button>
+              </div>
+              
+              <form onSubmit={handleCreditCardSubmit}>
+                <div className="modal-body">
+                  <div className="form-group">
+                    <label className="form-label">Nome do Cartão</label>
+                    <input 
+                      type="text" 
+                      className="form-input" 
+                      value={creditCardFormData.nome}
+                      onChange={(e) => setCreditCardFormData({...creditCardFormData, nome: e.target.value})}
+                      placeholder="Ex: Cartão Visa Montepio"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="form-group">
+                      <label className="form-label">Montante Máximo (€)</label>
+                      <input 
+                        type="number" 
+                        className="form-input" 
+                        value={creditCardFormData.valor_inicial}
+                        onChange={(e) => setCreditCardFormData({...creditCardFormData, valor_inicial: Number(e.target.value)})}
+                        placeholder="Ex: 5000"
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Saldo Atual (Dívida) (€)</label>
+                      <input 
+                        type="number" 
+                        className="form-input" 
+                        value={creditCardFormData.valor_total}
+                        onChange={(e) => setCreditCardFormData({...creditCardFormData, valor_total: Number(e.target.value)})}
+                        placeholder="Ex: 1500"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Taxa de Juro (% TAEG)</label>
+                    <input 
+                      type="number" 
+                      step="0.01"
+                      className="form-input" 
+                      value={creditCardFormData.taxa_juro}
+                      onChange={(e) => setCreditCardFormData({...creditCardFormData, taxa_juro: Number(e.target.value)})}
+                      placeholder="Ex: 15.5"
+                    />
+                  </div>
+                </div>
+                
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-secondary" onClick={handleCloseCreditCardModal}>
+                    Cancelar
+                  </button>
+                  <button type="submit" className="btn btn-primary">
+                    Adicionar Cartão
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {showModal && (
         <div className="modal-overlay" onClick={handleCloseModal}>
           <div className="modal animate-slideUp" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
@@ -458,7 +718,24 @@ function DebtsContent() {
                   <select
                     className="form-select"
                     value={formData.categoria}
-                    onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
+                    onChange={(e) => {
+                      const newCategory = e.target.value;
+                      let newTaxa = formData.taxa_juro;
+                      let newConta = formData.conta;
+
+                      if (newCategory === 'Cartão de Crédito' && creditCards.length > 0) {
+                        const card = creditCards.find(c => c.nome === newConta) || creditCards[0];
+                        newConta = card.nome;
+                        newTaxa = card.taxa_juro || 0;
+                      }
+
+                      setFormData({ 
+                        ...formData, 
+                        categoria: newCategory,
+                        conta: newConta,
+                        taxa_juro: newTaxa
+                      });
+                    }}
                   >
                     <option value="Cartão de Crédito">Cartão de Crédito</option>
                     <option value="Empréstimo">Empréstimo</option>
@@ -469,15 +746,33 @@ function DebtsContent() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Conta</label>
+                  <label className="form-label">{formData.categoria === 'Cartão de Crédito' ? 'Cartão' : 'Conta'}</label>
                   <select
                     className="form-select"
                     value={formData.conta}
-                    onChange={(e) => setFormData({ ...formData, conta: e.target.value })}
+                    onChange={(e) => {
+                      const newConta = e.target.value;
+                      let newTaxa = formData.taxa_juro;
+
+                      if (formData.categoria === 'Cartão de Crédito') {
+                        const card = creditCards.find(c => c.nome === newConta);
+                        if (card) {
+                          newTaxa = card.taxa_juro || 0;
+                        }
+                      }
+
+                      setFormData({ ...formData, conta: newConta, taxa_juro: newTaxa });
+                    }}
                   >
-                    {accounts.map((acc) => (
-                      <option key={acc.id} value={acc.nome}>{acc.nome}</option>
-                    ))}
+                    {formData.categoria === 'Cartão de Crédito' ? (
+                      creditCards.map((card) => (
+                        <option key={card.id} value={card.nome}>{card.nome}</option>
+                      ))
+                    ) : (
+                      accounts.map((acc) => (
+                        <option key={acc.id} value={acc.nome}>{acc.nome}</option>
+                      ))
+                    )}
                   </select>
                 </div>
               </div>
@@ -487,10 +782,11 @@ function DebtsContent() {
                   <label className="form-label">Taxa de Juro (%)</label>
                   <input
                     type="number"
-                    className="form-input"
+                    className={`form-input ${formData.categoria === 'Cartão de Crédito' ? 'bg-slate-800/50 cursor-not-allowed opacity-70' : ''}`}
                     value={formData.taxa_juro}
                     onChange={(e) => setFormData({ ...formData, taxa_juro: parseFloat(e.target.value) || 0 })}
                     step="0.1"
+                    readOnly={formData.categoria === 'Cartão de Crédito'}
                   />
                 </div>
 

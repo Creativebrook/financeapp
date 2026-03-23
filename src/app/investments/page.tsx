@@ -76,6 +76,8 @@ function InvestmentsContent() {
     addInvestment, 
     updateInvestment, 
     deleteInvestment, 
+    updateAccount,
+    addVariableExpense,
     refreshPrices, 
     getPlatformSummaries,
     customWallets,
@@ -89,9 +91,17 @@ function InvestmentsContent() {
   const [walletToRemove, setWalletToRemove] = useState<string | null>(null);
   const [showRemoveWalletModal, setShowRemoveWalletModal] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [showInvestModal, setShowInvestModal] = useState(false);
+  const [investFormData, setInvestFormData] = useState({
+    plataforma: 'XTB' as Plataforma,
+    valor: 0,
+    accountId: '',
+    carteira: '',
+  });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [investmentToDelete, setInvestmentToDelete] = useState<string | null>(null);
   const [editingInvestment, setEditingInvestment] = useState<Investment | null>(null);
+  const [isAddMoreMode, setIsAddMoreMode] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [refreshMessage, setRefreshMessage] = useState<{ type: 'success' | 'warning'; text: string } | null>(null);
@@ -232,6 +242,7 @@ function InvestmentsContent() {
   };
 
   const handleOpenModal = (investment?: Investment) => {
+    setIsAddMoreMode(false);
     if (investment) {
       setEditingInvestment(investment);
       setFormData({
@@ -266,29 +277,168 @@ function InvestmentsContent() {
     setShowModal(true);
   };
 
+  const handleOpenAddMoreModal = (investment: Investment) => {
+    setEditingInvestment(investment);
+    setIsAddMoreMode(true);
+    setFormData({
+      plataforma: investment.plataforma,
+      carteira: investment.carteira || '',
+      ticker: investment.ticker,
+      nome: investment.nome,
+      quantidade: 0,
+      preco_medio: investment.preco_atual,
+      preco_atual: investment.preco_atual,
+      posicao: investment.posicao || 'long',
+      alocacao_alvo: investment.alocacao_alvo || 0,
+      isAutoPrice: investment.isAutoPrice || false,
+      accountId: '',
+    });
+    setShowModal(true);
+  };
+
   const handleCloseModal = () => {
     setShowModal(false);
     setEditingInvestment(null);
   };
 
+  const handleOpenInvestModal = () => {
+    setInvestFormData({
+      plataforma: activePlatform,
+      valor: 0,
+      accountId: '',
+      carteira: activeWallet,
+    });
+    setShowInvestModal(true);
+  };
+
+  const handleInvestSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const { plataforma, valor, accountId, carteira } = investFormData;
+    if (valor <= 0 || !accountId) return;
+
+    // Filter investments for the selected platform and wallet
+    let targetInvestments = investments.filter(i => i.plataforma === plataforma);
+    if (plataforma === 'Trading212' && carteira) {
+      targetInvestments = targetInvestments.filter(i => i.carteira === carteira);
+    }
+
+    if (targetInvestments.length === 0) {
+      alert('Não existem ativos nesta plataforma/carteira para distribuir o investimento.');
+      return;
+    }
+
+    const totalValue = targetInvestments.reduce((sum, i) => sum + i.valor_atual, 0);
+    
+    // Calculate distribution
+    // If Robo Advisor, use alocacao_alvo if available. 
+    // Otherwise use current weight.
+    
+    const hasTargetAllocation = targetInvestments.some(i => (i.alocacao_alvo || 0) > 0);
+    const totalTargetAllocation = targetInvestments.reduce((sum, i) => sum + (i.alocacao_alvo || 0), 0);
+
+    targetInvestments.forEach(investment => {
+      let weight = 0;
+      if (hasTargetAllocation && totalTargetAllocation > 0) {
+        weight = (investment.alocacao_alvo || 0) / totalTargetAllocation;
+      } else if (totalValue > 0) {
+        weight = investment.valor_atual / totalValue;
+      } else {
+        // Equal distribution if no value and no target
+        weight = 1 / targetInvestments.length;
+      }
+
+      const amountToInvest = valor * weight;
+      if (amountToInvest > 0) {
+        const newQuantity = amountToInvest / investment.preco_atual;
+        const totalQuantity = investment.quantidade + newQuantity;
+        const newAveragePrice = (investment.quantidade * investment.preco_medio + amountToInvest) / totalQuantity;
+
+        updateInvestment(investment.id, {
+          quantidade: totalQuantity,
+          preco_medio: newAveragePrice,
+          preco_atual: investment.preco_atual, // Keep current price
+        });
+      }
+    });
+
+    // Deduct from account
+    const account = accounts.find(a => a.id === accountId);
+    if (account) {
+      updateAccount(account.id, { saldo: account.saldo - valor });
+      
+      // Record as variable expense
+      addVariableExpense({
+        nome: `Investimento em ${plataforma}${carteira ? ` (${carteira})` : ''}`,
+        valor: valor,
+        data: new Date().toISOString().split('T')[0],
+        conta: account.nome,
+        categoria: 'Investimento'
+      });
+    }
+
+    setShowInvestModal(false);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const investmentData = {
-      plataforma: formData.plataforma,
-      carteira: formData.carteira || undefined,
-      ticker: formData.ticker.toUpperCase(),
-      nome: formData.nome,
-      quantidade: formData.quantidade,
-      preco_medio: formData.preco_medio,
-      preco_atual: formData.preco_atual,
-      posicao: formData.plataforma === 'Revolut Metals' ? undefined : formData.posicao,
-      alocacao_alvo: formData.alocacao_alvo || undefined,
-      isAutoPrice: formData.isAutoPrice,
-    };
     
-    if (editingInvestment) {
+    if (editingInvestment && isAddMoreMode) {
+      // Logic to add more to existing investment
+      const newQuantity = editingInvestment.quantidade + formData.quantidade;
+      // Calculate new average price: (old_qty * old_avg + new_qty * new_price) / total_qty
+      const newAveragePrice = (editingInvestment.quantidade * editingInvestment.preco_medio + formData.quantidade * formData.preco_medio) / newQuantity;
+      
+      const investmentData = {
+        plataforma: editingInvestment.plataforma,
+        carteira: editingInvestment.carteira || undefined,
+        ticker: editingInvestment.ticker,
+        nome: editingInvestment.nome,
+        quantidade: newQuantity,
+        preco_medio: newAveragePrice,
+        preco_atual: formData.preco_atual,
+        posicao: editingInvestment.posicao,
+        alocacao_alvo: editingInvestment.alocacao_alvo,
+        isAutoPrice: formData.isAutoPrice,
+      };
+      
+      updateInvestment(editingInvestment.id, investmentData);
+
+      // Deduct from account if specified
+      if (formData.accountId) {
+        const amount = formData.quantidade * formData.preco_medio;
+        const account = accounts.find(a => a.id === formData.accountId);
+        if (account) {
+          updateAccount(account.id, { saldo: account.saldo - amount });
+        }
+      }
+    } else if (editingInvestment) {
+      const investmentData = {
+        plataforma: formData.plataforma,
+        carteira: formData.carteira || undefined,
+        ticker: formData.ticker.toUpperCase(),
+        nome: formData.nome,
+        quantidade: formData.quantidade,
+        preco_medio: formData.preco_medio,
+        preco_atual: formData.preco_atual,
+        posicao: formData.plataforma === 'Revolut Metals' ? undefined : formData.posicao,
+        alocacao_alvo: formData.alocacao_alvo || undefined,
+        isAutoPrice: formData.isAutoPrice,
+      };
       updateInvestment(editingInvestment.id, investmentData);
     } else {
+      const investmentData = {
+        plataforma: formData.plataforma,
+        carteira: formData.carteira || undefined,
+        ticker: formData.ticker.toUpperCase(),
+        nome: formData.nome,
+        quantidade: formData.quantidade,
+        preco_medio: formData.preco_medio,
+        preco_atual: formData.preco_atual,
+        posicao: formData.plataforma === 'Revolut Metals' ? undefined : formData.posicao,
+        alocacao_alvo: formData.alocacao_alvo || undefined,
+        isAutoPrice: formData.isAutoPrice,
+      };
       addInvestment(investmentData, formData.accountId || undefined);
     }
     handleCloseModal();
@@ -368,6 +518,12 @@ function InvestmentsContent() {
               <RefreshCw size={18} className={refreshing ? 'animate-pulse' : ''} />
               {refreshing ? 'A atualizar...' : 'Atualizar Preços'}
             </button>
+            {(activePlatform === 'XTB' || activePlatform === 'Robo Advisor' || activePlatform === 'Trading212') && (
+              <button className="btn btn-secondary" onClick={handleOpenInvestModal} style={{ color: 'var(--accent-primary)', borderColor: 'var(--accent-primary)' }}>
+                <TrendingUp size={18} />
+                Investir
+              </button>
+            )}
             <button className="btn btn-primary" onClick={() => handleOpenModal()}>
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M5 12h14"></path>
@@ -377,6 +533,43 @@ function InvestmentsContent() {
             </button>
           </div>
         </div>
+
+        {/* Mobile Header Buttons */}
+        {isMobile && (
+          <div style={{ 
+            display: 'flex', 
+            gap: '10px', 
+            marginBottom: '20px',
+            marginTop: '10px'
+          }}>
+            <button 
+              className="btn btn-secondary" 
+              onClick={handleRefresh}
+              disabled={refreshing}
+              style={{ flex: '0 0 46px', height: '46px', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <RefreshCw size={18} className={refreshing ? 'animate-pulse' : ''} />
+            </button>
+            {(activePlatform === 'XTB' || activePlatform === 'Robo Advisor' || activePlatform === 'Trading212') && (
+              <button 
+                className="btn btn-secondary" 
+                onClick={handleOpenInvestModal} 
+                style={{ flex: 1, height: '46px', color: 'var(--accent-primary)', borderColor: 'var(--accent-primary)', padding: '0 12px', fontSize: '0.85rem' }}
+              >
+                <TrendingUp size={18} />
+                Investir
+              </button>
+            )}
+            <button 
+              className="btn btn-primary" 
+              onClick={() => handleOpenModal()}
+              style={{ flex: 1, height: '46px', padding: '0 12px', fontSize: '0.85rem' }}
+            >
+              <Plus size={18} />
+              Novo Ativo
+            </button>
+          </div>
+        )}
 
         {/* Platform Summary */}
         <div 
@@ -654,6 +847,31 @@ function InvestmentsContent() {
                       height: '46px',
                       overflow: 'hidden'
                     }}>
+                      {(activePlatform === 'Revolut Stocks' || activePlatform === 'Revolut Cripto' || activePlatform === 'Revolut Metals') && (
+                        <>
+                          <button 
+                            style={{ 
+                              flex: 1, 
+                              height: '100%', 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'center',
+                              background: 'transparent',
+                              border: 'none',
+                              cursor: 'pointer',
+                              color: 'var(--success-400)',
+                              transition: 'background 0.2s'
+                            }}
+                            onClick={() => handleOpenAddMoreModal(investment)}
+                            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(34, 197, 139, 0.05)'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                            title="Adicionar mais"
+                          >
+                            <Plus size={isMobile ? 18 : 20} />
+                          </button>
+                          <div style={{ width: '1px', height: '24px', background: 'rgba(255, 255, 255, 0.1)' }}></div>
+                        </>
+                      )}
                       <button 
                         style={{ 
                           flex: 1, 
@@ -670,8 +888,9 @@ function InvestmentsContent() {
                         onClick={() => handleOpenModal(investment)}
                         onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(77, 166, 196, 0.05)'}
                         onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                        title="Editar"
                       >
-                        <Edit2 size={20} />
+                        <Edit2 size={isMobile ? 18 : 20} />
                       </button>
                       <div style={{ width: '1px', height: '24px', background: 'rgba(255, 255, 255, 0.1)' }}></div>
                       <button 
@@ -690,8 +909,9 @@ function InvestmentsContent() {
                         onClick={() => handleDelete(investment.id)}
                         onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(224, 90, 111, 0.05)'}
                         onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                        title="Eliminar"
                       >
-                        <Trash2 size={20} />
+                        <Trash2 size={isMobile ? 18 : 20} />
                       </button>
                     </div>
                   </div>
@@ -779,10 +999,20 @@ function InvestmentsContent() {
                         </td>
                         <td>
                           <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-start' }}>
-                            <button className="btn btn-icon btn-secondary" onClick={() => handleOpenModal(investment)}>
+                            {(activePlatform === 'Revolut Stocks' || activePlatform === 'Revolut Cripto' || activePlatform === 'Revolut Metals') && (
+                              <button 
+                                className="btn btn-icon btn-secondary" 
+                                onClick={() => handleOpenAddMoreModal(investment)}
+                                style={{ color: 'var(--success-400)' }}
+                                title="Adicionar mais"
+                              >
+                                <Plus size={16} />
+                              </button>
+                            )}
+                            <button className="btn btn-icon btn-secondary" onClick={() => handleOpenModal(investment)} title="Editar">
                               <Edit2 size={16} />
                             </button>
-                            <button className="btn btn-icon btn-danger" onClick={() => handleDelete(investment.id)}>
+                            <button className="btn btn-icon btn-danger" onClick={() => handleDelete(investment.id)} title="Eliminar">
                               <Trash2 size={16} />
                             </button>
                           </div>
@@ -813,7 +1043,7 @@ function InvestmentsContent() {
           <div className="modal animate-slideUp" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
             <div className="modal-header">
               <h2 className="modal-title">
-                {editingInvestment ? 'Editar Ativo' : 'Novo Ativo'}
+                {isAddMoreMode ? `Adicionar mais ${formData.ticker}` : (editingInvestment ? 'Editar Ativo' : 'Novo Ativo')}
               </h2>
               <button className="btn btn-icon btn-secondary" onClick={handleCloseModal}>
                 <X size={20} />
@@ -828,6 +1058,7 @@ function InvestmentsContent() {
                     className="form-select"
                     value={formData.plataforma}
                     onChange={(e) => setFormData({ ...formData, plataforma: e.target.value as Plataforma })}
+                    disabled={isAddMoreMode}
                   >
                     {plataformas.map((p) => (
                       <option key={p} value={p}>{p}</option>
@@ -852,7 +1083,7 @@ function InvestmentsContent() {
                 )}
               </div>
 
-              {!editingInvestment && (
+              {(!editingInvestment || isAddMoreMode) && (
                 <div className="form-group">
                   <label className="form-label">Conta de Origem</label>
                   <select
@@ -898,6 +1129,7 @@ function InvestmentsContent() {
                     }}
                     placeholder="Ex: AAPL, BTC-USD"
                     required
+                    disabled={isAddMoreMode}
                   />
                 </div>
 
@@ -910,13 +1142,14 @@ function InvestmentsContent() {
                     onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                     placeholder="Ex: Apple Inc."
                     required
+                    disabled={isAddMoreMode}
                   />
                 </div>
               </div>
 
               <div className="grid-3">
                 <div className="form-group">
-                  <label className="form-label">Quantidade</label>
+                  <label className="form-label">{isAddMoreMode ? 'Quantidade a Adicionar' : 'Quantidade'}</label>
                   <input
                     type="number"
                     className="form-input"
@@ -928,7 +1161,7 @@ function InvestmentsContent() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Preço/Ação (€)</label>
+                  <label className="form-label">{isAddMoreMode ? 'Preço de Compra (€)' : 'Preço/Ação (€)'}</label>
                   <input
                     type="number"
                     className="form-input"
@@ -991,7 +1224,93 @@ function InvestmentsContent() {
                   Cancelar
                 </button>
                 <button type="submit" className="btn btn-primary">
-                  {editingInvestment ? 'Guardar' : 'Criar'}
+                  {isAddMoreMode ? 'Adicionar' : (editingInvestment ? 'Guardar' : 'Criar')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Invest Modal */}
+      {showInvestModal && (
+        <div className="modal-overlay" onClick={() => setShowInvestModal(false)}>
+          <div className="modal animate-slideUp" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+            <div className="modal-header">
+              <h2 className="modal-title">Investir em {investFormData.plataforma}</h2>
+              <button className="btn btn-icon btn-secondary" onClick={() => setShowInvestModal(false)}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleInvestSubmit}>
+              <div className="form-group">
+                <label className="form-label">Plataforma</label>
+                <select
+                  className="form-select"
+                  value={investFormData.plataforma}
+                  onChange={(e) => setInvestFormData({ ...investFormData, plataforma: e.target.value as Plataforma })}
+                  disabled
+                >
+                  {plataformas.map((p) => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
+              </div>
+
+              {investFormData.plataforma === 'Trading212' && (
+                <div className="form-group">
+                  <label className="form-label">Carteira (Pie)</label>
+                  <select
+                    className="form-select"
+                    value={investFormData.carteira}
+                    onChange={(e) => setInvestFormData({ ...investFormData, carteira: e.target.value })}
+                  >
+                    <option value="">Todas as Carteiras</option>
+                    {allWallets.map(wallet => (
+                      <option key={wallet} value={wallet}>{wallet}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="form-group">
+                <label className="form-label">Valor a Investir (€)</label>
+                <input
+                  type="number"
+                  className="form-input"
+                  value={investFormData.valor}
+                  onChange={(e) => setInvestFormData({ ...investFormData, valor: parseFloat(e.target.value) || 0 })}
+                  step="0.01"
+                  required
+                  autoFocus
+                />
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                  Este valor será distribuído pelos ativos atuais de acordo com o seu peso no portfólio.
+                </p>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Conta de Origem</label>
+                <select
+                  className="form-select"
+                  value={investFormData.accountId}
+                  onChange={(e) => setInvestFormData({ ...investFormData, accountId: e.target.value })}
+                  required
+                >
+                  <option value="">Selecionar Conta</option>
+                  {accounts.map(acc => (
+                    <option key={acc.id} value={acc.id}>{acc.nome} ({formatCurrency(acc.saldo)})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="modal-actions">
+                <button type="button" className="btn btn-secondary" onClick={() => setShowInvestModal(false)}>
+                  Cancelar
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  Confirmar Investimento
                 </button>
               </div>
             </form>

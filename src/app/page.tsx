@@ -482,11 +482,40 @@ function DashboardContent() {
     }
   };
 
-  // Dynamic cards data based on accounts from context
+  // Calculate real-time balances for accounts (matching the logic in /accounts page)
+  const accountBalances = useMemo(() => {
+    const now = new Date('2026-03-20T00:00:00Z');
+    const currentDay = now.getDate();
+    
+    return accounts.map(account => {
+      const accIncomeSoFar = income
+        .filter(inc => inc.conta === account.nome && inc.data <= currentDay)
+        .reduce((sum, inc) => sum + inc.valor, 0);
+
+      const accFixed = fixedExpenses
+        .filter(exp => exp.conta === account.nome && exp.frequencia === 'mensal' && exp.data_pagamento <= currentDay)
+        .reduce((sum, exp) => sum + exp.valor, 0);
+        
+      const accVariable = variableExpenses
+        .filter(exp => exp.conta === account.nome && exp.data && exp.data.startsWith('2026-03'))
+        .reduce((sum, exp) => sum + exp.valor, 0);
+        
+      const accDebts = debts
+        .filter(d => d.conta === account.nome && d.data_pagamento <= currentDay)
+        .reduce((sum, d) => sum + d.prestacao_mensal, 0);
+        
+      const realTimeBalance = (account.saldo + accIncomeSoFar) - (accFixed + accVariable + accDebts);
+
+      return {
+        ...account,
+        realTimeBalance
+      };
+    });
+  }, [accounts, income, fixedExpenses, variableExpenses, debts]);
+
+  // Dynamic cards data based on accounts and credit cards from debts
   const cardsData = useMemo(() => {
-    return accounts.map((account, index) => {
-      // Find hardcoded transactions for these accounts if they match by name
-      // This is a bit of a hack to keep the nice UI while making balances dynamic
+    const accountCards = accountBalances.map((account, index) => {
       const hardcodedAccount = [
         { name: "Montepio", number: "1024 0606 1502 1979", transactions: [
           { name: 'Continente', date: '04 Mar 2026', amount: '-42,50', icon: 'ShoppingCart', type: 'Supermercado' },
@@ -503,34 +532,52 @@ function DashboardContent() {
           { name: 'Netflix', date: '03 Mar 2026', amount: '-15,99', icon: 'ShoppingCart', type: 'Entretenimento' },
           { name: 'Spotify', date: '02 Mar 2026', amount: '-9,99', icon: 'ShoppingCart', type: 'Música' },
           { name: 'Uber', date: '01 Mar 2026', amount: '-12,50', icon: 'Banknote', type: 'Transporte' },
-        ]},
-        { name: "Montepio Crédito", number: "4111 1111 1111 1111", transactions: [
-          { name: 'IKEA', date: '04 Mar 2026', amount: '-189,00', icon: 'ShoppingBag', type: 'Casa' },
-          { name: 'CP - Comboios', date: '02 Mar 2026', amount: '-22,50', icon: 'Banknote', type: 'Transporte' },
-          { name: 'Worten', date: '01 Mar 2026', amount: '-79,99', icon: 'ShoppingCart', type: 'Eletrónica' },
-        ]},
-        { name: "Cetelem Crédito", number: "5500 1234 5678 9010", transactions: [
-          { name: 'Worten', date: '04 Mar 2026', amount: '-299,00', icon: 'ShoppingCart', type: 'Eletrónica' },
-          { name: 'Fnac', date: '02 Mar 2026', amount: '-45,90', icon: 'ShoppingBag', type: 'Cultura' },
-          { name: 'MediaMarkt', date: '01 Mar 2026', amount: '-159,00', icon: 'ShoppingCart', type: 'Eletrónica' },
-        ]},
-        { name: "Oney Crédito", number: "6011 1111 1111 1117", transactions: [
-          { name: 'Leroy Merlin', date: '04 Mar 2026', amount: '-89,90', icon: 'ShoppingBag', type: 'Casa' },
-          { name: 'Jumbo', date: '03 Mar 2026', amount: '-56,30', icon: 'ShoppingCart', type: 'Supermercado' },
-          { name: 'Restaurante', date: '01 Mar 2026', amount: '-42,00', icon: 'Banknote', type: 'Restauração' },
         ]}
-      ].find(h => account.nome.includes(h.name));
+      ].find(h => account.nome === h.name);
 
       return {
         id: account.id,
         name: account.nome,
-        balance: account.saldo,
+        balance: account.realTimeBalance,
         number: hardcodedAccount?.number || account.iban || "**** **** **** " + account.id.slice(-4),
         cardAccent: getCardAccent(index),
         transactions: hardcodedAccount?.transactions || []
       };
     });
-  }, [accounts]);
+
+    const creditCards = debts
+      .filter(debt => debt.categoria === 'Cartão de Crédito')
+      .map((debt, index) => {
+        const hardcodedCreditCard = [
+          { name: "Cartão Montepio", number: "4111 1111 1111 1111", transactions: [
+            { name: 'IKEA', date: '04 Mar 2026', amount: '-189,00', icon: 'ShoppingBag', type: 'Casa' },
+            { name: 'CP - Comboios', date: '02 Mar 2026', amount: '-22,50', icon: 'Banknote', type: 'Transporte' },
+            { name: 'Worten', date: '01 Mar 2026', amount: '-79,99', icon: 'ShoppingCart', type: 'Eletrónica' },
+          ]},
+          { name: "Cartão Cetelem", number: "5500 1234 5678 9010", transactions: [
+            { name: 'Worten', date: '04 Mar 2026', amount: '-299,00', icon: 'ShoppingCart', type: 'Eletrónica' },
+            { name: 'Fnac', date: '02 Mar 2026', amount: '-45,90', icon: 'ShoppingBag', type: 'Cultura' },
+            { name: 'MediaMarkt', date: '01 Mar 2026', amount: '-159,00', icon: 'ShoppingCart', type: 'Eletrónica' },
+          ]},
+          { name: "Cartão Oney", number: "6011 1111 1111 1117", transactions: [
+            { name: 'Leroy Merlin', date: '04 Mar 2026', amount: '-89,90', icon: 'ShoppingBag', type: 'Casa' },
+            { name: 'Jumbo', date: '03 Mar 2026', amount: '-56,30', icon: 'ShoppingCart', type: 'Supermercado' },
+            { name: 'Restaurante', date: '01 Mar 2026', amount: '-42,00', icon: 'Banknote', type: 'Restauração' },
+          ]}
+        ].find(h => debt.nome === h.name);
+
+        return {
+          id: debt.id,
+          name: debt.nome,
+          balance: -debt.valor_total, // Used amount as debt
+          number: hardcodedCreditCard?.number || "**** **** **** " + debt.id.slice(-4),
+          cardAccent: getCardAccent(accounts.length + index),
+          transactions: hardcodedCreditCard?.transactions || []
+        };
+      });
+
+    return [...accountCards, ...creditCards];
+  }, [accountBalances, debts, accounts.length]);
 
   const summary = getDashboardSummary();
   const platformSummaries = getPlatformSummaries();
@@ -805,7 +852,7 @@ function DashboardContent() {
                     <div className="w-9 h-9 rounded-full bg-white/[0.03] border border-white/[0.05] flex items-center justify-center">
                       <HandCoins size={16} className="text-slate-600" />
                     </div>
-                    <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">BALANÇO</p>
+                    <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">PATRIMÓNIO</p>
                   </div>
                   <div className="mt-8">
                     <h1 className="text-[3.25rem] font-medium text-white tracking-tighter leading-none">
@@ -963,11 +1010,11 @@ function DashboardContent() {
             {/* SECÇÃO INFERIOR: SALDO E ASSETS */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <BalanceCard 
-                title="SALDO ATUAL"
-                current={summary.monthlyCashflow}
-                total={summary.monthlyIncome}
-                percentage={Math.round((summary.monthlyCashflow / summary.monthlyIncome) * 100)}
-                previousPercentage={Math.round((summary.monthlyCashflow / summary.monthlyIncome) * 100 * 0.85)}
+                title="SALDO TOTAL"
+                current={summary.totalAccounts}
+                total={summary.totalBase}
+                percentage={summary.totalBase > 0 ? Math.round((summary.totalAccounts / summary.totalBase) * 100) : 0}
+                previousPercentage={45}
                 onClick={() => window.location.href = '/accounts'}
               />
               <div onClick={() => window.location.href = '/investments'} className="cursor-pointer">

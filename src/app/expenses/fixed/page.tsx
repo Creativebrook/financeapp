@@ -6,12 +6,11 @@ import { FinanceProvider, useFinance } from '@/context/FinanceContext';
 import { useSidebar } from '@/context/SidebarContext';
 import Sidebar from '@/components/Sidebar';
 import PremiumHeader from '@/components/PremiumHeader';
-import { Plus, Edit2, Trash2, Receipt, X, Calendar, ReceiptEuro, CalendarRange, Layers2 } from 'lucide-react';
-import { formatCurrency, getNextPaymentDate, formatDate, getPlatformColor, getCategoryColor, getFrequencyColor } from '@/lib/utils';
+import { Plus, Edit2, Trash2, Receipt, X, Calendar, ReceiptEuro, Layers2 } from 'lucide-react';
+import { formatCurrency, getNextPaymentDate, formatDate, getPlatformColor, getCategoryColor } from '@/lib/utils';
 import { getPieChartColor } from '@/lib/theme';
 import { FixedExpense, Frequencia } from '@/types';
 
-const FixedExpensesFrequencyChart = dynamic(() => import('@/components/charts/FixedExpensesFrequencyChart'), { ssr: false });
 const FixedExpensesCategoryBarChart = dynamic(() => import('@/components/charts/FixedExpensesCategoryBarChart'), { ssr: false });
 
 function FixedExpensesContent() {
@@ -19,6 +18,8 @@ function FixedExpensesContent() {
   const { isCollapsed } = useSidebar();
   const [showModal, setShowModal] = useState(false);
   const [editingExpense, setEditingExpense] = useState<FixedExpense | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const [formData, setFormData] = useState({
     nome: '',
     valor: 0,
@@ -102,6 +103,24 @@ function FixedExpensesContent() {
   const totalAnnualSoFar = calculateAnnualSoFar();
   const totalAnnualValue = totalMonthly * 12;
 
+  const today = new Date('2026-03-20T00:00:00Z');
+  const currentDay = today.getDate();
+
+  // Expenses that already happened this month
+  const pastExpenses = fixedExpenses
+    .filter(e => e.frequencia === 'mensal' && e.data_pagamento <= currentDay)
+    .sort((a, b) => b.data_pagamento - a.data_pagamento);
+
+  // Pagination logic
+  const totalPages = Math.ceil(pastExpenses.length / itemsPerPage);
+  const paginatedExpenses = pastExpenses.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  // Upcoming expenses (next 4, even if next month)
+  const upcomingFixedExpenses = fixedExpenses
+    .map(e => ({ ...e, nextDate: getNextPaymentDate(e.data_pagamento) }))
+    .sort((a, b) => a.nextDate.getTime() - b.nextDate.getTime())
+    .slice(0, 4);
+
   // Calculate monthly income
   const monthlyIncome = income.reduce((sum, inc) => {
     switch (inc.frequencia) {
@@ -119,12 +138,6 @@ function FixedExpensesContent() {
   const monthlyPercentage = monthlyIncome > 0 ? (totalMonthly / monthlyIncome) * 100 : 0;
   const annualPercentage = annualIncome > 0 ? (totalAnnualSoFar / annualIncome) * 100 : 0;
 
-  const sortedExpenses = [...fixedExpenses].sort((a, b) => {
-    const dateA = getNextPaymentDate(a.data_pagamento).getTime();
-    const dateB = getNextPaymentDate(b.data_pagamento).getTime();
-    return dateA - dateB;
-  });
-
   const expensesByCategory = fixedExpenses.reduce((acc, e) => {
     acc[e.categoria] = (acc[e.categoria] || 0) + calculateMonthlyEquivalent(e);
     return acc;
@@ -135,21 +148,6 @@ function FixedExpensesContent() {
     value,
     percent: totalMonthly > 0 ? Math.round((value / totalMonthly) * 100) : 0
   })).sort((a, b) => b.value - a.value);
-
-  const frequencyGroups = fixedExpenses.reduce((acc, e) => {
-    acc[e.frequencia] = (acc[e.frequencia] || 0) + calculateMonthlyEquivalent(e);
-    return acc;
-  }, {} as Record<string, number>);
-
-  const frequencyData = [
-    { name: 'Mensal', value: (frequencyGroups['mensal'] || 0) + (frequencyGroups['quinzenal'] || 0) + (frequencyGroups['semanal'] || 0) },
-    { name: 'Trimestral', value: frequencyGroups['trimestral'] || 0 },
-    { name: 'Semestral', value: frequencyGroups['semestral'] || 0 },
-    { name: 'Anual', value: frequencyGroups['anual'] || 0 },
-  ].filter(item => item.value > 0).map(item => ({
-    ...item,
-    percent: totalMonthly > 0 ? Math.round((item.value / totalMonthly) * 100) : 0
-  }));
 
   const handleOpenModal = (expense?: FixedExpense) => {
     if (expense) {
@@ -287,38 +285,7 @@ function FixedExpensesContent() {
             </div>
           </div>
 
-          {/* Card 2: Frequency Pie Chart */}
-          <div className="card animate-slideUp flex flex-col" style={{ padding: '24px' }}>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-9 h-9 rounded-full bg-white/[0.03] border border-white/[0.05] flex items-center justify-center">
-                <CalendarRange size={16} className="text-slate-400" />
-              </div>
-              <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">Por Frequência</p>
-            </div>
-            
-            <div style={{ height: '180px', width: '100%', position: 'relative' }}>
-              <FixedExpensesFrequencyChart data={frequencyData} total={totalMonthly} />
-            </div>
-
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: '1fr', 
-              gap: '8px', 
-              marginTop: '16px' 
-            }}>
-              {frequencyData.map((entry, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: getFrequencyColor(entry.name) }} />
-                  <div className="flex justify-between items-center flex-1 min-w-0">
-                    <span className="text-[10px] text-slate-400 truncate mr-2">{entry.name}</span>
-                    <span className="text-[10px] text-slate-500 font-medium">{entry.percent}%</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Card 3: Category Bar Chart */}
+          {/* Card 2: Category Bar Chart */}
           <div className="card animate-slideUp flex flex-col" style={{ padding: '24px' }}>
             <div className="flex items-center gap-3 mb-4">
               <div className="w-9 h-9 rounded-full bg-white/[0.03] border border-white/[0.05] flex items-center justify-center">
@@ -348,6 +315,52 @@ function FixedExpensesContent() {
               ))}
             </div>
           </div>
+
+          {/* Card 3: Upcoming Expenses */}
+          <div className="card animate-slideUp">
+            <div className="card-header">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-white/[0.03] border border-white/[0.05] flex items-center justify-center">
+                  <Calendar size={16} className="text-slate-400" />
+                </div>
+                <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">Próximas Despesas</p>
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {upcomingFixedExpenses.map((expense, index) => (
+                <div
+                  key={index}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '14px 16px',
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(255, 255, 255, 0.03)',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 500, fontSize: '0.9375rem', color: 'white' }}>{expense.nome}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      {formatDate(expense.nextDate.toISOString())}
+                    </div>
+                  </div>
+                  <div style={{ 
+                    fontWeight: 500,
+                    fontSize: '0.9375rem',
+                    color: 'var(--warning-400)'
+                  }}>
+                    -{formatCurrency(expense.valor)}
+                  </div>
+                </div>
+              ))}
+              {upcomingFixedExpenses.length === 0 && (
+                <p className="text-center text-slate-500 text-sm py-4">Não há despesas próximas</p>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Expenses Table */}
@@ -366,7 +379,7 @@ function FixedExpensesContent() {
                 </tr>
               </thead>
               <tbody>
-                {sortedExpenses.map((expense) => (
+                {paginatedExpenses.map((expense) => (
                   <tr key={expense.id}>
                     <td style={{ textAlign: 'left' }}>
                       <div style={{ fontWeight: 400, fontSize: '0.9rem' }}>{expense.nome}</div>
@@ -383,7 +396,7 @@ function FixedExpensesContent() {
                     </td>
                     <td style={{ textAlign: 'left' }}>
                       <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                        {formatDate(getNextPaymentDate(expense.data_pagamento).toISOString())}
+                        {formatDate(new Date(2026, 2, expense.data_pagamento).toISOString())}
                       </span>
                     </td>
                     <td style={{ textAlign: 'left' }}>
@@ -422,8 +435,31 @@ function FixedExpensesContent() {
                 ))}
               </tbody>
             </table>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center gap-4 mt-6 pb-4">
+                <button 
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                >
+                  Anterior
+                </button>
+                <span className="text-sm text-slate-400">
+                  Página {currentPage} de {totalPages}
+                </span>
+                <button 
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  Próxima
+                </button>
+              </div>
+            )}
             
-            {fixedExpenses.length === 0 && (
+            {pastExpenses.length === 0 && (
               <div className="empty-state">
                 <Receipt size={48} style={{ opacity: 0.3, marginBottom: '16px' }} />
                 <p>Nenhuma despesa fixa adicionada</p>
@@ -438,7 +474,7 @@ function FixedExpensesContent() {
 
         {/* Mobile List */}
         <div className="md:hidden space-y-3">
-          {sortedExpenses.map((expense) => {
+          {paginatedExpenses.map((expense) => {
             const weight = totalMonthly > 0 ? (calculateMonthlyEquivalent(expense) / totalMonthly) * 100 : 0;
 
             return (
@@ -448,7 +484,7 @@ function FixedExpensesContent() {
                   <div>
                     <h3 className="font-bold !text-[1rem] text-white leading-tight">{expense.nome}</h3>
                     <p className="text-[10px] text-slate-500 uppercase tracking-wider mt-0.5">
-                      DATA: {formatDate(getNextPaymentDate(expense.data_pagamento).toISOString())}
+                      DATA: {formatDate(new Date(2026, 2, expense.data_pagamento).toISOString())}
                     </p>
                   </div>
                   <div className="text-right">
@@ -581,7 +617,7 @@ function FixedExpensesContent() {
                     <option value="Impostos">Impostos</option>
                     <option value="Saúde">Saúde</option>
                     <option value="Seguros">Seguros</option>
-                    <option value="Serviços">Serviços</option>
+                    <option value="Telemóveis">Telemóveis</option>
                     <option value="Subscrição">Subscrição</option>
                     <option value="Tecnologia">Tecnologia</option>
                     <option value="Transportes">Transportes</option>

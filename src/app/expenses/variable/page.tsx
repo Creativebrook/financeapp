@@ -31,7 +31,7 @@ function VariableExpensesContent() {
     categoria: 'Supermercado' as string,
   });
 
-  const [categories, setCategories] = useState<string[]>(['Animais', 'Casa', 'Combustível', 'Diversos', 'Educação', 'Lazer', 'Pessoal', 'Restaurantes', 'Saúde', 'Supermercado', 'Shopping', 'Taxas', 'Transporte']);
+  const [categories, setCategories] = useState<string[]>(['Animais', 'Casa', 'Combustível', 'Diversos', 'Educação', 'Lazer', 'Pessoal', 'Restaurantes', 'Saúde', 'Supermercado', 'Shopping', 'Taxas', 'Transporte', 'Transferência', 'Investimento']);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 

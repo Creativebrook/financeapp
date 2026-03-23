@@ -5,13 +5,14 @@ import dynamic from 'next/dynamic';
 import { FinanceProvider, useFinance } from '@/context/FinanceContext';
 import { useSidebar } from '@/context/SidebarContext';
 import Sidebar from '@/components/Sidebar';
-import { Plus, Edit2, Trash2, Wallet, X, ArrowUpRight, PiggyBank } from 'lucide-react';
+import { Plus, Edit2, Trash2, Wallet, X, ArrowUpRight, PiggyBank, ChevronLeft, ChevronRight, CreditCard, Eye } from 'lucide-react';
 import PremiumHeader from '@/components/PremiumHeader';
 import { formatCurrency, formatDate, getCategoryColor } from '@/lib/utils';
 import { Account } from '@/types';
 import { getCardAccent } from '@/lib/theme';
 
 const AccountsDistributionChart = dynamic(() => import('@/components/charts/AccountsDistributionChart'), { ssr: false });
+const AccountsEvolutionChart = dynamic(() => import('@/components/charts/AccountsEvolutionChart'), { ssr: false });
 
 // Helper function to get color based on percentage
 const getPercentageColor = (value: number) => {
@@ -32,6 +33,7 @@ function AccountsContent() {
   const { isCollapsed } = useSidebar();
   const [showModal, setShowModal] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+  const [activeDebitCardIndex, setActiveDebitCardIndex] = useState(0);
   const [formData, setFormData] = useState({
     nome: '',
     tipo: 'Conta à Ordem',
@@ -132,6 +134,11 @@ function AccountsContent() {
 
   const { saldoInicialSoFar, saldoAtual, incomeSoFar, expensesSoFar, accountBalances } = calculateCurrentMonthProgress();
   
+  const debitCards = accountBalances.filter(acc => acc.tipo.toLowerCase() === 'conta à ordem');
+  
+  // Ensure active index is within bounds
+  const safeActiveIndex = activeDebitCardIndex >= debitCards.length ? 0 : activeDebitCardIndex;
+  
   // Calculate percentages for the KPI
   const currentPercentage = saldoInicialSoFar > 0 ? Math.round((saldoAtual / saldoInicialSoFar) * 100) : 0;
   const previousPercentage = 45; // Mocked
@@ -153,6 +160,26 @@ function AccountsContent() {
     percent: saldoAtual > 0 ? Math.round((bank.value / saldoAtual) * 100) : 0,
     color: getCategoryColor(bank.name), // Using consistent colors
   }));
+
+  // Prepare data for Evolution Chart (Last 3 months)
+  const months = ['Jan', 'Fev', 'Mar'];
+  const evolutionData = months.map((month, idx) => {
+    const dataObj: any = { month };
+    accountBalances.forEach((acc) => {
+      if (idx === 2) { // Current month (March)
+        dataObj[acc.nome] = acc.realTimeBalance;
+      } else {
+        // Mock historical data (idx 0 = Jan, idx 1 = Feb)
+        // Let's make it slightly different from current balance
+        const factor = idx === 0 ? 0.85 : 0.92;
+        dataObj[acc.nome] = acc.saldo * factor;
+      }
+    });
+    return dataObj;
+  });
+
+  const accountNames = accountBalances.map(acc => acc.nome);
+  const accountColors = accountNames.map(name => getCategoryColor(name));
 
   const handleOpenModal = (account?: Account) => {
     if (account) {
@@ -226,8 +253,8 @@ function AccountsContent() {
           </button>
         </div>
 
-        {/* Top Row: Two Columns */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 mt-[30px] md:mt-0">
+        {/* Top Row: Three Columns */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6 mt-[30px] md:mt-0">
           {/* Left: SALDO ATUAL Card - Like Dashboard BalanceCard */}
           <div 
             style={{
@@ -287,7 +314,7 @@ function AccountsContent() {
             </div>
           </div>
 
-          {/* Right: Pie Chart - Distribuição por Banco (Chart left, Legend right) */}
+          {/* Middle: Evolution Chart - Evolução de Saldos (Last 3 months) */}
           <div 
             style={{
               backgroundColor: 'var(--card-bg)',
@@ -301,37 +328,123 @@ function AccountsContent() {
             <div className="flex justify-between items-start mb-2">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full bg-white/[0.03] border border-white/[0.05] flex items-center justify-center">
-                  <Wallet size={16} className="text-slate-600" />
+                  <ArrowUpRight size={16} className="text-slate-600" />
                 </div>
-                <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">Por Banco</p>
+                <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">EVOLUÇÃO</p>
               </div>
             </div>
             
-            {pieData.length > 0 ? (
-              <div className="flex items-center h-[calc(100%-40px)]">
-                {/* Pie Chart on the left */}
-                <div style={{ width: '50%', height: '180px', minWidth: 0, minHeight: 0 }}>
-                  <AccountsDistributionChart data={pieData} />
-                </div>
-                
-                {/* Legend on the right */}
-                <div style={{ width: '50%', paddingLeft: '12px' }}>
-                  {pieData.map((entry, index) => (
-                    <div key={index} className="flex items-center gap-2 mb-2">
-                      <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color }} />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[11px] text-slate-300 truncate" style={{ fontWeight: 500 }}>{entry.name}</div>
-                        <div className="text-[10px] text-slate-500">
-                          {formatCurrency(entry.value)} ({entry.percent}%)
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+            {evolutionData.length > 0 ? (
+              <div className="h-[calc(100%-40px)] mt-2">
+                <AccountsEvolutionChart 
+                  data={evolutionData} 
+                  accountNames={accountNames} 
+                  colors={accountColors}
+                />
               </div>
             ) : (
               <div className="flex items-center justify-center h-[calc(100%-40px)] text-slate-500 text-sm">
                 Sem dados disponíveis
+              </div>
+            )}
+          </div>
+
+          {/* Right: CARTÕES DE DÉBITO Card - Similar to Dashboard "OS MEUS CARTÕES" */}
+          <div 
+            style={{
+              backgroundColor: 'var(--card-bg)',
+              borderRadius: '8px',
+              border: '1px solid var(--card-border)',
+              padding: '24px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              height: '100%',
+            }}
+          >
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-white/[0.03] border border-white/[0.05] flex items-center justify-center">
+                  <CreditCard size={16} className="text-slate-600" />
+                </div>
+                <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">CARTÕES DE DÉBITO</p>
+              </div>
+              {debitCards.length > 1 && (
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => setActiveDebitCardIndex(activeDebitCardIndex === 0 ? debitCards.length - 1 : activeDebitCardIndex - 1)}
+                    className="w-7 h-7 rounded-full bg-white/[0.03] border border-white/[0.08] flex items-center justify-center text-slate-600 hover:text-white hover:bg-white/[0.1] transition-all"
+                  >
+                    <ChevronLeft size={14} />
+                  </button>
+                  <button 
+                    onClick={() => setActiveDebitCardIndex(activeDebitCardIndex === debitCards.length - 1 ? 0 : activeDebitCardIndex + 1)}
+                    className="w-7 h-7 rounded-full bg-white/[0.03] border border-white/[0.08] flex items-center justify-center text-slate-600 hover:text-white hover:bg-white/[0.1] transition-all"
+                  >
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {debitCards.length > 0 ? (
+              <div className="flex-1 flex flex-col justify-center">
+                {(() => {
+                  const card = debitCards[safeActiveIndex];
+                  const originalIndex = accountBalances.findIndex(acc => acc.id === card.id);
+                  const accent = getCardAccent(originalIndex !== -1 ? originalIndex : 0);
+                  const accountMonthlyIncome = getAccountIncome(card.nome);
+                  const totalResources = accountMonthlyIncome + card.saldo;
+                  const percentage = totalResources > 0 ? Math.round((card.realTimeBalance / totalResources) * 100) : 0;
+                  
+                  return (
+                    <div
+                      className="w-full aspect-[1.58/1] rounded-md p-6 pt-4 relative overflow-hidden border-l-[3px] transition-all duration-500"
+                      style={{
+                        backgroundColor: 'var(--bg-surface-2)',
+                        borderLeftColor: `var(${accent})`,
+                        backgroundImage: `linear-gradient(90deg, color-mix(in srgb, var(${accent}) 8%, transparent), transparent 40%)`,
+                        boxShadow: `0 0 18px color-mix(in srgb, var(${accent}) 25%, transparent)`
+                      }}
+                    >
+                      <div className="flex justify-between items-start relative z-10">
+                        <span className="text-white font-black italic text-xl tracking-tighter opacity-90">
+                          {card.nome.split(' ')[0]}
+                        </span>
+                      </div>
+                      <div className="mt-3 relative z-10">
+                        <p className="text-[9px] text-white/50 font-bold uppercase tracking-[0.2em]">
+                          {card.nome} (Débito)
+                        </p>
+                        <div className="flex items-center gap-3 mt-1.5">
+                          <h4 className="text-2xl font-bold text-white tracking-tight">
+                            {formatCurrency(card.realTimeBalance)}
+                          </h4>
+                          <Eye size={14} className="text-white/40 cursor-pointer hover:text-white/80 transition-colors" />
+                          <div className="flex items-center gap-1.5 ml-auto">
+                            <span className="kpi-delta" style={{ 
+                              fontSize: '10px',
+                              padding: '2px 6px',
+                              color: getPercentageColor(percentage), 
+                              background: `color-mix(in srgb, ${getPercentageColor(percentage)} 14%, transparent)`
+                            }}>
+                              {percentage}%
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="mt-auto pt-6 relative z-10">
+                        <p className="text-sm text-white/90 font-mono tracking-[0.3em]">
+                          {card.iban ? `**** **** **** ${card.iban.slice(-4)}` : '**** **** **** ****'}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            ) : (
+              <div className="flex-1 flex items-center justify-center text-slate-500 text-sm border border-dashed border-white/[0.05] rounded-lg">
+                Nenhum cartão de débito
               </div>
             )}
           </div>

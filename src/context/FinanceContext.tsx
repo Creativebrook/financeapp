@@ -35,10 +35,11 @@ const initialInvestments: Investment[] = [
 const initialDebts: Debt[] = [
   { id: '1', nome: 'Cartão Montepio', valor_total: 1500, valor_inicial: 5000, prestacao_mensal: 75, data_pagamento: 15, conta: 'Montepio', categoria: 'Cartão de Crédito' },
   { id: '2', nome: 'Cartão Cetelem', valor_total: 3000, valor_inicial: 4500, prestacao_mensal: 125, data_pagamento: 20, conta: 'N26', categoria: 'Cartão de Crédito' },
-  { id: '3', nome: 'Crédito Automóvel', valor_total: 15000, valor_inicial: 25000, prestacao_mensal: 350, data_pagamento: 5, conta: 'Montepio', categoria: 'Empréstimo' },
-  { id: '4', nome: 'Crédito Pessoal Cetelem', valor_total: 8000, valor_inicial: 12000, prestacao_mensal: 200, data_pagamento: 25, conta: 'N26', categoria: 'Empréstimo' },
-  { id: '5', nome: 'Finanças', valor_total: 500, valor_inicial: 1000, prestacao_mensal: 50, data_pagamento: 10, conta: 'Revolut', categoria: 'Impostos' },
-  { id: '6', nome: 'Segurança Social', valor_total: 200, valor_inicial: 200, prestacao_mensal: 200, data_pagamento: 1, conta: 'Montepio', categoria: 'Impostos' },
+  { id: '3', nome: 'Cartão Oney', valor_total: 850, valor_inicial: 1500, prestacao_mensal: 50, data_pagamento: 10, conta: 'Montepio', categoria: 'Cartão de Crédito' },
+  { id: '4', nome: 'Crédito Automóvel', valor_total: 15000, valor_inicial: 25000, prestacao_mensal: 350, data_pagamento: 5, conta: 'Montepio', categoria: 'Empréstimo' },
+  { id: '5', nome: 'Crédito Pessoal Cetelem', valor_total: 8000, valor_inicial: 12000, prestacao_mensal: 200, data_pagamento: 25, conta: 'N26', categoria: 'Empréstimo' },
+  { id: '6', nome: 'Finanças', valor_total: 500, valor_inicial: 1000, prestacao_mensal: 50, data_pagamento: 10, conta: 'Revolut', categoria: 'Impostos' },
+  { id: '7', nome: 'Segurança Social', valor_total: 200, valor_inicial: 200, prestacao_mensal: 200, data_pagamento: 1, conta: 'Montepio', categoria: 'Impostos' },
 ];
 
 const initialFixedExpenses: FixedExpense[] = [
@@ -333,6 +334,11 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   };
 
   const transferFunds = (fromAccountId: string, toAccountId: string, amount: number) => {
+    const fromAccount = accounts.find(a => a.id === fromAccountId);
+    const toAccount = accounts.find(a => a.id === toAccountId);
+    
+    if (!fromAccount || !toAccount) return;
+
     setAccounts(prev => prev.map(a => {
       if (a.id === fromAccountId) {
         return { ...a, saldo: a.saldo - amount, data_atualizacao: new Date().toISOString().split('T')[0] };
@@ -342,6 +348,26 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       }
       return a;
     }));
+
+    // Create variable expense for the source account
+    const today = new Date().toISOString().split('T')[0];
+    addVariableExpense({
+      nome: `Transferência para ${toAccount.nome}`,
+      valor: amount,
+      data: today,
+      conta: fromAccount.nome,
+      categoria: 'Transferência'
+    });
+
+    // Create income entry for the destination account
+    addIncomeEntry({
+      nome: 'Transferência',
+      valor: amount,
+      frequencia: 'unico',
+      data: new Date().getDate(),
+      data_especifica: today,
+      conta: toAccount.nome
+    });
   };
 
   // Income actions
@@ -360,7 +386,37 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   // Computed values
   const getDashboardSummary = (): DashboardSummary => {
-    const totalAccounts = accounts.reduce((sum, a) => sum + a.saldo, 0);
+    // Calculate "Real-time" current balance based on day of month (matching /accounts page)
+    const now = new Date('2026-03-20T00:00:00Z');
+    const currentDay = now.getDate();
+    
+    const totalBase = accounts.reduce((sum, account) => {
+      const accIncomeSoFar = income
+        .filter(inc => inc.conta === account.nome && inc.data <= currentDay)
+        .reduce((sum, inc) => sum + inc.valor, 0);
+      return sum + account.saldo + accIncomeSoFar;
+    }, 0);
+
+    const totalAccounts = accounts.reduce((sum, account) => {
+      const accIncomeSoFar = income
+        .filter(inc => inc.conta === account.nome && inc.data <= currentDay)
+        .reduce((sum, inc) => sum + inc.valor, 0);
+
+      const accFixed = fixedExpenses
+        .filter(exp => exp.conta === account.nome && exp.frequencia === 'mensal' && exp.data_pagamento <= currentDay)
+        .reduce((sum, exp) => sum + exp.valor, 0);
+        
+      const accVariable = variableExpenses
+        .filter(exp => exp.conta === account.nome && exp.data && exp.data.startsWith('2026-03'))
+        .reduce((sum, exp) => sum + exp.valor, 0);
+        
+      const accDebts = debts
+        .filter(d => d.conta === account.nome && d.data_pagamento <= currentDay)
+        .reduce((sum, d) => sum + d.prestacao_mensal, 0);
+        
+      return sum + (account.saldo + accIncomeSoFar) - (accFixed + accVariable + accDebts);
+    }, 0);
+
     const totalInvestments = investments.reduce((sum, i) => sum + i.valor_atual, 0);
     const totalDebts = debts.reduce((sum, d) => sum + d.valor_total, 0);
     
@@ -391,6 +447,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     
     return {
       totalWealth: totalAccounts + totalInvestments - totalDebts,
+      totalAccounts,
+      totalBase,
       totalInvestments,
       totalDebts,
       monthlyCashflow: monthlyIncome - totalExpenses,
