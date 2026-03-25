@@ -56,6 +56,8 @@ export interface FixedExpense {
   data_pagamento: number;
   conta: string;
   categoria: string;
+  data_inicio?: string;
+  data_fim?: string;
 }
 
 // Variable Expense Types
@@ -81,7 +83,6 @@ export interface Income {
   data_inicio?: string;
   data_fim?: string;
   conta: string;
-  isExtra?: boolean;
 }
 
 // Calendar Event Types

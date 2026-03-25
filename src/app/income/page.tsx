@@ -42,7 +42,6 @@ function IncomeContent() {
     data_inicio: '',
     data_fim: '',
     conta: 'Montepio',
-    isExtra: false,
   });
 
   const calculateMonthlyEquivalent = (incomeItem: Income): number => {
@@ -69,7 +68,7 @@ function IncomeContent() {
     }
   };
 
-  const totalMonthly = income.filter(i => i && !i.isExtra).reduce((sum, i) => sum + calculateMonthlyEquivalent(i), 0);
+  const totalMonthly = income.filter(i => i).reduce((sum, i) => sum + calculateMonthlyEquivalent(i), 0);
   const totalAnnual = income.filter(i => i).reduce((sum, i) => sum + calculateAnnualEquivalent(i), 0);
 
   // Annual projection data (mock for now based on monthly income)
@@ -230,7 +229,6 @@ function IncomeContent() {
         data_inicio: incomeItem.data_inicio || '',
         data_fim: incomeItem.data_fim || '',
         conta: incomeItem.conta,
-        isExtra: incomeItem.isExtra || false,
       });
     } else {
       setEditingIncome(null);
@@ -243,7 +241,6 @@ function IncomeContent() {
         data_inicio: '',
         data_fim: '',
         conta: accounts[0]?.nome || 'Montepio',
-        isExtra: false,
       });
     }
     setShowModal(true);
@@ -252,6 +249,14 @@ function IncomeContent() {
   const handleCloseModal = () => {
     setShowModal(false);
     setEditingIncome(null);
+  };
+
+  const handleEndRecurring = () => {
+    if (editingIncome) {
+      const today = new Date().toISOString().split('T')[0];
+      updateIncome(editingIncome.id, { ...formData, data_fim: today });
+      handleCloseModal();
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -806,19 +811,17 @@ function IncomeContent() {
                 </div>
               )}
 
-              <div className="form-group">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="w-4 h-4 rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-slate-900"
-                    checked={formData.isExtra}
-                    onChange={(e) => setFormData({ ...formData, isExtra: e.target.checked })}
-                  />
-                  <span className="text-sm text-slate-300">Este rendimento é extra (não expectável)</span>
-                </label>
-              </div>
-
               <div className="modal-actions">
+                {editingIncome && formData.frequencia !== 'unico' && (
+                  <button 
+                    type="button" 
+                    className="btn btn-danger" 
+                    style={{ marginRight: 'auto' }}
+                    onClick={handleEndRecurring}
+                  >
+                    Terminar rendimento automático
+                  </button>
+                )}
                 <button type="button" className="btn btn-secondary" onClick={handleCloseModal}>
                   Cancelar
                 </button>

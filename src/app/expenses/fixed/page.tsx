@@ -50,6 +50,8 @@ function FixedExpensesContent() {
     data: '', // for history items
     conta: 'Montepio',
     categoria: 'Subscrição',
+    data_inicio: '',
+    data_fim: '',
   });
 
   const calculateMonthlyEquivalent = (expense: FixedExpense): number => {
@@ -126,8 +128,16 @@ function FixedExpensesContent() {
     return original ? original.categoria : 'Subscrição';
   };
 
+  // Filter fixed expenses by selected month
+  const filteredFixedExpenses = fixedExpenses.filter(e => {
+    if (!e) return false;
+    if (e.data_inicio && e.data_inicio > `${selectedMonth}-31`) return false;
+    if (e.data_fim && e.data_fim < `${selectedMonth}-01`) return false;
+    return true;
+  });
+
   // Upcoming expenses (next 4, even if next month) - User said NOT TO CHANGE LOGIC
-  const upcomingFixedExpenses = fixedExpenses
+  const upcomingFixedExpenses = filteredFixedExpenses
     .map(e => ({ ...e, nextDate: getNextPaymentDate(e.data_pagamento) }))
     .sort((a, b) => a.nextDate.getTime() - b.nextDate.getTime())
     .slice(0, 4);
@@ -157,6 +167,8 @@ function FixedExpensesContent() {
           data: expense.data,
           conta: expense.conta,
           categoria: 'Fixa',
+          data_inicio: '',
+          data_fim: '',
         });
       } else {
         setFormData({
@@ -167,6 +179,8 @@ function FixedExpensesContent() {
           data: '',
           conta: expense.conta,
           categoria: expense.categoria,
+          data_inicio: expense.data_inicio || '',
+          data_fim: expense.data_fim || '',
         });
       }
     } else {
@@ -179,6 +193,8 @@ function FixedExpensesContent() {
         data: new Date().toISOString().split('T')[0],
         conta: accounts[0]?.nome || 'Montepio',
         categoria: 'Subscrição',
+        data_inicio: '',
+        data_fim: '',
       });
     }
     setShowModal(true);
@@ -188,6 +204,14 @@ function FixedExpensesContent() {
     setShowModal(false);
     setEditingExpense(null);
     setIsEditingHistory(false);
+  };
+
+  const handleEndRecurring = () => {
+    if (editingExpense && !isEditingHistory) {
+      const todayStr = new Date().toISOString().split('T')[0];
+      updateFixedExpense(editingExpense.id, { ...formData, data_fim: todayStr });
+      handleCloseModal();
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -209,7 +233,9 @@ function FixedExpensesContent() {
           frequencia: formData.frequencia,
           data_pagamento: formData.data_pagamento,
           conta: formData.conta,
-          categoria: formData.categoria
+          categoria: formData.categoria,
+          data_inicio: formData.data_inicio,
+          data_fim: formData.data_fim
         });
       }
     } else {
@@ -219,7 +245,9 @@ function FixedExpensesContent() {
         frequencia: formData.frequencia,
         data_pagamento: formData.data_pagamento,
         conta: formData.conta,
-        categoria: formData.categoria
+        categoria: formData.categoria,
+        data_inicio: formData.data_inicio,
+        data_fim: formData.data_fim
       });
     }
     handleCloseModal();
@@ -724,7 +752,40 @@ function FixedExpensesContent() {
                 </select>
               </div>
 
+              {!isEditingHistory && (
+                <div className="grid-2">
+                  <div className="form-group">
+                    <label className="form-label">Data de Início (Opcional)</label>
+                    <input
+                      type="date"
+                      className="form-input"
+                      value={formData.data_inicio}
+                      onChange={(e) => setFormData({ ...formData, data_inicio: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Data de Fim (Opcional)</label>
+                    <input
+                      type="date"
+                      className="form-input"
+                      value={formData.data_fim}
+                      onChange={(e) => setFormData({ ...formData, data_fim: e.target.value })}
+                    />
+                  </div>
+                </div>
+              )}
+
               <div className="modal-actions">
+                {editingExpense && !isEditingHistory && (
+                  <button 
+                    type="button" 
+                    className="btn btn-danger" 
+                    style={{ marginRight: 'auto' }}
+                    onClick={handleEndRecurring}
+                  >
+                    Terminar despesa automática
+                  </button>
+                )}
                 <button type="button" className="btn btn-secondary" onClick={handleCloseModal}>
                   Cancelar
                 </button>

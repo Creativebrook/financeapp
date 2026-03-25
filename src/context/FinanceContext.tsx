@@ -243,7 +243,7 @@ const initialVariableExpenses: VariableExpense[] = [
   { id: 'v-mar-23', nome: 'Auchan Energy', valor: 25.00, data: '2026-03-14', conta: 'Montepio', categoria: 'Combustivel' },
   { id: 'v-mar-24', nome: 'Loja Chinês', valor: 6.78, data: '2026-03-15', conta: 'Montepio', categoria: 'Shopping' },
   { id: 'v-mar-25', nome: 'Via Verde', valor: 1.20, data: '2026-03-16', conta: 'Montepio', categoria: 'Transporte' },
-  { id: 'v-mar-26', nome: 'Transferência', valor: 300.00, data: '2026-03-16', conta: 'Montepio', categoria: 'Transferência' },
+  { id: 'v-mar-26', nome: 'Transf. Montepio > Revolut', valor: 300.00, data: '2026-03-16', conta: 'Montepio', categoria: 'Transferência' },
   { id: 'v-mar-27', nome: 'Resultados com Charme', valor: 21.90, data: '2026-03-17', conta: 'Montepio', categoria: 'Restaurantes' },
   { id: 'v-mar-28', nome: 'Compra Repsol', valor: 12.00, data: '2026-03-17', conta: 'Montepio', categoria: 'Combustivel' },
   { id: 'v-mar-29', nome: 'Compra Continente', valor: 28.92, data: '2026-03-17', conta: 'Montepio', categoria: 'Supermercado' },
@@ -283,9 +283,9 @@ const initialVariableExpenses: VariableExpense[] = [
   { id: 'v-feb-5', nome: 'SMEAS Água', valor: 37.09, data: '2026-02-02', conta: 'Montepio', categoria: 'Casa' },
   { id: 'v-feb-6', nome: 'Auchan Energy', valor: 25.00, data: '2026-02-03', conta: 'Montepio', categoria: 'Combustivel' },
   { id: 'v-feb-7', nome: 'Compra Mercadona', valor: 49.18, data: '2026-02-03', conta: 'Montepio', categoria: 'Supermercado' },
-  { id: 'v-feb-8', nome: 'Transferência', valor: 500.00, data: '2026-02-04', conta: 'Montepio', categoria: 'Transferência' },
-  { id: 'v-feb-9', nome: 'Transferência', valor: 500.00, data: '2026-02-04', conta: 'Montepio', categoria: 'Transferência' },
-  { id: 'v-feb-10', nome: 'Transferência', valor: 500.00, data: '2026-02-04', conta: 'Montepio', categoria: 'Transferência' },
+  { id: 'v-feb-8', nome: 'Transf. Montepio > Revolut', valor: 500.00, data: '2026-02-04', conta: 'Montepio', categoria: 'Transferência' },
+  { id: 'v-feb-9', nome: 'Transf. Montepio > Revolut', valor: 500.00, data: '2026-02-04', conta: 'Montepio', categoria: 'Transferência' },
+  { id: 'v-feb-10', nome: 'Transf. Montepio > Revolut', valor: 500.00, data: '2026-02-04', conta: 'Montepio', categoria: 'Transferência' },
   { id: 'v-feb-11', nome: 'Ebay', valor: 0.01, data: '2026-02-05', conta: 'Montepio', categoria: 'Taxas' },
   { id: 'v-feb-12', nome: 'Pastelaria', valor: 1.70, data: '2026-02-06', conta: 'Montepio', categoria: 'Diversos' },
   { id: 'v-feb-13', nome: 'Crossfit Open', valor: 12.95, data: '2026-02-07', conta: 'Montepio', categoria: 'Lazer' },
@@ -332,8 +332,8 @@ const initialVariableExpenses: VariableExpense[] = [
   { id: 'v-feb-54', nome: 'CTT', valor: 7.80, data: '2026-02-23', conta: 'Montepio', categoria: 'Diversos' },
   { id: 'v-feb-55', nome: 'Jogos Santa Casa', valor: 10.00, data: '2026-02-24', conta: 'Montepio', categoria: 'Lazer' },
   { id: 'v-feb-56', nome: 'Compra Mercadona', valor: 29.95, data: '2026-02-25', conta: 'Montepio', categoria: 'Supermercado' },
-  { id: 'v-feb-57', nome: 'Transferência', valor: 1000.00, data: '2026-02-27', conta: 'Montepio', categoria: 'Transferência' },
-  { id: 'v-feb-58', nome: 'Transferência', valor: 1000.00, data: '2026-02-27', conta: 'Montepio', categoria: 'Transferência' },
+  { id: 'v-feb-57', nome: 'Transf. Montepio > Revolut', valor: 1000.00, data: '2026-02-27', conta: 'Montepio', categoria: 'Transferência' },
+  { id: 'v-feb-58', nome: 'Transf. Montepio > Revolut', valor: 1000.00, data: '2026-02-27', conta: 'Montepio', categoria: 'Transferência' },
   { id: 'v-feb-59', nome: 'Compra Mercadona', valor: 49.63, data: '2026-02-27', conta: 'Montepio', categoria: 'Supermercado' },
 
   // Montepio Transactions - Janeiro 2026
@@ -346,7 +346,7 @@ const initialVariableExpenses: VariableExpense[] = [
 
   // Montepio Variable Expenses - Janeiro 2026
   { id: 'v-jan-1', nome: 'Via Verde', valor: 24.25, data: '2026-01-02', conta: 'Montepio', categoria: 'Transporte' },
-  { id: 'v-jan-2', nome: 'Transferência', valor: 120.00, data: '2026-01-02', conta: 'Montepio', categoria: 'Transferência' },
+  { id: 'v-jan-2', nome: 'Transf. Montepio > Revolut', valor: 120.00, data: '2026-01-02', conta: 'Montepio', categoria: 'Transferência' },
   { id: 'v-jan-3', nome: 'Compra Preço Louco', valor: 12.49, data: '2026-01-03', conta: 'Montepio', categoria: 'Supermercado' },
   { id: 'v-jan-4', nome: 'Compra Repsol', valor: 24.26, data: '2026-01-03', conta: 'Montepio', categoria: 'Combustivel' },
   { id: 'v-jan-5', nome: 'Compra Aldi', valor: 13.93, data: '2026-01-03', conta: 'Montepio', categoria: 'Supermercado' },
@@ -408,7 +408,6 @@ const initialVariableExpenses: VariableExpense[] = [
 
   // Revolut Transactions - Março 2026
   { id: '101', nome: 'Crossfit Valverde', valor: 59, data: '2026-03-22', conta: 'Revolut', categoria: 'Lazer' },
-  { id: '102', nome: 'Transferência', valor: -300, data: '2026-03-16', conta: 'Revolut', categoria: 'Transferência' },
   { id: '103', nome: 'Trading212', valor: 200, data: '2026-03-16', conta: 'Revolut', categoria: 'Investimento' },
   { id: 'f-rev-mar-1', nome: 'Semanada Gonçalo', valor: 5, data: '2026-03-22', conta: 'Revolut', categoria: 'Fixa' },
   { id: 'f-rev-mar-2', nome: 'Semanada Gonçalo', valor: 5, data: '2026-03-15', conta: 'Revolut', categoria: 'Fixa' },
@@ -417,8 +416,6 @@ const initialVariableExpenses: VariableExpense[] = [
   { id: '106', nome: 'Investimento', valor: 43.40, data: '2026-03-03', conta: 'Revolut', categoria: 'Investimento' },
   
   // Revolut Transactions - Fevereiro 2026
-  { id: '109', nome: 'Transferência', valor: -1000, data: '2026-02-27', conta: 'Revolut', categoria: 'Transferência' },
-  { id: '110', nome: 'Transferência', valor: -1000, data: '2026-02-27', conta: 'Revolut', categoria: 'Transferência' },
   { id: '111', nome: 'Semanada Gonçalo', valor: 5, data: '2026-02-22', conta: 'Revolut', categoria: 'Pessoal' },
   { id: '112', nome: 'Crossfit Valverde', valor: 59, data: '2026-02-19', conta: 'Revolut', categoria: 'Lazer' },
   { id: '113', nome: 'Semanada Gonçalo', valor: 5, data: '2026-02-15', conta: 'Revolut', categoria: 'Pessoal' },
@@ -429,9 +426,6 @@ const initialVariableExpenses: VariableExpense[] = [
   { id: '118', nome: 'Semanada Gonçalo', valor: 5, data: '2026-02-08', conta: 'Revolut', categoria: 'Pessoal' },
   { id: '119', nome: 'XTB', valor: 200, data: '2026-02-04', conta: 'Revolut', categoria: 'Investimento' },
   { id: '120', nome: 'XTB', valor: 100, data: '2026-02-04', conta: 'Revolut', categoria: 'Investimento' },
-  { id: '121', nome: 'Transferência', valor: -500, data: '2026-02-04', conta: 'Revolut', categoria: 'Transferência' },
-  { id: '122', nome: 'Transferência', valor: -500, data: '2026-02-04', conta: 'Revolut', categoria: 'Transferência' },
-  { id: '123', nome: 'Transferência', valor: -500, data: '2026-02-04', conta: 'Revolut', categoria: 'Transferência' },
   { id: '124', nome: 'Trading212', valor: 100, data: '2026-02-04', conta: 'Revolut', categoria: 'Investimento' },
   { id: '125', nome: 'Semanada Gonçalo', valor: 5, data: '2026-02-01', conta: 'Revolut', categoria: 'Pessoal' },
 
@@ -441,7 +435,6 @@ const initialVariableExpenses: VariableExpense[] = [
   { id: '128', nome: 'Semanada Gonçalo', valor: 5, data: '2026-01-11', conta: 'Revolut', categoria: 'Pessoal' },
   { id: '129', nome: 'Semanada Gonçalo', valor: 5, data: '2026-01-04', conta: 'Revolut', categoria: 'Pessoal' },
   { id: '130', nome: 'Robo Advisor', valor: 100, data: '2026-01-02', conta: 'Revolut', categoria: 'Investimento' },
-  { id: '131', nome: 'Transferência', valor: -120, data: '2026-01-02', conta: 'Revolut', categoria: 'Transferência' },
 ];
 
 const initialIncome: Income[] = [

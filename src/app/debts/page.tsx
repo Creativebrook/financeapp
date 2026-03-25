@@ -5,16 +5,34 @@ import { FinanceProvider, useFinance } from '@/context/FinanceContext';
 import { useSidebar } from '@/context/SidebarContext';
 import Sidebar from '@/components/Sidebar';
 import PremiumHeader from '@/components/PremiumHeader';
-import { Plus, Edit2, Trash2, CreditCard, X, AlertCircle, Calendar, Banknote, CalendarCheck, ChevronLeft, ChevronRight, Eye, Trash } from 'lucide-react';
+import { Plus, Edit2, Trash2, CreditCard, X, AlertCircle, Calendar, Banknote, CalendarCheck, ChevronLeft, ChevronRight, Eye, Trash, PieChart as PieChartIcon } from 'lucide-react';
 import { formatCurrency, getNextPaymentDate, formatDate } from '@/lib/utils';
-import { getCardAccent } from '@/lib/theme';
+import { getCardAccent, getPieChartColor } from '@/lib/theme';
 import { Debt } from '@/types';
+import DebtDistributionChart from '@/components/charts/DebtDistributionChart';
 
 function DebtsContent() {
-  const { debts, addDebt, updateDebt, deleteDebt, accounts, getDashboardSummary } = useFinance();
+  const { debts, addDebt, updateDebt, deleteDebt, accounts, getDashboardSummary, income, selectedMonth } = useFinance();
   const { isCollapsed } = useSidebar();
   const summary = getDashboardSummary();
-  const monthlyIncome = summary.monthlyIncome;
+  
+  const monthIncomeEntries = income.filter(i => {
+    if (!i) return false;
+    if (i.frequencia === 'unico' && i.data_especifica) {
+      return i.data_especifica.startsWith(selectedMonth);
+    }
+    if (i.frequencia === 'mensal') {
+      if (i.data_inicio && i.data_inicio > `${selectedMonth}-31`) return false;
+      if (i.data_fim && i.data_fim < `${selectedMonth}-01`) return false;
+      return true;
+    }
+    return false;
+  });
+
+  const expectedIncomeNoCarry = monthIncomeEntries
+    .filter(i => !i.nome.toLowerCase().includes('valor transportado'))
+    .reduce((sum, i) => sum + i.valor, 0);
+
   const [activeCardIndex, setActiveCardIndex] = useState(0);
   const [showCreditCardModal, setShowCreditCardModal] = useState(false);
   const [creditCardFormData, setCreditCardFormData] = useState({
@@ -59,7 +77,12 @@ function DebtsContent() {
   const totalInitialDebt = debts.reduce((sum, d) => sum + (d.valor_inicial || d.valor_total), 0);
   const debtPercentage = totalInitialDebt > 0 ? (totalDebt / totalInitialDebt) * 100 : 0;
   const totalMonthly = debts.reduce((sum, d) => sum + d.prestacao_mensal, 0);
-  const taxaEsforco = monthlyIncome > 0 ? (totalMonthly / monthlyIncome) * 100 : 0;
+  const taxaEsforco = expectedIncomeNoCarry > 0 ? (totalMonthly / expectedIncomeNoCarry) * 100 : 0;
+  
+  const debtDistributionData = debts.map(d => ({
+    name: d.nome,
+    value: d.valor_total
+  })).sort((a, b) => b.value - a.value);
   
   const sortedDebts = [...debts].sort((a, b) => {
     const dateA = getNextPaymentDate(a.data_pagamento).getTime();
@@ -207,7 +230,7 @@ function DebtsContent() {
 
         {/* Summary Cards - Four Columns with Spans */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-[30px] md:mt-0" style={{ marginBottom: '24px' }}>
-          <div className="card animate-slideUp lg:col-span-2" style={{ 
+          <div className="card animate-slideUp lg:col-span-1" style={{ 
             background: 'linear-gradient(to bottom, var(--card-hero-bg-start) 0%, var(--card-hero-bg-mid) 55%, var(--card-hero-bg-end) 100%)', 
             borderRadius: '8px', 
             border: '1px solid var(--card-border)', 
@@ -224,57 +247,71 @@ function DebtsContent() {
             
             <div className="flex items-end justify-between mb-2">
               <div className="flex items-center gap-3">
-                <h2 style={{ fontSize: '2rem', fontWeight: 700, color: 'white', margin: 0, fontFamily: 'Inter, sans-serif' }}>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'white', margin: 0, fontFamily: 'Inter, sans-serif' }}>
                   {formatCurrency(totalDebt)}
                 </h2>
                 <div style={{ backgroundColor: 'rgba(111, 106, 248, 0.1)', border: '1px solid rgba(111, 106, 248, 0.2)', borderRadius: '4px', padding: '2px 8px', fontSize: '0.7rem', color: '#6f6af8', fontWeight: 600 }}>
                   {debtPercentage.toFixed(1)}%
                 </div>
               </div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 500 }}>
-                TOTAL INICIAL: {formatCurrency(totalInitialDebt)}
-              </div>
             </div>
 
-            <div style={{ width: '100%', height: '6px', backgroundColor: 'rgba(255, 255, 255, 0.05)', borderRadius: '3px', overflow: 'hidden', marginBottom: '16px' }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 500, marginBottom: '12px' }}>
+              VALOR INICIAL: {formatCurrency(totalInitialDebt)}
+            </div>
+
+            <div style={{ width: '100%', height: '6px', backgroundColor: 'rgba(255, 255, 255, 0.05)', borderRadius: '3px', overflow: 'hidden', marginBottom: '24px' }}>
               <div style={{ width: `${debtPercentage}%`, height: '100%', backgroundColor: '#6f6af8', borderRadius: '3px' }}></div>
             </div>
 
-            <div className="text-[0.6rem] md:text-[0.75rem]" style={{ color: 'var(--text-secondary)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              PREVISÃO DE FINALIZAÇÃO: <span style={{ color: 'rgb(111, 106, 248)' }}>{formattedPayoffDate} ({maxMonths} meses)</span>
+            <div className="space-y-4 pt-4 border-t border-white/[0.05]">
+              <div>
+                <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] mb-1">PRESTAÇÕES MENSAIS</p>
+                <p className="text-lg font-bold text-white">{formatCurrency(totalMonthly)}</p>
+              </div>
+              
+              <div className="flex justify-between items-end">
+                <div>
+                  <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] mb-1">INCOME</p>
+                  <p className="text-sm font-semibold text-slate-300">{formatCurrency(expectedIncomeNoCarry)}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] mb-1">TAXA DE ESFORÇO</p>
+                  <p className="text-sm font-bold" style={{ color: getEffortColor(taxaEsforco) }}>{taxaEsforco.toFixed(1)}%</p>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="card animate-slideUp lg:col-span-1" style={{ 
+          <div className="card animate-slideUp lg:col-span-2" style={{ 
             background: 'linear-gradient(to bottom, var(--card-hero-bg-start) 0%, var(--card-hero-bg-mid) 55%, var(--card-hero-bg-end) 100%)', 
             borderRadius: '8px', 
             border: '1px solid var(--card-border)', 
-            padding: '24px' 
+            padding: '24px',
+            display: 'flex',
+            flexDirection: 'column'
           }}>
-            <div className="card-header" style={{ borderBottom: 'none', paddingBottom: '0', marginBottom: '20px' }}>
+            <div className="card-header" style={{ borderBottom: 'none', paddingBottom: '0', marginBottom: '10px' }}>
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full bg-white/[0.03] border border-white/[0.05] flex items-center justify-center">
-                  <CalendarCheck size={16} className="text-slate-400" />
+                  <PieChartIcon size={16} className="text-slate-400" />
                 </div>
-                <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">PRESTAÇÕES MENSAIS</p>
+                <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">DISTRIBUIÇÃO DE DÍVIDAS</p>
               </div>
             </div>
 
-            <div className="flex items-end justify-between mb-2">
-              <h2 style={{ fontSize: '2rem', fontWeight: 700, color: 'white', margin: 0, fontFamily: 'Inter, sans-serif' }}>
-                {formatCurrency(totalMonthly)}
-              </h2>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 500 }}>
-                INCOME: {formatCurrency(monthlyIncome)}
-              </div>
+            <div className="flex-1 flex items-center justify-center min-h-[160px]">
+              <DebtDistributionChart data={debtDistributionData} />
             </div>
 
-            <div style={{ width: '100%', height: '6px', backgroundColor: 'rgba(255, 255, 255, 0.05)', borderRadius: '3px', overflow: 'hidden', marginBottom: '16px' }}>
-              <div style={{ width: `${Math.min(taxaEsforco, 100)}%`, height: '100%', backgroundColor: getEffortColor(taxaEsforco), borderRadius: '3px' }}></div>
-            </div>
-
-            <div className="text-[0.6rem] md:text-[0.75rem]" style={{ color: 'var(--text-secondary)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              TAXA DE ESFORÇO: <span style={{ color: getEffortColor(taxaEsforco) }}>{taxaEsforco.toFixed(1)}%</span>
+            <div className="grid grid-cols-2 gap-2 mt-4">
+              {debtDistributionData.slice(0, 4).map((debt, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getPieChartColor(index) }}></div>
+                  <span className="text-[10px] text-slate-400 truncate">{debt.name}</span>
+                  <span className="text-[10px] text-slate-500 ml-auto">{(debt.value / totalDebt * 100).toFixed(0)}%</span>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -414,7 +451,7 @@ function DebtsContent() {
                       </td>
                       <td>
                         <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                          {monthlyIncome > 0 ? ((debt.prestacao_mensal / monthlyIncome) * 100).toFixed(1) : 0}%
+                          {expectedIncomeNoCarry > 0 ? ((debt.prestacao_mensal / expectedIncomeNoCarry) * 100).toFixed(1) : 0}%
                         </span>
                       </td>
                       <td>
