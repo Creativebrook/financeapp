@@ -5,84 +5,479 @@ import { Account, Investment, Debt, FixedExpense, VariableExpense, Income, Dashb
 
 // Initial data
 const initialAccounts: Account[] = [
-  { id: '1', nome: 'Montepio', tipo: 'Conta à ordem', saldo: 100.00, data_atualizacao: '2026-03-01', notas: 'Conta principal' },
-  { id: '2', nome: 'N26', tipo: 'Conta à ordem', saldo: 0.00, data_atualizacao: '2026-03-01', notas: 'Conta digital' },
-  { id: '3', nome: 'Revolut', tipo: 'Conta à ordem', saldo: 2044.00, data_atualizacao: '2026-03-01', notas: 'Conta internacional' },
+  { id: '1', nome: 'Montepio', tipo: 'Conta à ordem', saldo: 1610.00, data_atualizacao: '2026-03-25', notas: 'Conta principal' },
+  { id: '2', nome: 'N26', tipo: 'Conta à ordem', saldo: 0.00, data_atualizacao: '2026-03-23', notas: 'Conta digital' },
+  { id: '3', nome: 'Revolut', tipo: 'Conta à ordem', saldo: 2431.64, data_atualizacao: '2026-03-25', notas: 'Conta internacional' },
 ];
 
 const initialInvestments: Investment[] = [
   // XTB
-  { id: '1', plataforma: 'XTB', ticker: 'AAPL', nome: 'Apple Inc.', quantidade: 50, preco_medio: 150, preco_atual: 178, valor_atual: 8900, data_atualizacao: '2026-03-04' },
-  { id: '2', plataforma: 'XTB', ticker: 'TSLA', nome: 'Tesla Inc.', quantidade: 20, preco_medio: 200, preco_atual: 245, valor_atual: 4900, data_atualizacao: '2026-03-04' },
-  { id: '3', plataforma: 'XTB', ticker: 'NVDA', nome: 'NVIDIA Corp.', quantidade: 10, preco_medio: 400, preco_atual: 875, valor_atual: 8750, data_atualizacao: '2026-03-04' },
+  { id: 'xtb-1', plataforma: 'XTB', ticker: 'BNK.FR', nome: 'Lyxor Stoxx European 600 Banks', quantidade: 1, preco_medio: 111.25, preco_atual: 120.54, valor_atual: 120.54, data_atualizacao: '2026-03-24', alocacao_alvo: 5 },
+  { id: 'xtb-2', plataforma: 'XTB', ticker: 'XDNF.DE', nome: 'Xtrackers MSCI World Financials', quantidade: 1, preco_medio: 113.60, preco_atual: 112.60, valor_atual: 112.60, data_atualizacao: '2026-03-24', alocacao_alvo: 5 },
+  { id: 'xtb-3', plataforma: 'XTB', ticker: 'SXRV.DE', nome: 'iShares NASDAQ 100', quantidade: 1, preco_medio: 431.89, preco_atual: 451.14, valor_atual: 451.14, data_atualizacao: '2026-03-24', alocacao_alvo: 20 },
+  { id: 'xtb-4', plataforma: 'XTB', ticker: 'SXR8.DE', nome: 'iShares Core S&P 500', quantidade: 1, preco_medio: 331.70, preco_atual: 341.48, valor_atual: 341.48, data_atualizacao: '2026-03-24', alocacao_alvo: 15 },
+  { id: 'xtb-5', plataforma: 'XTB', ticker: 'IWDA.AS', nome: 'iShares Core MSCI World', quantidade: 1, preco_medio: 331.63, preco_atual: 343.59, valor_atual: 343.59, data_atualizacao: '2026-03-24', alocacao_alvo: 15 },
+  { id: 'xtb-6', plataforma: 'XTB', ticker: 'XDWT.DE', nome: 'Xtrackers MSCI World Information Tech', quantidade: 1, preco_medio: 430.46, preco_atual: 438.28, valor_atual: 438.28, data_atualizacao: '2026-03-24', alocacao_alvo: 20 },
+  { id: 'xtb-7', plataforma: 'XTB', ticker: 'VVSM.DE', nome: 'VanEck Semiconductor', quantidade: 1, preco_medio: 414.64, preco_atual: 527.22, valor_atual: 527.22, data_atualizacao: '2026-03-24', alocacao_alvo: 20 },
   // Trading212
-  { id: '4', plataforma: 'Trading212', carteira: 'Tech Europe 2030', ticker: 'MSFT', nome: 'Microsoft', quantidade: 15, preco_medio: 320, preco_atual: 415, valor_atual: 6225, data_atualizacao: '2026-03-04' },
-  { id: '5', plataforma: 'Trading212', carteira: 'Tech Europe 2030', ticker: 'GOOGL', nome: 'Alphabet', quantidade: 10, preco_medio: 140, preco_atual: 175, valor_atual: 1750, data_atualizacao: '2026-03-04' },
+  // Pie: Growth Predict
+  { id: 't212-gp-1', plataforma: 'Trading212', carteira: 'Growth Predict', ticker: 'MU', nome: 'Micron Technology', quantidade: 0.46007211, preco_medio: 120.76, preco_atual: 344.16, valor_atual: 158.34, data_atualizacao: '2026-03-24', dividendos_ganhos: 3.33, dividendos_reinvestidos: 3.33 },
+  { id: 't212-gp-2', plataforma: 'Trading212', carteira: 'Growth Predict', ticker: 'GS', nome: 'Goldman Sachs', quantidade: 0.16723897, preco_medio: 659.36, preco_atual: 725.01, valor_atual: 121.25, data_atualizacao: '2026-03-24' },
+  { id: 't212-gp-3', plataforma: 'Trading212', carteira: 'Growth Predict', ticker: 'NVDA', nome: 'Nvidia', quantidade: 0.60426697, preco_medio: 149.27, preco_atual: 152.35, valor_atual: 92.06, data_atualizacao: '2026-03-24' },
+  { id: 't212-gp-4', plataforma: 'Trading212', carteira: 'Growth Predict', ticker: 'JPM', nome: 'JPMorgan Chase & Co', quantidade: 0.26921536, preco_medio: 252.25, preco_atual: 254.03, valor_atual: 68.39, data_atualizacao: '2026-03-24' },
+  { id: 't212-gp-5', plataforma: 'Trading212', carteira: 'Growth Predict', ticker: 'BAC', nome: 'Bank of America', quantidade: 1.62828302, preco_medio: 42.30, preco_atual: 41.72, valor_atual: 67.93, data_atualizacao: '2026-03-24' },
+  { id: 't212-gp-6', plataforma: 'Trading212', carteira: 'Growth Predict', ticker: 'UAL', nome: 'United Airlines', quantidade: 0.75093276, preco_medio: 82.03, preco_atual: 81.63, valor_atual: 61.3, data_atualizacao: '2026-03-24' },
+  { id: 't212-gp-7', plataforma: 'Trading212', carteira: 'Growth Predict', ticker: 'SLB', nome: 'SLB', quantidade: 1.30811643, preco_medio: 35.09, preco_atual: 43.64, valor_atual: 57.08, data_atualizacao: '2026-03-24' },
+  { id: 't212-gp-8', plataforma: 'Trading212', carteira: 'Growth Predict', ticker: 'PLD', nome: 'Prologis', quantidade: 0.26152874, preco_medio: 101.17, preco_atual: 112.23, valor_atual: 29.35, data_atualizacao: '2026-03-24' },
+  { id: 't212-gp-9', plataforma: 'Trading212', carteira: 'Growth Predict', ticker: 'BX', nome: 'Blackstone', quantidade: 0.18092547, preco_medio: 136.69, preco_atual: 93.69, valor_atual: 16.95, data_atualizacao: '2026-03-24' },
+  { id: 't212-gp-10', plataforma: 'Trading212', carteira: 'Growth Predict', ticker: 'AMZN', nome: 'Amazon', quantidade: 0.11946878, preco_medio: 194.61, preco_atual: 179.30, valor_atual: 21.42, data_atualizacao: '2026-03-24' },
+
+  // Pie: NextGen Leaders
+  { id: 't212-nl-1', plataforma: 'Trading212', carteira: 'NextGen Leaders', ticker: 'AXSM', nome: 'Axsome Therapeutics', quantidade: 0.69022277, preco_medio: 112.56, preco_atual: 136.68, valor_atual: 94.34, data_atualizacao: '2026-03-24', dividendos_ganhos: 0.17, dividendos_reinvestidos: 0.17 },
+  { id: 't212-nl-2', plataforma: 'Trading212', carteira: 'NextGen Leaders', ticker: 'ORCL', nome: 'Oracle', quantidade: 0.46950386, preco_medio: 187.45, preco_atual: 127.37, valor_atual: 59.8, data_atualizacao: '2026-03-24' },
+  { id: 't212-nl-3', plataforma: 'Trading212', carteira: 'NextGen Leaders', ticker: 'CRSP', nome: 'CRISPR Therapeutics', quantidade: 1.40645634, preco_medio: 43.83, preco_atual: 40.06, valor_atual: 56.34, data_atualizacao: '2026-03-24' },
+  { id: 't212-nl-4', plataforma: 'Trading212', carteira: 'NextGen Leaders', ticker: 'APP', nome: 'AppLovin', quantidade: 0.1234908, preco_medio: 432.18, preco_atual: 377.11, valor_atual: 46.57, data_atualizacao: '2026-03-24' },
+  { id: 't212-nl-5', plataforma: 'Trading212', carteira: 'NextGen Leaders', ticker: 'LMT', nome: 'Lockheed Martin', quantidade: 0.08096875, preco_medio: 412.50, preco_atual: 524.40, valor_atual: 42.46, data_atualizacao: '2026-03-24' },
+  { id: 't212-nl-6', plataforma: 'Trading212', carteira: 'NextGen Leaders', ticker: 'UNH', nome: 'UnitedHealth', quantidade: 0.1597113, preco_medio: 252.39, preco_atual: 234.42, valor_atual: 37.44, data_atualizacao: '2026-03-24' },
+  { id: 't212-nl-7', plataforma: 'Trading212', carteira: 'NextGen Leaders', ticker: 'FSLR', nome: 'First Solar', quantidade: 0.22927531, preco_medio: 168.27, preco_atual: 167.83, valor_atual: 38.48, data_atualizacao: '2026-03-24' },
+  { id: 't212-nl-8', plataforma: 'Trading212', carteira: 'NextGen Leaders', ticker: 'XOM', nome: 'Exxon Mobil', quantidade: 0.21176222, preco_medio: 103.13, preco_atual: 141.38, valor_atual: 29.94, data_atualizacao: '2026-03-24' },
+  { id: 't212-nl-9', plataforma: 'Trading212', carteira: 'NextGen Leaders', ticker: 'RTX', nome: 'RTX Corp', quantidade: 0.10944615, preco_medio: 143.08, preco_atual: 166.84, valor_atual: 18.26, data_atualizacao: '2026-03-24' },
+  { id: 't212-nl-10', plataforma: 'Trading212', carteira: 'NextGen Leaders', ticker: 'CVX', nome: 'Chevron', quantidade: 0.12693715, preco_medio: 133.69, preco_atual: 177.65, valor_atual: 22.55, data_atualizacao: '2026-03-24' },
+  { id: 't212-nl-11', plataforma: 'Trading212', carteira: 'NextGen Leaders', ticker: 'CVS', nome: 'CVS Health', quantidade: 0.29334027, preco_medio: 61.67, preco_atual: 63.03, valor_atual: 18.49, data_atualizacao: '2026-03-24' },
+  { id: 't212-nl-12', plataforma: 'Trading212', carteira: 'NextGen Leaders', ticker: 'SHOP', nome: 'Shopify', quantidade: 0.09319548, preco_medio: 126.29, preco_atual: 101.19, valor_atual: 9.43, data_atualizacao: '2026-03-24' },
+  { id: 't212-nl-13', plataforma: 'Trading212', carteira: 'NextGen Leaders', ticker: 'SPOT', nome: 'Spotify Technology', quantidade: 0.03886728, preco_medio: 539.01, preco_atual: 419.63, valor_atual: 16.31, data_atualizacao: '2026-03-24' },
+
+  // Pie: Top Active Gainers
+  { id: 't212-tag-1', plataforma: 'Trading212', carteira: 'Top Active Gainers', ticker: 'IQ', nome: 'iQIYI', quantidade: 30.30447795, preco_medio: 1.53, preco_atual: 1.07, valor_atual: 32.36, data_atualizacao: '2026-03-24' },
+  { id: 't212-tag-2', plataforma: 'Trading212', carteira: 'Top Active Gainers', ticker: 'GOOG', nome: 'Alphabet (Class C)', quantidade: 0.10718148, preco_medio: 193.78, preco_atual: 251.16, valor_atual: 26.92, data_atualizacao: '2026-03-24' },
+  { id: 't212-tag-3', plataforma: 'Trading212', carteira: 'Top Active Gainers', ticker: 'MSFT', nome: 'Microsoft', quantidade: 0.06845857, preco_medio: 399.37, preco_atual: 322.38, valor_atual: 22.07, data_atualizacao: '2026-03-24' },
+  { id: 't212-tag-4', plataforma: 'Trading212', carteira: 'Top Active Gainers', ticker: 'JPM', nome: 'JPMorgan Chase & Co', quantidade: 0.09507967, preco_medio: 252.21, preco_atual: 254.00, valor_atual: 24.15, data_atualizacao: '2026-03-24' },
+  { id: 't212-tag-5', plataforma: 'Trading212', carteira: 'Top Active Gainers', ticker: 'CAT', nome: 'Caterpillar', quantidade: 0.03743064, preco_medio: 340.89, preco_atual: 622.49, valor_atual: 23.3, data_atualizacao: '2026-03-24' },
+  { id: 't212-tag-6', plataforma: 'Trading212', carteira: 'Top Active Gainers', ticker: 'NFLX', nome: 'Netflix', quantidade: 0.32273258, preco_medio: 88.87, preco_atual: 78.67, valor_atual: 25.39, data_atualizacao: '2026-03-24' },
+  { id: 't212-tag-7', plataforma: 'Trading212', carteira: 'Top Active Gainers', ticker: 'BAC', nome: 'Bank of America', quantidade: 0.57534117, preco_medio: 42.29, preco_atual: 41.80, valor_atual: 24.05, data_atualizacao: '2026-03-24' },
+  { id: 't212-tag-8', plataforma: 'Trading212', carteira: 'Top Active Gainers', ticker: 'MLM', nome: 'Martin Marietta Materials', quantidade: 0.04677319, preco_medio: 519.53, preco_atual: 496.22, valor_atual: 23.21, data_atualizacao: '2026-03-24' },
+  { id: 't212-tag-9', plataforma: 'Trading212', carteira: 'Top Active Gainers', ticker: 'AXSM', nome: 'Axsome Therapeutics', quantidade: 0.17043523, preco_medio: 112.59, preco_atual: 136.71, valor_atual: 23.3, data_atualizacao: '2026-03-24' },
+  { id: 't212-tag-10', plataforma: 'Trading212', carteira: 'Top Active Gainers', ticker: 'DASH', nome: 'DoorDash', quantidade: 0.16036068, preco_medio: 179.16, preco_atual: 135.20, valor_atual: 21.68, data_atualizacao: '2026-03-24' },
+  { id: 't212-tag-11', plataforma: 'Trading212', carteira: 'Top Active Gainers', ticker: 'AAPL', nome: 'Apple', quantidade: 0.08557461, preco_medio: 213.15, preco_atual: 218.41, valor_atual: 18.69, data_atualizacao: '2026-03-24' },
+  { id: 't212-tag-12', plataforma: 'Trading212', carteira: 'Top Active Gainers', ticker: 'AXP', nome: 'American Express', quantidade: 0.072244, preco_medio: 275.60, preco_atual: 260.51, valor_atual: 18.82, data_atualizacao: '2026-03-24' },
+  { id: 't212-tag-13', plataforma: 'Trading212', carteira: 'Top Active Gainers', ticker: 'ECL', nome: 'Ecolab', quantidade: 0.08018929, preco_medio: 233.19, preco_atual: 227.59, valor_atual: 18.25, data_atualizacao: '2026-03-24' },
+  { id: 't212-tag-14', plataforma: 'Trading212', carteira: 'Top Active Gainers', ticker: 'CVX', nome: 'Chevron', quantidade: 0.11448203, preco_medio: 133.73, preco_atual: 177.58, valor_atual: 20.33, data_atualizacao: '2026-03-24' },
+  { id: 't212-tag-15', plataforma: 'Trading212', carteira: 'Top Active Gainers', ticker: 'C', nome: 'Citigroup', quantidade: 0.20177253, preco_medio: 81.13, preco_atual: 98.58, valor_atual: 19.89, data_atualizacao: '2026-03-24' },
+  { id: 't212-tag-16', plataforma: 'Trading212', carteira: 'Top Active Gainers', ticker: 'MA', nome: 'Mastercard', quantidade: 0.02949173, preco_medio: 484.54, preco_atual: 429.61, valor_atual: 12.67, data_atualizacao: '2026-03-24' },
+  { id: 't212-tag-17', plataforma: 'Trading212', carteira: 'Top Active Gainers', ticker: 'AMD', nome: 'Advanced Micro Devices', quantidade: 0.082822, preco_medio: 156.00, preco_atual: 177.85, valor_atual: 14.73, data_atualizacao: '2026-03-24' },
+  { id: 't212-tag-18', plataforma: 'Trading212', carteira: 'Top Active Gainers', ticker: 'BRK.B', nome: 'Berkshire Hathaway (Class B)', quantidade: 0.03172795, preco_medio: 428.33, preco_atual: 413.83, valor_atual: 13.13, data_atualizacao: '2026-03-24' },
+  { id: 't212-tag-19', plataforma: 'Trading212', carteira: 'Top Active Gainers', ticker: 'PM', nome: 'Philip Morris International', quantidade: 0.09212239, preco_medio: 143.29, preco_atual: 141.44, valor_atual: 13.03, data_atualizacao: '2026-03-24' },
+  { id: 't212-tag-20', plataforma: 'Trading212', carteira: 'Top Active Gainers', ticker: 'WMT', nome: 'Walmart', quantidade: 0.1287051, preco_medio: 89.97, preco_atual: 105.59, valor_atual: 13.59, data_atualizacao: '2026-03-24' },
+  { id: 't212-tag-21', plataforma: 'Trading212', carteira: 'Top Active Gainers', ticker: 'MCO', nome: 'Moody\'s', quantidade: 0.03575062, preco_medio: 406.15, preco_atual: 369.22, valor_atual: 13.2, data_atualizacao: '2026-03-24' },
+  { id: 't212-tag-22', plataforma: 'Trading212', carteira: 'Top Active Gainers', ticker: 'DE', nome: 'Deere & Co', quantidade: 0.02796188, preco_medio: 428.08, preco_atual: 507.12, valor_atual: 14.18, data_atualizacao: '2026-03-24' },
+  { id: 't212-tag-23', plataforma: 'Trading212', carteira: 'Top Active Gainers', ticker: 'WM', nome: 'Waste Management', quantidade: 0.04325202, preco_medio: 196.52, preco_atual: 193.75, valor_atual: 8.38, data_atualizacao: '2026-03-24' },
+  { id: 't212-tag-24', plataforma: 'Trading212', carteira: 'Top Active Gainers', ticker: 'SPOT', nome: 'Spotify Technology', quantidade: 0.0225033, preco_medio: 539.03, preco_atual: 419.94, valor_atual: 9.45, data_atualizacao: '2026-03-24' },
+  { id: 't212-tag-25', plataforma: 'Trading212', carteira: 'Top Active Gainers', ticker: 'PLTR', nome: 'Palantir', quantidade: 0.07245666, preco_medio: 146.57, preco_atual: 134.29, valor_atual: 9.73, data_atualizacao: '2026-03-24' },
+
+  // Pie: Best Dividend Yield
+  { id: 't212-bdy-1', plataforma: 'Trading212', carteira: 'Best Dividend Yield', ticker: 'MO', nome: 'Altria', quantidade: 0.86819587, preco_medio: 55.55, preco_atual: 55.59, valor_atual: 48.26, data_atualizacao: '2026-03-24', dividendos_ganhos: 0.05, dividendos_reinvestidos: 0.05 },
+  { id: 't212-bdy-2', plataforma: 'Trading212', carteira: 'Best Dividend Yield', ticker: 'UVE', nome: 'Universal Insurance', quantidade: 1.65759647, preco_medio: 21.71, preco_atual: 30.05, valor_atual: 49.81, data_atualizacao: '2026-03-24' },
+  { id: 't212-bdy-3', plataforma: 'Trading212', carteira: 'Best Dividend Yield', ticker: 'PEBO', nome: 'Peoples Bancorp', quantidade: 1.48625601, preco_medio: 26.20, preco_atual: 27.68, valor_atual: 41.14, data_atualizacao: '2026-03-24' },
+  { id: 't212-bdy-4', plataforma: 'Trading212', carteira: 'Best Dividend Yield', ticker: 'EFC', nome: 'Ellington Financial', quantidade: 3.2421483, preco_medio: 11.45, preco_atual: 10.05, valor_atual: 32.58, data_atualizacao: '2026-03-24' },
+  { id: 't212-bdy-5', plataforma: 'Trading212', carteira: 'Best Dividend Yield', ticker: 'T', nome: 'AT&T', quantidade: 1.2613225, preco_medio: 22.33, preco_atual: 24.91, valor_atual: 31.42, data_atualizacao: '2026-03-24' },
+  { id: 't212-bdy-6', plataforma: 'Trading212', carteira: 'Best Dividend Yield', ticker: 'AM', nome: 'Antero Midstream', quantidade: 1.66155989, preco_medio: 15.77, preco_atual: 20.06, valor_atual: 33.33, data_atualizacao: '2026-03-24' },
+  { id: 't212-bdy-7', plataforma: 'Trading212', carteira: 'Best Dividend Yield', ticker: 'LPG', nome: 'Dorian LPG', quantidade: 1.11051329, preco_medio: 24.86, preco_atual: 29.80, valor_atual: 33.09, data_atualizacao: '2026-03-24' },
+  { id: 't212-bdy-8', plataforma: 'Trading212', carteira: 'Best Dividend Yield', ticker: 'OMF', nome: 'OneMain', quantidade: 0.69461173, preco_medio: 48.60, preco_atual: 45.65, valor_atual: 31.71, data_atualizacao: '2026-03-24' },
+  { id: 't212-bdy-9', plataforma: 'Trading212', carteira: 'Best Dividend Yield', ticker: 'MFA', nome: 'MFA Financial', quantidade: 2.98190107, preco_medio: 8.30, preco_atual: 8.38, valor_atual: 24.98, data_atualizacao: '2026-03-24' },
+  { id: 't212-bdy-10', plataforma: 'Trading212', carteira: 'Best Dividend Yield', ticker: 'VZ', nome: 'Verizon Communications', quantidade: 0.28394472, preco_medio: 38.92, preco_atual: 43.88, valor_atual: 12.46, data_atualizacao: '2026-03-24' },
+
+  // Pie: Diversified ETF Core
+  { id: 't212-dec-1', plataforma: 'Trading212', carteira: 'Diversified ETF Core', ticker: 'WSML', nome: 'iShares Msci World Small Cap (Acc)', quantidade: 6.1161663, preco_medio: 7.62, preco_atual: 7.93, valor_atual: 48.52, data_atualizacao: '2026-03-24', dividendos_ganhos: 0.02, dividendos_reinvestidos: 0.02 },
+  { id: 't212-dec-2', plataforma: 'Trading212', carteira: 'Diversified ETF Core', ticker: 'IWDA', nome: 'iShares Core MSCI World (Acc)', quantidade: 0.41517512, preco_medio: 108.68, preco_atual: 108.97, valor_atual: 45.24, data_atualizacao: '2026-03-24' },
+  { id: 't212-dec-3', plataforma: 'Trading212', carteira: 'Diversified ETF Core', ticker: 'R1GB', nome: 'iShares Russell 1000 Growth (Acc)', quantidade: 1.05368992, preco_medio: 36.78, preco_atual: 34.73, valor_atual: 36.6, data_atualizacao: '2026-03-24' },
+  { id: 't212-dec-4', plataforma: 'Trading212', carteira: 'Diversified ETF Core', ticker: 'WGLD', nome: 'WisdomTree Core Physical Gold', quantidade: 0.07462689, preco_medio: 336.61, preco_atual: 378.15, valor_atual: 28.22, data_atualizacao: '2026-03-24' },
+  { id: 't212-dec-5', plataforma: 'Trading212', carteira: 'Diversified ETF Core', ticker: 'SMH', nome: 'VanEck Semiconductor (Acc)', quantidade: 0.5320067, preco_medio: 48.08, preco_atual: 59.85, valor_atual: 31.84, data_atualizacao: '2026-03-24' },
+  { id: 't212-dec-6', plataforma: 'Trading212', carteira: 'Diversified ETF Core', ticker: 'DAGB', nome: 'VanEck Crypto and Blockchain Innovators (Acc)', quantidade: 2.789092, preco_medio: 11.19, preco_atual: 9.77, valor_atual: 27.26, data_atualizacao: '2026-03-24' },
+  { id: 't212-dec-7', plataforma: 'Trading212', carteira: 'Diversified ETF Core', ticker: 'DGRA', nome: 'WisdomTree US Quality Dividend Growth (Acc)', quantidade: 0.62942063, preco_medio: 45.31, preco_atual: 45.18, valor_atual: 28.44, data_atualizacao: '2026-03-24' },
+  { id: 't212-dec-8', plataforma: 'Trading212', carteira: 'Diversified ETF Core', ticker: 'ARR', nome: 'ARMOUR Residential REIT', quantidade: 1.36146219, preco_medio: 14.85, preco_atual: 13.85, valor_atual: 18.85, data_atualizacao: '2026-03-24' },
+  { id: 't212-dec-9', plataforma: 'Trading212', carteira: 'Diversified ETF Core', ticker: '4OQ1', nome: 'AGNC Investment Corp', quantidade: 1.607411, preco_medio: 9.61, preco_atual: 8.61, valor_atual: 13.84, data_atualizacao: '2026-03-24' },
+
+  // Pie: S&P500 Safe Stocks
+  { id: 't212-sss-1', plataforma: 'Trading212', carteira: 'S&P500 Safe Stocks', ticker: 'META', nome: 'Meta Platforms', quantidade: 0.0406481, preco_medio: 567.80, preco_atual: 513.68, valor_atual: 20.88, data_atualizacao: '2026-03-24', dividendos_ganhos: 0.01, dividendos_reinvestidos: 0.01 },
+  { id: 't212-sss-2', plataforma: 'Trading212', carteira: 'S&P500 Safe Stocks', ticker: 'MSFT', nome: 'Microsoft', quantidade: 0.05671814, preco_medio: 399.52, preco_atual: 322.47, valor_atual: 18.29, data_atualizacao: '2026-03-24' },
+  { id: 't212-sss-3', plataforma: 'Trading212', carteira: 'S&P500 Safe Stocks', ticker: 'AMZN', nome: 'Amazon', quantidade: 0.10059689, preco_medio: 191.46, preco_atual: 179.73, valor_atual: 18.08, data_atualizacao: '2026-03-24' },
+  { id: 't212-sss-4', plataforma: 'Trading212', carteira: 'S&P500 Safe Stocks', ticker: 'AAPL', nome: 'Apple', quantidade: 0.08888752, preco_medio: 213.08, preco_atual: 218.37, valor_atual: 19.41, data_atualizacao: '2026-03-24' },
+  { id: 't212-sss-5', plataforma: 'Trading212', carteira: 'S&P500 Safe Stocks', ticker: 'TSLA', nome: 'Tesla', quantidade: 0.05698938, preco_medio: 357.08, preco_atual: 332.17, valor_atual: 18.93, data_atualizacao: '2026-03-24' },
+  { id: 't212-sss-6', plataforma: 'Trading212', carteira: 'S&P500 Safe Stocks', ticker: 'PG', nome: 'Procter & Gamble', quantidade: 0.1473644, preco_medio: 127.91, preco_atual: 123.91, valor_atual: 18.26, data_atualizacao: '2026-03-24' },
+  { id: 't212-sss-7', plataforma: 'Trading212', carteira: 'S&P500 Safe Stocks', ticker: 'MCD', nome: 'McDonald\'s', quantidade: 0.0684803, preco_medio: 264.75, preco_atual: 266.06, valor_atual: 18.22, data_atualizacao: '2026-03-24' },
+  { id: 't212-sss-8', plataforma: 'Trading212', carteira: 'S&P500 Safe Stocks', ticker: 'APP', nome: 'AppLovin', quantidade: 0.04733388, preco_medio: 432.04, preco_atual: 377.10, valor_atual: 17.85, data_atualizacao: '2026-03-24' },
+  { id: 't212-sss-9', plataforma: 'Trading212', carteira: 'S&P500 Safe Stocks', ticker: 'HOOD', nome: 'Robinhood Markets', quantidade: 0.29478331, preco_medio: 90.64, preco_atual: 60.45, valor_atual: 17.82, data_atualizacao: '2026-03-24' },
+  { id: 't212-sss-10', plataforma: 'Trading212', carteira: 'S&P500 Safe Stocks', ticker: 'V', nome: 'Visa', quantidade: 0.05453495, preco_medio: 285.12, preco_atual: 262.40, valor_atual: 14.31, data_atualizacao: '2026-03-24' },
+  { id: 't212-sss-11', plataforma: 'Trading212', carteira: 'S&P500 Safe Stocks', ticker: 'NVDA', nome: 'Nvidia', quantidade: 0.07749962, preco_medio: 149.29, preco_atual: 152.39, valor_atual: 11.81, data_atualizacao: '2026-03-24' },
+  { id: 't212-sss-12', plataforma: 'Trading212', carteira: 'S&P500 Safe Stocks', ticker: 'JNJ', nome: 'Johnson & Johnson', quantidade: 0.04350818, preco_medio: 168.70, preco_atual: 202.95, valor_atual: 8.83, data_atualizacao: '2026-03-24' },
+  { id: 't212-sss-13', plataforma: 'Trading212', carteira: 'S&P500 Safe Stocks', ticker: 'KO', nome: 'Coca-Cola', quantidade: 0.13089862, preco_medio: 59.97, preco_atual: 64.55, valor_atual: 8.45, data_atualizacao: '2026-03-24' },
+  { id: 't212-sss-14', plataforma: 'Trading212', carteira: 'S&P500 Safe Stocks', ticker: 'PEP', nome: 'PepsiCo', quantidade: 0.06499957, preco_medio: 123.54, preco_atual: 130.46, valor_atual: 8.48, data_atualizacao: '2026-03-24' },
+  { id: 't212-sss-15', plataforma: 'Trading212', carteira: 'S&P500 Safe Stocks', ticker: 'JCI', nome: 'Johnson Controls International', quantidade: 0.08271264, preco_medio: 96.96, preco_atual: 119.69, valor_atual: 9.9, data_atualizacao: '2026-03-24' },
+
+  // Pie: Tech Europe 2030
+  { id: 't212-te-1', plataforma: 'Trading212', carteira: 'Tech Europe 2030', ticker: 'ASML', nome: 'ASML', quantidade: 0.01684061, preco_medio: 1157.32, preco_atual: 1217.89, valor_atual: 20.51, data_atualizacao: '2026-03-24' },
+  { id: 't212-te-2', plataforma: 'Trading212', carteira: 'Tech Europe 2030', ticker: 'SU', nome: 'Schneider Electric', quantidade: 0.03982982, preco_medio: 238.26, preco_atual: 241.78, valor_atual: 9.63, data_atualizacao: '2026-03-24' },
+  { id: 't212-te-3', plataforma: 'Trading212', carteira: 'Tech Europe 2030', ticker: 'IFX', nome: 'Infineon Technologies', quantidade: 0.25461427, preco_medio: 40.06, preco_atual: 38.33, valor_atual: 9.76, data_atualizacao: '2026-03-24' },
+  { id: 't212-te-4', plataforma: 'Trading212', carteira: 'Tech Europe 2030', ticker: 'STM', nome: 'STMicroelectronics', quantidade: 0.34414278, preco_medio: 26.82, preco_atual: 27.66, valor_atual: 9.52, data_atualizacao: '2026-03-24' },
+  { id: 't212-te-5', plataforma: 'Trading212', carteira: 'Tech Europe 2030', ticker: 'BESI', nome: 'BE Semiconductor Industries', quantidade: 0.05396269, preco_medio: 172.16, preco_atual: 184.02, valor_atual: 9.93, data_atualizacao: '2026-03-24' },
+  { id: 't212-te-6', plataforma: 'Trading212', carteira: 'Tech Europe 2030', ticker: 'SAP', nome: 'SAP', quantidade: 0.06018341, preco_medio: 177.79, preco_atual: 148.21, valor_atual: 8.92, data_atualizacao: '2026-03-24' },
+  { id: 't212-te-7', plataforma: 'Trading212', carteira: 'Tech Europe 2030', ticker: 'EXV3', nome: 'iShares STOXX Europe 600 Technology DE (Dist)', quantidade: 0.1227374, preco_medio: 82.94, preco_atual: 77.56, valor_atual: 9.52, data_atualizacao: '2026-03-24' },
+  { id: 't212-te-8', plataforma: 'Trading212', carteira: 'Tech Europe 2030', ticker: 'ADYEN', nome: 'Adyen', quantidade: 0.00550892, preco_medio: 1074.62, preco_atual: 887.65, valor_atual: 4.89, data_atualizacao: '2026-03-24' },
+  { id: 't212-te-9', plataforma: 'Trading212', carteira: 'Tech Europe 2030', ticker: 'SIE', nome: 'Siemens', quantidade: 0.0227347, preco_medio: 236.64, preco_atual: 209.37, valor_atual: 4.76, data_atualizacao: '2026-03-24' },
+  { id: 't212-te-10', plataforma: 'Trading212', carteira: 'Tech Europe 2030', ticker: 'WIX', nome: 'Wix.com', quantidade: 0.06412686, preco_medio: 67.68, preco_atual: 75.32, valor_atual: 4.83, data_atualizacao: '2026-03-24' },
+  { id: 't212-te-11', plataforma: 'Trading212', carteira: 'Tech Europe 2030', ticker: 'PATH', nome: 'UiPath', quantidade: 0.48787908, preco_medio: 11.19, preco_atual: 9.61, valor_atual: 4.69, data_atualizacao: '2026-03-24' },
+
+  // Pie: Moonshot Profile
+  { id: 't212-mp-1', plataforma: 'Trading212', carteira: 'Moonshot Profile', ticker: 'IBRX', nome: 'ImmunityBio', quantidade: 2.00519831, preco_medio: 3.33, preco_atual: 6.43, valor_atual: 12.9, data_atualizacao: '2026-03-24' },
+  { id: 't212-mp-2', plataforma: 'Trading212', carteira: 'Moonshot Profile', ticker: 'ENPH', nome: 'Enphase Energy', quantidade: 0.23669009, preco_medio: 35.28, preco_atual: 35.62, valor_atual: 8.43, data_atualizacao: '2026-03-24' },
+  { id: 't212-mp-3', plataforma: 'Trading212', carteira: 'Moonshot Profile', ticker: 'IMMP', nome: 'Immutep', quantidade: 26.11967962, preco_medio: 0.54, preco_atual: 0.32, valor_atual: 8.28, data_atualizacao: '2026-03-24' },
+  { id: 't212-mp-4', plataforma: 'Trading212', carteira: 'Moonshot Profile', ticker: 'HIVE', nome: 'Hive Digital Technologies Ltd', quantidade: 4.77966643, preco_medio: 2.07, preco_atual: 1.80, valor_atual: 8.6, data_atualizacao: '2026-03-24' },
+  { id: 't212-mp-5', plataforma: 'Trading212', carteira: 'Moonshot Profile', ticker: 'OSCR', nome: 'Oscar Health', quantidade: 0.78457249, preco_medio: 11.32, preco_atual: 10.45, valor_atual: 8.2, data_atualizacao: '2026-03-24' },
+  { id: 't212-mp-6', plataforma: 'Trading212', carteira: 'Moonshot Profile', ticker: 'CLSK', nome: 'Cleanspark', quantidade: 0.71807725, preco_medio: 8.98, preco_atual: 8.36, valor_atual: 6, data_atualizacao: '2026-03-24' },
+  { id: 't212-mp-7', plataforma: 'Trading212', carteira: 'Moonshot Profile', ticker: 'MNPR', nome: 'Monopar Therapeutics', quantidade: 0.11173222, preco_medio: 56.21, preco_atual: 47.61, valor_atual: 5.32, data_atualizacao: '2026-03-24' },
+  { id: 't212-mp-8', plataforma: 'Trading212', carteira: 'Moonshot Profile', ticker: 'DAVE', nome: 'Dave', quantidade: 0.03287768, preco_medio: 168.20, preco_atual: 179.15, valor_atual: 5.89, data_atualizacao: '2026-03-24' },
+  { id: 't212-mp-9', plataforma: 'Trading212', carteira: 'Moonshot Profile', ticker: 'OKLO', nome: 'Oklo', quantidade: 0.11763905, preco_medio: 59.68, preco_atual: 47.86, valor_atual: 5.63, data_atualizacao: '2026-03-24' },
+  { id: 't212-cash', plataforma: 'Trading212', ticker: 'CASH', nome: 'Numerário / Dividendos', quantidade: 1, preco_medio: 14.42, preco_atual: 2.89, valor_atual: 2.89, data_atualizacao: '2026-03-24' },
   // Revolut Stocks
-  { id: '7', plataforma: 'Revolut Stocks', ticker: 'VOO', nome: 'Vanguard S&P 500', quantidade: 25, preco_medio: 380, preco_atual: 520, valor_atual: 13000, data_atualizacao: '2026-03-04' },
-  { id: '8', plataforma: 'Revolut Stocks', ticker: 'VWCE', nome: 'Vanguard World', quantidade: 100, preco_medio: 95, preco_atual: 108, valor_atual: 10800, data_atualizacao: '2026-03-04' },
+  { id: '7', plataforma: 'Revolut Stocks', ticker: 'NVDA', nome: 'NVIDIA Corp.', quantidade: 9.81210175, preco_medio: 129.63, preco_atual: 151.66, valor_atual: 1488.12, data_atualizacao: '2026-03-24' },
+  { id: '8', plataforma: 'Revolut Stocks', ticker: 'TSM', nome: 'Taiwan Semiconductor', quantidade: 0.81378769, preco_medio: 280.74, preco_atual: 292.53, valor_atual: 238.06, data_atualizacao: '2026-03-24' },
+  { id: '16', plataforma: 'Revolut Stocks', ticker: 'AVGO', nome: 'Broadcom Inc.', quantidade: 0.65040905, preco_medio: 351.48, preco_atual: 276.36, valor_atual: 179.75, data_atualizacao: '2026-03-24' },
+  { id: '17', plataforma: 'Revolut Stocks', ticker: 'UDMY', nome: 'Udemy Inc.', quantidade: 6.98712446, preco_medio: 6.43, preco_atual: 4.18, valor_atual: 29.21, data_atualizacao: '2026-03-24' },
   // Revolut Cripto
-  { id: '9', plataforma: 'Revolut Cripto', ticker: 'BTC-USD', nome: 'Bitcoin', quantidade: 0.05, preco_medio: 35000, preco_atual: 83500, valor_atual: 4175, data_atualizacao: '2026-03-04' },
-  { id: '10', plataforma: 'Revolut Cripto', ticker: 'ETH-USD', nome: 'Ethereum', quantidade: 0.5, preco_medio: 2000, preco_atual: 2950, valor_atual: 1475, data_atualizacao: '2026-03-04' },
-  { id: '11', plataforma: 'Revolut Cripto', ticker: 'SOL-USD', nome: 'Solana', quantidade: 5, preco_medio: 80, preco_atual: 145, valor_atual: 725, data_atualizacao: '2026-03-04' },
+  { id: '9', plataforma: 'Revolut Cripto', ticker: 'BTC', nome: 'Bitcoin', quantidade: 0.01742, preco_medio: 62343.86, preco_atual: 61851.32, valor_atual: 1077.45, data_atualizacao: '2026-03-24' },
+  { id: '10', plataforma: 'Revolut Cripto', ticker: 'ETH', nome: 'Ethereum', quantidade: 0.1515, preco_medio: 3433.33, preco_atual: 1608.18, valor_atual: 243.64, data_atualizacao: '2026-03-24' },
   // Robo Advisor
-  { id: '12', plataforma: 'Robo Advisor', ticker: 'IWDA', nome: 'iShares Core MSCI World', quantidade: 50, preco_medio: 72, preco_atual: 78, valor_atual: 3900, data_atualizacao: '2026-03-04', alocacao_alvo: 40 },
-  { id: '13', plataforma: 'Robo Advisor', ticker: 'EFA', nome: 'iShares MSCI EAFE', quantidade: 30, preco_medio: 68, preco_atual: 74, valor_atual: 2220, data_atualizacao: '2026-03-04', alocacao_alvo: 30 },
-  { id: '14', plataforma: 'Robo Advisor', ticker: 'EMIM', nome: 'iShares MSCI EM', quantidade: 40, preco_medio: 28, preco_atual: 32, valor_atual: 1280, data_atualizacao: '2026-03-04', alocacao_alvo: 20 },
-  { id: '15', plataforma: 'Robo Advisor', ticker: 'IGLA', nome: 'iShares Global Green Bond', quantidade: 20, preco_medio: 52, preco_atual: 50, valor_atual: 1000, data_atualizacao: '2026-03-04', alocacao_alvo: 10 },
+  { id: 'ra-cash', plataforma: 'Robo Advisor', ticker: 'CASH', nome: 'Numerário', quantidade: 1, preco_medio: 341.56, preco_atual: 341.56, valor_atual: 341.56, data_atualizacao: '2026-03-24', alocacao_alvo: 11 },
+  { id: 'ra-1', plataforma: 'Robo Advisor', ticker: 'LYPS', nome: 'Lyxor MSCI Pacific', quantidade: 1, preco_medio: 518.14, preco_atual: 503.64, valor_atual: 503.64, data_atualizacao: '2026-03-24', alocacao_alvo: 16.22 },
+  { id: 'ra-2', plataforma: 'Robo Advisor', ticker: 'LYMS', nome: 'Lyxor MSCI Emerging Markets', quantidade: 1, preco_medio: 517.19, preco_atual: 502.71, valor_atual: 502.71, data_atualizacao: '2026-03-24', alocacao_alvo: 16.19 },
+  { id: 'ra-3', plataforma: 'Robo Advisor', ticker: 'LEMA', nome: 'Lyxor MSCI Emerging Markets (LUX)', quantidade: 1, preco_medio: 407.93, preco_atual: 396.51, valor_atual: 396.51, data_atualizacao: '2026-03-24', alocacao_alvo: 12.77 },
+  { id: 'ra-4', plataforma: 'Robo Advisor', ticker: '79U0', nome: 'Amundi Index MSCI World SRI', quantidade: 1, preco_medio: 398.03, preco_atual: 386.89, valor_atual: 386.89, data_atualizacao: '2026-03-24', alocacao_alvo: 12.46 },
+  { id: 'ra-5', plataforma: 'Robo Advisor', ticker: 'LYP6', nome: 'Lyxor Core MSCI World', quantidade: 1, preco_medio: 266.10, preco_atual: 258.65, valor_atual: 258.65, data_atualizacao: '2026-03-24', alocacao_alvo: 8.33 },
+  { id: 'ra-6', plataforma: 'Robo Advisor', ticker: 'WELK', nome: 'Amundi Index MSCI World', quantidade: 1, preco_medio: 129.37, preco_atual: 125.75, valor_atual: 125.75, data_atualizacao: '2026-03-24', alocacao_alvo: 4.05 },
+  { id: 'ra-7', plataforma: 'Robo Advisor', ticker: 'XDWI', nome: 'Xtrackers MSCI World Info Tech', quantidade: 1, preco_medio: 125.54, preco_atual: 122.03, valor_atual: 122.03, data_atualizacao: '2026-03-24', alocacao_alvo: 3.93 },
+  { id: 'ra-8', plataforma: 'Robo Advisor', ticker: '2B72', nome: 'iShares MSCI World Info Tech', quantidade: 1, preco_medio: 122.34, preco_atual: 118.92, valor_atual: 118.92, data_atualizacao: '2026-03-24', alocacao_alvo: 3.83 },
+  { id: 'ra-9', plataforma: 'Robo Advisor', ticker: 'EBUY', nome: 'Amundi MSCI Digital Economy', quantidade: 1, preco_medio: 119.79, preco_atual: 116.44, valor_atual: 116.44, data_atualizacao: '2026-03-24', alocacao_alvo: 3.75 },
+  { id: 'ra-10', plataforma: 'Robo Advisor', ticker: 'PRAJ', nome: 'Amundi MSCI Robotics & AI', quantidade: 1, preco_medio: 94.87, preco_atual: 92.22, valor_atual: 92.22, data_atualizacao: '2026-03-24', alocacao_alvo: 2.97 },
+  { id: 'ra-11', plataforma: 'Robo Advisor', ticker: 'UBUD', nome: 'Amundi MSCI Semiconductors', quantidade: 1, preco_medio: 63.89, preco_atual: 62.10, valor_atual: 62.10, data_atualizacao: '2026-03-24', alocacao_alvo: 2.00 },
+  { id: 'ra-12', plataforma: 'Robo Advisor', ticker: 'AMEL', nome: 'Amundi MSCI New Energy', quantidade: 1, preco_medio: 61.66, preco_atual: 59.93, valor_atual: 59.93, data_atualizacao: '2026-03-24', alocacao_alvo: 1.93 },
+  { id: 'ra-13', plataforma: 'Robo Advisor', ticker: 'LGQK', nome: 'L&G Cyber Security', quantidade: 1, preco_medio: 24.60, preco_atual: 23.91, valor_atual: 23.91, data_atualizacao: '2026-03-24', alocacao_alvo: 0.77 },
 ];
 
 const initialDebts: Debt[] = [
-  { id: '1', nome: 'Cartão Montepio', valor_total: 1500, valor_inicial: 5000, prestacao_mensal: 75, data_pagamento: 15, conta: 'Montepio', categoria: 'Cartão de Crédito' },
-  { id: '2', nome: 'Cartão Cetelem', valor_total: 3000, valor_inicial: 4500, prestacao_mensal: 125, data_pagamento: 20, conta: 'N26', categoria: 'Cartão de Crédito' },
-  { id: '3', nome: 'Cartão Oney', valor_total: 850, valor_inicial: 1500, prestacao_mensal: 50, data_pagamento: 10, conta: 'Montepio', categoria: 'Cartão de Crédito' },
-  { id: '4', nome: 'Crédito Automóvel', valor_total: 15000, valor_inicial: 25000, prestacao_mensal: 350, data_pagamento: 5, conta: 'Montepio', categoria: 'Empréstimo' },
-  { id: '5', nome: 'Crédito Pessoal Cetelem', valor_total: 8000, valor_inicial: 12000, prestacao_mensal: 200, data_pagamento: 25, conta: 'N26', categoria: 'Empréstimo' },
-  { id: '6', nome: 'Finanças', valor_total: 500, valor_inicial: 1000, prestacao_mensal: 50, data_pagamento: 10, conta: 'Revolut', categoria: 'Impostos' },
-  { id: '7', nome: 'Segurança Social', valor_total: 200, valor_inicial: 200, prestacao_mensal: 200, data_pagamento: 1, conta: 'Montepio', categoria: 'Impostos' },
+  { id: '1', nome: 'Cartão de Crédito Cetelem', valor_total: 550.57, valor_inicial: 1250, prestacao_mensal: 62.50, data_pagamento: 2, conta: 'Montepio', categoria: 'Cartão de Crédito', taxa_juro: 12.53 },
+  { id: '2', nome: 'Crédito Cetelem', valor_total: 1548.40, valor_inicial: 1548.40, prestacao_mensal: 40.44, data_pagamento: 2, conta: 'Montepio', categoria: 'Empréstimo', taxa_juro: 12.75 },
+  { id: '3', nome: 'Cartão de Crédito Montepio', valor_total: 714.31, valor_inicial: 1000, prestacao_mensal: 41.92, data_pagamento: 7, conta: 'Montepio', categoria: 'Cartão de Crédito', taxa_juro: 8.00 },
+  { id: '4', nome: 'Dívida Seg. Social', valor_total: 1669.24, valor_inicial: 1669.24, prestacao_mensal: 26.76, data_pagamento: 20, conta: 'Montepio', categoria: 'Impostos' },
+  { id: '5', nome: 'Credito Automóvel', valor_total: 15029.38, valor_inicial: 16897.30, prestacao_mensal: 224.99, data_pagamento: 24, conta: 'Montepio', categoria: 'Empréstimo' },
+  { id: '6', nome: 'Dívida Finanças', valor_total: 1258.24, valor_inicial: 1258.24, prestacao_mensal: 58.92, data_pagamento: 2, conta: 'Montepio', categoria: 'Impostos' },
 ];
 
 const initialFixedExpenses: FixedExpense[] = [
-  { id: '1', nome: 'Seguro automóvel', valor: 300, frequencia: 'trimestral', data_pagamento: 15, conta: 'Montepio', categoria: 'Seguros' },
-  { id: '2', nome: 'Pensão de alimentos', valor: 500, frequencia: 'mensal', data_pagamento: 1, conta: 'Montepio', categoria: 'Família' },
-  { id: '3', nome: 'IUC', valor: 50, frequencia: 'anual', data_pagamento: 1, conta: 'N26', categoria: 'Impostos' },
-  { id: '4', nome: 'ACP', valor: 60, frequencia: 'anual', data_pagamento: 1, conta: 'N26', categoria: 'Outros' },
-  { id: '5', nome: 'ChatGPT', valor: 20, frequencia: 'mensal', data_pagamento: 10, conta: 'Revolut', categoria: 'Subscrição' },
-  { id: '6', nome: 'Ginásio', valor: 40, frequencia: 'mensal', data_pagamento: 3, conta: 'N26', categoria: 'Saúde' },
-  { id: '7', nome: 'Canva', valor: 15, frequencia: 'mensal', data_pagamento: 18, conta: 'Revolut', categoria: 'Subscrição' },
-  { id: '8', nome: 'Freepik', valor: 15, frequencia: 'mensal', data_pagamento: 18, conta: 'Revolut', categoria: 'Subscrição' },
-  { id: '9', nome: 'Domínio + alojamento', valor: 100, frequencia: 'anual', data_pagamento: 1, conta: 'N26', categoria: 'Tecnologia' },
-  { id: '10', nome: 'Telemóveis', valor: 50, frequencia: 'mensal', data_pagamento: 24, conta: 'Montepio', categoria: 'Serviços' },
+  { id: '1', nome: 'Telemóvel Gonçalo', valor: 10, frequencia: 'mensal', data_pagamento: 1, conta: 'Montepio', categoria: 'Serviços' },
+  { id: '2', nome: 'Telemóvel', valor: 13, frequencia: 'mensal', data_pagamento: 4, conta: 'Montepio', categoria: 'Serviços' },
+  { id: '3', nome: 'Seguro Auto', valor: 215.15, frequencia: 'trimestral', data_pagamento: 8, conta: 'Montepio', categoria: 'Seguros' },
+  { id: '4', nome: 'Clube ACP', valor: 9.80, frequencia: 'mensal', data_pagamento: 9, conta: 'Montepio', categoria: 'Subscrição' },
+  { id: '5', nome: 'Subs. ChatGPT', valor: 23, frequencia: 'mensal', data_pagamento: 14, conta: 'Montepio', categoria: 'Subscrição' },
+  { id: '6', nome: 'Crossfit Valverde', valor: 59, frequencia: 'mensal', data_pagamento: 15, conta: 'Montepio', categoria: 'Saúde' },
+  { id: '7', nome: 'Pensão Alimentos', valor: 160.06, frequencia: 'mensal', data_pagamento: 27, conta: 'Montepio', categoria: 'Família' },
+  { id: '8', nome: 'Semanada Gonçalo', valor: 5, frequencia: 'semanal', data_pagamento: 29, conta: 'Revolut', categoria: 'Pessoal' },
+  { id: '9', nome: 'Robo Advisor', valor: 100, frequencia: 'mensal', data_pagamento: 2, conta: 'Revolut', categoria: 'Investimento' },
+  { id: '10', nome: 'XTB', valor: 100, frequencia: 'mensal', data_pagamento: 4, conta: 'Revolut', categoria: 'Investimento' },
 ];
 
 const initialVariableExpenses: VariableExpense[] = [
-  // Fevereiro 2026
-  { id: '1', nome: 'Supermercado Continente', valor: 180, data: '2026-02-05', conta: 'Montepio', categoria: 'Supermercado' },
-  { id: '2', nome: 'Supermercado Auchan', valor: 120, data: '2026-02-12', conta: 'N26', categoria: 'Supermercado' },
-  { id: '3', nome: 'Supermercado Lidl', valor: 85, data: '2026-02-20', conta: 'N26', categoria: 'Supermercado' },
-  { id: '4', nome: 'Combustível Galp', valor: 60, data: '2026-02-03', conta: 'Montepio', categoria: 'Combustível' },
-  { id: '5', nome: 'Combustível BP', valor: 55, data: '2026-02-15', conta: 'N26', categoria: 'Combustível' },
-  { id: '6', nome: 'Restaurante Sushi', valor: 45, data: '2026-02-08', conta: 'Revolut', categoria: 'Restaurantes' },
-  { id: '7', nome: 'Restaurante Italiano', valor: 35, data: '2026-02-14', conta: 'N26', categoria: 'Restaurantes' },
-  { id: '8', nome: 'Restaurante Hambúrguer', valor: 25, data: '2026-02-22', conta: 'Revolut', categoria: 'Restaurantes' },
-  { id: '9', nome: 'Roupa Zara', valor: 85, data: '2026-02-10', conta: 'N26', categoria: 'Compras' },
-  { id: '10', nome: 'Eletrónica Amazon', valor: 120, data: '2026-02-18', conta: 'Revolut', categoria: 'Compras' },
-  { id: '11', nome: 'Cabeleireiro', valor: 35, data: '2026-02-25', conta: 'Montepio', categoria: 'Diversos' },
-  { id: '12', nome: 'Farmácia', valor: 25, data: '2026-02-28', conta: 'N26', categoria: 'Diversos' },
+  // Montepio Fixed Expenses - Março 2026
+  { id: 'f-mar-1', nome: 'Telemóvel Gonçalo', valor: 10, data: '2026-03-01', conta: 'Montepio', categoria: 'Fixa' },
+  { id: 'f-mar-2', nome: 'Telemóvel', valor: 13, data: '2026-03-05', conta: 'Montepio', categoria: 'Fixa' },
+  { id: 'f-mar-3', nome: 'Clube ACP', valor: 9.80, data: '2026-03-09', conta: 'Montepio', categoria: 'Fixa' },
+  { id: 'f-mar-4', nome: 'Subs. ChatGPT', valor: 23, data: '2026-03-14', conta: 'Montepio', categoria: 'Fixa' },
+  { id: 'f-mar-5', nome: 'Pensão Alimentos', valor: 160.06, data: '2026-03-28', conta: 'Montepio', categoria: 'Fixa' },
+
+  // Montepio Fixed Expenses - Fevereiro 2026
+  { id: 'f-feb-1', nome: 'Telemóvel Gonçalo', valor: 10, data: '2026-02-01', conta: 'Montepio', categoria: 'Fixa' },
+  { id: 'f-feb-2', nome: 'Clube ACP', valor: 9.80, data: '2026-02-06', conta: 'Montepio', categoria: 'Fixa' },
+  { id: 'f-feb-3', nome: 'Telemóvel', valor: 13, data: '2026-02-06', conta: 'Montepio', categoria: 'Fixa' },
+  { id: 'f-feb-4', nome: 'Subs. ChatGPT', valor: 23, data: '2026-02-14', conta: 'Montepio', categoria: 'Fixa' },
+  { id: 'f-feb-5', nome: 'Pensão Alimentos', valor: 240.09, data: '2026-02-27', conta: 'Montepio', categoria: 'Fixa' },
+
+  // Montepio Fixed Expenses - Janeiro 2026
+  { id: 'f-jan-1', nome: 'Telemóvel Gonçalo', valor: 10, data: '2026-01-01', conta: 'Montepio', categoria: 'Fixa' },
+  { id: 'f-jan-2', nome: 'Telemóvel', valor: 13, data: '2026-01-04', conta: 'Montepio', categoria: 'Fixa' },
+  { id: 'f-jan-3', nome: 'Seguro Auto', valor: 215.15, data: '2026-01-08', conta: 'Montepio', categoria: 'Fixa' },
+  { id: 'f-jan-4', nome: 'Clube ACP', valor: 9.80, data: '2026-01-13', conta: 'Montepio', categoria: 'Fixa' },
+  { id: 'f-jan-5', nome: 'Subs. ChatGPT', valor: 23, data: '2026-01-14', conta: 'Montepio', categoria: 'Fixa' },
+  { id: 'f-jan-6', nome: 'Crossfit Valverde', valor: 59, data: '2026-01-19', conta: 'Montepio', categoria: 'Fixa' },
+  { id: 'f-jan-7', nome: 'Pensão Alimentos', valor: 240.09, data: '2026-01-28', conta: 'Montepio', categoria: 'Fixa' },
+
+  // Montepio Transactions - Março 2026
+  { id: 'm-mar-1', nome: 'Dívida Finanças', valor: 59.24, data: '2026-03-02', conta: 'Montepio', categoria: 'Dívida' },
+  { id: 'm-mar-2', nome: 'CC Cetelem', valor: 62.50, data: '2026-03-02', conta: 'Montepio', categoria: 'Dívida' },
+  { id: 'm-mar-3', nome: 'Crédito Cetelem', valor: 40.44, data: '2026-03-02', conta: 'Montepio', categoria: 'Dívida' },
+  { id: 'm-mar-4', nome: 'CC Montepio', valor: 42.78, data: '2026-03-07', conta: 'Montepio', categoria: 'Dívida' },
+  { id: 'm-mar-5', nome: 'Dívida Seg. Social', valor: 26.76, data: '2026-03-20', conta: 'Montepio', categoria: 'Dívida' },
+  { id: 'm-mar-6', nome: 'Crédito Automóvel', valor: 224.99, data: '2026-03-24', conta: 'Montepio', categoria: 'Dívida' },
+
+  // Montepio Variable Expenses - Março 2026
+  { id: 'v-mar-1', nome: 'Auchan Energy', valor: 25.00, data: '2026-03-01', conta: 'Montepio', categoria: 'Combustivel' },
+  { id: 'v-mar-2', nome: 'Via Verde', valor: 2.35, data: '2026-03-02', conta: 'Montepio', categoria: 'Transporte' },
+  { id: 'v-mar-3', nome: 'Compra Mercadona', valor: 12.99, data: '2026-03-02', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'v-mar-4', nome: 'Água SMEAS', valor: 35.38, data: '2026-03-03', conta: 'Montepio', categoria: 'Casa' },
+  { id: 'v-mar-5', nome: 'Compra Mercadona', valor: 12.85, data: '2026-03-04', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'v-mar-6', nome: 'Resultados com Charme', valor: 7.10, data: '2026-03-05', conta: 'Montepio', categoria: 'Restaurantes' },
+  { id: 'v-mar-7', nome: 'Via Verde', valor: 2.20, data: '2026-03-06', conta: 'Montepio', categoria: 'Transporte' },
+  { id: 'v-mar-8', nome: 'Jogos Santa Casa', valor: 10.00, data: '2026-03-06', conta: 'Montepio', categoria: 'Diversos' },
+  { id: 'v-mar-9', nome: 'Compra Mercadona', valor: 49.04, data: '2026-03-06', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'v-mar-10', nome: 'Solução MS', valor: 3.00, data: '2026-03-07', conta: 'Montepio', categoria: 'Taxas' },
+  { id: 'v-mar-11', nome: 'Comissão Manutenção', valor: 0.12, data: '2026-03-07', conta: 'Montepio', categoria: 'Taxas' },
+  { id: 'v-mar-12', nome: 'Compra Aldi', valor: 33.53, data: '2026-03-07', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'v-mar-13', nome: 'Via Verde', valor: 1.20, data: '2026-03-09', conta: 'Montepio', categoria: 'Transporte' },
+  { id: 'v-mar-14', nome: 'Compra Zumub', valor: 31.64, data: '2026-03-09', conta: 'Montepio', categoria: 'Diversos' },
+  { id: 'v-mar-15', nome: 'Compra Repsol', valor: 25.00, data: '2026-03-09', conta: 'Montepio', categoria: 'Combustivel' },
+  { id: 'v-mar-16', nome: 'Compra Wells', valor: 7.54, data: '2026-03-09', conta: 'Montepio', categoria: 'Shopping' },
+  { id: 'v-mar-17', nome: 'Compra Continente', valor: 12.64, data: '2026-03-09', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'v-mar-18', nome: 'Levantamento', valor: 20.00, data: '2026-03-10', conta: 'Montepio', categoria: 'Diversos' },
+  { id: 'v-mar-19', nome: 'Compra Mercadona', valor: 32.81, data: '2026-03-11', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'v-mar-20', nome: 'Compra Continente', valor: 4.85, data: '2026-03-12', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'v-mar-21', nome: 'Compra Continente', valor: 6.54, data: '2026-03-12', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'v-mar-22', nome: 'SU Eletricidade', valor: 56.07, data: '2026-03-14', conta: 'Montepio', categoria: 'Casa' },
+  { id: 'v-mar-23', nome: 'Auchan Energy', valor: 25.00, data: '2026-03-14', conta: 'Montepio', categoria: 'Combustivel' },
+  { id: 'v-mar-24', nome: 'Loja Chinês', valor: 6.78, data: '2026-03-15', conta: 'Montepio', categoria: 'Shopping' },
+  { id: 'v-mar-25', nome: 'Via Verde', valor: 1.20, data: '2026-03-16', conta: 'Montepio', categoria: 'Transporte' },
+  { id: 'v-mar-26', nome: 'Transferência', valor: 300.00, data: '2026-03-16', conta: 'Montepio', categoria: 'Transferência' },
+  { id: 'v-mar-27', nome: 'Resultados com Charme', valor: 21.90, data: '2026-03-17', conta: 'Montepio', categoria: 'Restaurantes' },
+  { id: 'v-mar-28', nome: 'Compra Repsol', valor: 12.00, data: '2026-03-17', conta: 'Montepio', categoria: 'Combustivel' },
+  { id: 'v-mar-29', nome: 'Compra Continente', valor: 28.92, data: '2026-03-17', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'v-mar-30', nome: 'Levantamento', valor: 50.00, data: '2026-03-18', conta: 'Montepio', categoria: 'Diversos' },
+  { id: 'v-mar-31', nome: 'Compra Mercadona', valor: 41.92, data: '2026-03-18', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'v-mar-32', nome: 'Compra Aliexpress', valor: 9.15, data: '2026-03-18', conta: 'Montepio', categoria: 'Shopping' },
+  { id: 'v-mar-33', nome: 'Compra Mercadona', valor: 10.02, data: '2026-03-19', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'v-mar-34', nome: 'Canva Software', valor: 1.89, data: '2026-03-21', conta: 'Montepio', categoria: 'Diversos' },
+  { id: 'v-mar-35', nome: 'Comissão', valor: 0.07, data: '2026-03-21', conta: 'Montepio', categoria: 'Taxas' },
+  { id: 'v-mar-36', nome: 'Compra Aliexpress', valor: 22.23, data: '2026-03-21', conta: 'Montepio', categoria: 'Shopping' },
+  { id: 'v-mar-37', nome: 'AS Parque Real', valor: 10.14, data: '2026-03-21', conta: 'Montepio', categoria: 'Transporte' },
+  { id: 'v-mar-38', nome: 'Auchan Energy', valor: 35.00, data: '2026-03-21', conta: 'Montepio', categoria: 'Combustivel' },
+  { id: 'v-mar-39', nome: 'Compra Continente', valor: 12.97, data: '2026-03-21', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'v-mar-40', nome: 'Água SMEAS', valor: 36.86, data: '2026-03-22', conta: 'Montepio', categoria: 'Casa' },
+  { id: 'v-mar-41', nome: 'Compra lanche', valor: 4.00, data: '2026-03-22', conta: 'Montepio', categoria: 'Diversos' },
+  { id: 'v-mar-42', nome: 'Compra Auchan', valor: 34.06, data: '2026-03-22', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'v-mar-43', nome: 'Via Verde', valor: 2.65, data: '2026-03-23', conta: 'Montepio', categoria: 'Transporte' },
+  { id: 'v-mar-44', nome: 'Compra Mercadona', valor: 18.40, data: '2026-03-23', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'v-mar-45', nome: 'Estacionamento', valor: 0.20, data: '2026-03-24', conta: 'Montepio', categoria: 'Transporte' },
+  { id: 'v-mar-46', nome: 'Estacionamento', valor: 0.80, data: '2026-03-24', conta: 'Montepio', categoria: 'Transporte' },
+  { id: 'v-mar-47', nome: 'Lanche', valor: 4.80, data: '2026-03-24', conta: 'Montepio', categoria: 'Diversos' },
+
+  // Montepio Transactions - Fevereiro 2026
+  { id: 'm-feb-1', nome: 'Dívida Finanças', valor: 58.92, data: '2026-02-02', conta: 'Montepio', categoria: 'Dívida' },
+  { id: 'm-feb-2', nome: 'CC Cetelem', valor: 62.50, data: '2026-02-02', conta: 'Montepio', categoria: 'Dívida' },
+  { id: 'm-feb-3', nome: 'Crédito Cetelem', valor: 40.44, data: '2026-02-02', conta: 'Montepio', categoria: 'Dívida' },
+  { id: 'm-feb-4', nome: 'Crédito Lentes', valor: 59.33, data: '2026-02-06', conta: 'Montepio', categoria: 'Dívida' },
+  { id: 'm-feb-5', nome: 'CC Montepio', valor: 40.48, data: '2026-02-07', conta: 'Montepio', categoria: 'Dívida' },
+  { id: 'm-feb-6', nome: 'Dívida Seg. Social', valor: 26.68, data: '2026-02-20', conta: 'Montepio', categoria: 'Dívida' },
+  { id: 'm-feb-7', nome: 'Credito Automóvel', valor: 224.99, data: '2026-02-24', conta: 'Montepio', categoria: 'Dívida' },
+
+  // Montepio Variable Expenses - Fevereiro 2026
+  { id: 'v-feb-1', nome: 'Pastelaria', valor: 6.29, data: '2026-02-01', conta: 'Montepio', categoria: 'Diversos' },
+  { id: 'v-feb-2', nome: 'Pastelaria', valor: 20.60, data: '2026-02-01', conta: 'Montepio', categoria: 'Diversos' },
+  { id: 'v-feb-3', nome: 'Via Verde', valor: 1.20, data: '2026-02-02', conta: 'Montepio', categoria: 'Transporte' },
+  { id: 'v-feb-4', nome: 'UCI Cinemas', valor: 19.32, data: '2026-02-02', conta: 'Montepio', categoria: 'Lazer' },
+  { id: 'v-feb-5', nome: 'SMEAS Água', valor: 37.09, data: '2026-02-02', conta: 'Montepio', categoria: 'Casa' },
+  { id: 'v-feb-6', nome: 'Auchan Energy', valor: 25.00, data: '2026-02-03', conta: 'Montepio', categoria: 'Combustivel' },
+  { id: 'v-feb-7', nome: 'Compra Mercadona', valor: 49.18, data: '2026-02-03', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'v-feb-8', nome: 'Transferência', valor: 500.00, data: '2026-02-04', conta: 'Montepio', categoria: 'Transferência' },
+  { id: 'v-feb-9', nome: 'Transferência', valor: 500.00, data: '2026-02-04', conta: 'Montepio', categoria: 'Transferência' },
+  { id: 'v-feb-10', nome: 'Transferência', valor: 500.00, data: '2026-02-04', conta: 'Montepio', categoria: 'Transferência' },
+  { id: 'v-feb-11', nome: 'Ebay', valor: 0.01, data: '2026-02-05', conta: 'Montepio', categoria: 'Taxas' },
+  { id: 'v-feb-12', nome: 'Pastelaria', valor: 1.70, data: '2026-02-06', conta: 'Montepio', categoria: 'Diversos' },
+  { id: 'v-feb-13', nome: 'Crossfit Open', valor: 12.95, data: '2026-02-07', conta: 'Montepio', categoria: 'Lazer' },
+  { id: 'v-feb-14', nome: 'Comissão', valor: 0.49, data: '2026-02-07', conta: 'Montepio', categoria: 'Taxas' },
+  { id: 'v-feb-15', nome: 'Imposto Selo', valor: 0.02, data: '2026-02-07', conta: 'Montepio', categoria: 'Taxas' },
+  { id: 'v-feb-16', nome: 'Padel Lovers', valor: 6.00, data: '2026-02-07', conta: 'Montepio', categoria: 'Lazer' },
+  { id: 'v-feb-17', nome: 'Solução MS', valor: 3.00, data: '2026-02-07', conta: 'Montepio', categoria: 'Taxas' },
+  { id: 'v-feb-18', nome: 'Comissão Manutenção', valor: 0.12, data: '2026-02-07', conta: 'Montepio', categoria: 'Taxas' },
+  { id: 'v-feb-19', nome: 'Lavagem Carro', valor: 4.80, data: '2026-02-08', conta: 'Montepio', categoria: 'Transporte' },
+  { id: 'v-feb-20', nome: 'Via Verde', valor: 4.75, data: '2026-02-09', conta: 'Montepio', categoria: 'Transporte' },
+  { id: 'v-feb-21', nome: 'Compra Paypayue', valor: 0.20, data: '2026-02-09', conta: 'Montepio', categoria: 'Taxas' },
+  { id: 'v-feb-22', nome: 'Confeitaria Duquesa', valor: 5.75, data: '2026-02-09', conta: 'Montepio', categoria: 'Diversos' },
+  { id: 'v-feb-23', nome: 'Compra Mercadona', valor: 63.67, data: '2026-02-09', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'v-feb-24', nome: 'SU eletricidade', valor: 59.27, data: '2026-02-10', conta: 'Montepio', categoria: 'Casa' },
+  { id: 'v-feb-25', nome: 'Transferência', valor: 120.00, data: '2026-02-10', conta: 'Montepio', categoria: 'Diversos' },
+  { id: 'v-feb-26', nome: 'Comissão', valor: 0.24, data: '2026-02-10', conta: 'Montepio', categoria: 'Taxas' },
+  { id: 'v-feb-27', nome: 'Imposto Selo', valor: 0.01, data: '2026-02-10', conta: 'Montepio', categoria: 'Taxas' },
+  { id: 'v-feb-28', nome: 'Compra Mercadona', valor: 13.21, data: '2026-02-10', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'v-feb-29', nome: 'Auchan Energy', valor: 25.00, data: '2026-02-12', conta: 'Montepio', categoria: 'Combustivel' },
+  { id: 'v-feb-30', nome: 'Compra Betclic', valor: 10.00, data: '2026-02-13', conta: 'Montepio', categoria: 'Lazer' },
+  { id: 'v-feb-31', nome: 'Compra Mercadona', valor: 49.23, data: '2026-02-13', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'v-feb-32', nome: 'AS Parque Real', valor: 4.95, data: '2026-02-14', conta: 'Montepio', categoria: 'Transporte' },
+  { id: 'v-feb-33', nome: 'Compra Continente', valor: 34.69, data: '2026-02-14', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'v-feb-34', nome: 'Via Verde', valor: 1.05, data: '2026-02-16', conta: 'Montepio', categoria: 'Transporte' },
+  { id: 'v-feb-35', nome: 'Canva Software', valor: 6.00, data: '2026-02-16', conta: 'Montepio', categoria: 'Pessoal' },
+  { id: 'v-feb-36', nome: 'Comissão', valor: 0.23, data: '2026-02-16', conta: 'Montepio', categoria: 'Taxas' },
+  { id: 'v-feb-37', nome: 'Imposto Selo', valor: 0.01, data: '2026-02-16', conta: 'Montepio', categoria: 'Taxas' },
+  { id: 'v-feb-38', nome: 'City Wok 2', valor: 34.10, data: '2026-02-16', conta: 'Montepio', categoria: 'Restaurantes' },
+  { id: 'v-feb-39', nome: 'Worten', valor: 25.99, data: '2026-02-16', conta: 'Montepio', categoria: 'Shopping' },
+  { id: 'v-feb-40', nome: 'Playstation', valor: 8.99, data: '2026-02-17', conta: 'Montepio', categoria: 'Lazer' },
+  { id: 'v-feb-41', nome: 'Espelho Gaúcho', valor: 20.96, data: '2026-02-17', conta: 'Montepio', categoria: 'Restaurantes' },
+  { id: 'v-feb-42', nome: 'Compra Continente', valor: 13.26, data: '2026-02-17', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'v-feb-43', nome: 'Compra Wells', valor: 11.30, data: '2026-02-17', conta: 'Montepio', categoria: 'Saúde' },
+  { id: 'v-feb-44', nome: 'Auchan Energy', valor: 20.00, data: '2026-02-17', conta: 'Montepio', categoria: 'Combustivel' },
+  { id: 'v-feb-45', nome: 'Compra Mercadona', valor: 21.25, data: '2026-02-18', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'v-feb-46', nome: 'Via Verde', valor: 0.15, data: '2026-02-19', conta: 'Montepio', categoria: 'Transporte' },
+  { id: 'v-feb-47', nome: 'Compra Mercadona', valor: 42.21, data: '2026-02-20', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'v-feb-48', nome: 'Mix Pão', valor: 11.20, data: '2026-02-21', conta: 'Montepio', categoria: 'Diversos' },
+  { id: 'v-feb-49', nome: 'Maia Vivaci', valor: 7.19, data: '2026-02-21', conta: 'Montepio', categoria: 'Diversos' },
+  { id: 'v-feb-50', nome: 'Compra Mercadona', valor: 49.61, data: '2026-02-22', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'v-feb-51', nome: 'Auchan Energy', valor: 20.00, data: '2026-02-22', conta: 'Montepio', categoria: 'Combustivel' },
+  { id: 'v-feb-52', nome: 'Via Verde', valor: 3.10, data: '2026-02-23', conta: 'Montepio', categoria: 'Transporte' },
+  { id: 'v-feb-53', nome: 'ULS Gaia Espinho', valor: 1.50, data: '2026-02-23', conta: 'Montepio', categoria: 'Transporte' },
+  { id: 'v-feb-54', nome: 'CTT', valor: 7.80, data: '2026-02-23', conta: 'Montepio', categoria: 'Diversos' },
+  { id: 'v-feb-55', nome: 'Jogos Santa Casa', valor: 10.00, data: '2026-02-24', conta: 'Montepio', categoria: 'Lazer' },
+  { id: 'v-feb-56', nome: 'Compra Mercadona', valor: 29.95, data: '2026-02-25', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'v-feb-57', nome: 'Transferência', valor: 1000.00, data: '2026-02-27', conta: 'Montepio', categoria: 'Transferência' },
+  { id: 'v-feb-58', nome: 'Transferência', valor: 1000.00, data: '2026-02-27', conta: 'Montepio', categoria: 'Transferência' },
+  { id: 'v-feb-59', nome: 'Compra Mercadona', valor: 49.63, data: '2026-02-27', conta: 'Montepio', categoria: 'Supermercado' },
+
+  // Montepio Transactions - Janeiro 2026
+  { id: 'm-jan-1', nome: 'CC Cetelem', valor: 62.50, data: '2026-01-02', conta: 'Montepio', categoria: 'Dívida' },
+  { id: 'm-jan-2', nome: 'Crédito Cetelem', valor: 40.44, data: '2026-01-02', conta: 'Montepio', categoria: 'Dívida' },
+  { id: 'm-jan-3', nome: 'Crédito Lentes', valor: 59.33, data: '2026-01-06', conta: 'Montepio', categoria: 'Dívida' },
+  { id: 'm-jan-4', nome: 'CC Montepio', valor: 42.49, data: '2026-01-07', conta: 'Montepio', categoria: 'Dívida' },
+  { id: 'm-jan-5', nome: 'Dívida Seg. Social', valor: 26.60, data: '2026-01-20', conta: 'Montepio', categoria: 'Dívida' },
+  { id: 'm-jan-6', nome: 'Credito Automóvel', valor: 224.99, data: '2026-01-26', conta: 'Montepio', categoria: 'Dívida' },
+
+  // Montepio Variable Expenses - Janeiro 2026
+  { id: 'v-jan-1', nome: 'Via Verde', valor: 24.25, data: '2026-01-02', conta: 'Montepio', categoria: 'Transporte' },
+  { id: 'v-jan-2', nome: 'Transferência', valor: 120.00, data: '2026-01-02', conta: 'Montepio', categoria: 'Transferência' },
+  { id: 'v-jan-3', nome: 'Compra Preço Louco', valor: 12.49, data: '2026-01-03', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'v-jan-4', nome: 'Compra Repsol', valor: 24.26, data: '2026-01-03', conta: 'Montepio', categoria: 'Combustivel' },
+  { id: 'v-jan-5', nome: 'Compra Aldi', valor: 13.93, data: '2026-01-03', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'v-jan-6', nome: 'McDonald\'s', valor: 15.00, data: '2026-01-03', conta: 'Montepio', categoria: 'Restaurantes' },
+  { id: 'v-jan-7', nome: 'UCI Cinemas', valor: 22.20, data: '2026-01-05', conta: 'Montepio', categoria: 'Lazer' },
+  { id: 'v-jan-8', nome: 'Taxa Moderadora', valor: 1.25, data: '2026-01-05', conta: 'Montepio', categoria: 'Saúde' },
+  { id: 'v-jan-9', nome: 'Compra Mercadona', valor: 49.46, data: '2026-01-06', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'v-jan-10', nome: 'Solução MS', valor: 3.00, data: '2026-01-07', conta: 'Montepio', categoria: 'Taxas' },
+  { id: 'v-jan-11', nome: 'Comissão Manutenção', valor: 0.12, data: '2026-01-07', conta: 'Montepio', categoria: 'Taxas' },
+  { id: 'v-jan-12', nome: 'Via Verde', valor: 5.65, data: '2026-01-08', conta: 'Montepio', categoria: 'Transporte' },
+  { id: 'v-jan-13', nome: 'Auchan Energy', valor: 34.18, data: '2026-01-08', conta: 'Montepio', categoria: 'Combustivel' },
+  { id: 'v-jan-14', nome: 'Compra Nata Lisboa', valor: 2.50, data: '2026-01-08', conta: 'Montepio', categoria: 'Diversos' },
+  { id: 'v-jan-15', nome: 'Compra Aldi', valor: 14.17, data: '2026-01-09', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'v-jan-16', nome: 'AS Parque Real', valor: 3.19, data: '2026-01-10', conta: 'Montepio', categoria: 'Transporte' },
+  { id: 'v-jan-17', nome: 'McDonald\'s', valor: 20.55, data: '2026-01-11', conta: 'Montepio', categoria: 'Restaurantes' },
+  { id: 'v-jan-18', nome: 'Taxa Moderadora', valor: 0.50, data: '2026-01-12', conta: 'Montepio', categoria: 'Saúde' },
+  { id: 'v-jan-19', nome: 'Compra Mercadona', valor: 54.36, data: '2026-01-12', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'v-jan-20', nome: 'Jogos Santa Casa', valor: 10.00, data: '2026-01-14', conta: 'Montepio', categoria: 'Lazer' },
+  { id: 'v-jan-21', nome: 'Compra Mercadona', valor: 38.97, data: '2026-01-14', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'v-jan-22', nome: 'Compra Mercadona', valor: 18.10, data: '2026-01-15', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'v-jan-23', nome: 'Transferência', valor: 16.70, data: '2026-01-15', conta: 'Montepio', categoria: 'Diversos' },
+  { id: 'v-jan-24', nome: 'Via Verde', valor: 0.90, data: '2026-01-16', conta: 'Montepio', categoria: 'Transporte' },
+  { id: 'v-jan-25', nome: 'Trading 212', valor: 150.00, data: '2026-01-16', conta: 'Montepio', categoria: 'Investimento' },
+  { id: 'v-jan-26', nome: 'Compra Aldi', valor: 32.75, data: '2026-01-16', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'v-jan-27', nome: 'Canva Software', valor: 6.00, data: '2026-01-17', conta: 'Montepio', categoria: 'Diversos' },
+  { id: 'v-jan-28', nome: 'Comissão', valor: 0.23, data: '2026-01-17', conta: 'Montepio', categoria: 'Taxas' },
+  { id: 'v-jan-29', nome: 'Imposto Selo', valor: 0.01, data: '2026-01-17', conta: 'Montepio', categoria: 'Taxas' },
+  { id: 'v-jan-30', nome: 'Auchan Energy', valor: 25.00, data: '2026-01-18', conta: 'Montepio', categoria: 'Combustivel' },
+  { id: 'v-jan-31', nome: 'Restaurante', valor: 52.00, data: '2026-01-18', conta: 'Montepio', categoria: 'Restaurantes' },
+  { id: 'v-jan-32', nome: 'Klarna', valor: 25.33, data: '2026-01-19', conta: 'Montepio', categoria: 'Shopping' },
+  { id: 'v-jan-33', nome: 'Compra Ikea', valor: 3.29, data: '2026-01-19', conta: 'Montepio', categoria: 'Restaurantes' },
+  { id: 'v-jan-34', nome: 'Taxa Moderadora', valor: 0.50, data: '2026-01-19', conta: 'Montepio', categoria: 'Saúde' },
+  { id: 'v-jan-35', nome: 'Comissão', valor: 0.12, data: '2026-01-19', conta: 'Montepio', categoria: 'Taxas' },
+  { id: 'v-jan-36', nome: 'Levantamento', valor: 20.00, data: '2026-01-20', conta: 'Montepio', categoria: 'Diversos' },
+  { id: 'v-jan-37', nome: 'Auchan Energy', valor: 25.00, data: '2026-01-20', conta: 'Montepio', categoria: 'Combustivel' },
+  { id: 'v-jan-38', nome: 'Compra Aldi', valor: 11.72, data: '2026-01-20', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'v-jan-39', nome: 'Padel Lovers', valor: 6.00, data: '2026-01-21', conta: 'Montepio', categoria: 'Lazer' },
+  { id: 'v-jan-40', nome: 'Transferência', valor: 29.80, data: '2026-01-21', conta: 'Montepio', categoria: 'Diversos' },
+  { id: 'v-jan-41', nome: 'Trading 212', valor: 50.00, data: '2026-01-22', conta: 'Montepio', categoria: 'Investimento' },
+  { id: 'v-jan-42', nome: 'Compra Mercadona', valor: 43.38, data: '2026-01-22', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'v-jan-43', nome: 'Via Verde', valor: 6.15, data: '2026-01-23', conta: 'Montepio', categoria: 'Transporte' },
+  { id: 'v-jan-44', nome: 'Compra Mercadona', valor: 9.92, data: '2026-01-24', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'v-jan-45', nome: 'Compra Preço Louco', valor: 12.49, data: '2026-01-24', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'v-jan-46', nome: 'Via Verde', valor: 9.70, data: '2026-01-25', conta: 'Montepio', categoria: 'Transporte' },
+  { id: 'v-jan-47', nome: 'Compra Zumub', valor: 11.58, data: '2026-01-27', conta: 'Montepio', categoria: 'Shopping' },
+  { id: 'v-jan-48', nome: 'Compra Mercadona', valor: 26.59, data: '2026-01-27', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'v-jan-49', nome: 'Compra Aldi', valor: 20.60, data: '2026-01-27', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'v-jan-50', nome: 'Padel Lovers', valor: 6.00, data: '2026-01-28', conta: 'Montepio', categoria: 'Lazer' },
+  { id: 'v-jan-51', nome: 'UBER', valor: 4.94, data: '2026-01-29', conta: 'Montepio', categoria: 'Transporte' },
+  { id: 'v-jan-52', nome: 'Compra Temu', valor: 32.50, data: '2026-01-29', conta: 'Montepio', categoria: 'Shopping' },
+  { id: 'v-jan-53', nome: 'Auchan Energy', valor: 25.00, data: '2026-01-29', conta: 'Montepio', categoria: 'Combustivel' },
+  { id: 'v-jan-54', nome: 'McDonald\'s', valor: 9.70, data: '2026-01-29', conta: 'Montepio', categoria: 'Restaurantes' },
+  { id: 'v-jan-55', nome: 'McDonald\'s', valor: 12.65, data: '2026-01-30', conta: 'Montepio', categoria: 'Restaurantes' },
+  { id: 'v-jan-56', nome: 'Compra Aldi', valor: 16.38, data: '2026-01-30', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'v-jan-57', nome: 'UBER', valor: 3.95, data: '2026-01-31', conta: 'Montepio', categoria: 'Transporte' },
+  { id: 'v-jan-58', nome: 'Trofa Saúde', valor: 27.08, data: '2026-01-31', conta: 'Montepio', categoria: 'Saúde' },
+  { id: 'v-jan-59', nome: 'Confeitaria', valor: 6.60, data: '2026-01-31', conta: 'Montepio', categoria: 'Diversos' },
+  { id: 'v-jan-60', nome: 'FNAC', valor: 132.00, data: '2026-01-31', conta: 'Montepio', categoria: 'Lazer' },
+
+  // Revolut Transactions - Março 2026
+  { id: '101', nome: 'Crossfit Valverde', valor: 59, data: '2026-03-22', conta: 'Revolut', categoria: 'Lazer' },
+  { id: '102', nome: 'Transferência', valor: -300, data: '2026-03-16', conta: 'Revolut', categoria: 'Transferência' },
+  { id: '103', nome: 'Trading212', valor: 200, data: '2026-03-16', conta: 'Revolut', categoria: 'Investimento' },
+  { id: 'f-rev-mar-1', nome: 'Semanada Gonçalo', valor: 5, data: '2026-03-22', conta: 'Revolut', categoria: 'Fixa' },
+  { id: 'f-rev-mar-2', nome: 'Semanada Gonçalo', valor: 5, data: '2026-03-15', conta: 'Revolut', categoria: 'Fixa' },
+  { id: 'f-rev-mar-3', nome: 'Semanada Gonçalo', valor: 5, data: '2026-03-08', conta: 'Revolut', categoria: 'Fixa' },
+  { id: 'f-rev-mar-4', nome: 'Robo Advisor', valor: 100, data: '2026-03-02', conta: 'Revolut', categoria: 'Fixa' },
+  { id: '106', nome: 'Investimento', valor: 43.40, data: '2026-03-03', conta: 'Revolut', categoria: 'Investimento' },
   
-  // Março 2026 (Mês atual)
-  { id: '13', nome: 'Supermercado Pingo Doce', valor: 95, data: '2026-03-02', conta: 'Montepio', categoria: 'Supermercado' },
-  { id: '14', nome: 'Combustível Repsol', valor: 70, data: '2026-03-05', conta: 'N26', categoria: 'Combustível' },
-  { id: '15', nome: 'Jantar Amigos', valor: 40, data: '2026-03-08', conta: 'Revolut', categoria: 'Restaurantes' },
-  { id: '16', nome: 'Farmácia Wells', valor: 15, data: '2026-03-12', conta: 'Montepio', categoria: 'Diversos' },
-  { id: '17', nome: 'Uber Eats', valor: 22, data: '2026-03-15', conta: 'Revolut', categoria: 'Restaurantes' },
-  { id: '18', nome: 'Supermercado Mercadona', valor: 110, data: '2026-03-17', conta: 'N26', categoria: 'Supermercado' },
+  // Revolut Transactions - Fevereiro 2026
+  { id: '109', nome: 'Transferência', valor: -1000, data: '2026-02-27', conta: 'Revolut', categoria: 'Transferência' },
+  { id: '110', nome: 'Transferência', valor: -1000, data: '2026-02-27', conta: 'Revolut', categoria: 'Transferência' },
+  { id: '111', nome: 'Semanada Gonçalo', valor: 5, data: '2026-02-22', conta: 'Revolut', categoria: 'Pessoal' },
+  { id: '112', nome: 'Crossfit Valverde', valor: 59, data: '2026-02-19', conta: 'Revolut', categoria: 'Lazer' },
+  { id: '113', nome: 'Semanada Gonçalo', valor: 5, data: '2026-02-15', conta: 'Revolut', categoria: 'Pessoal' },
+  { id: '114', nome: 'Trading212', valor: 100, data: '2026-02-10', conta: 'Revolut', categoria: 'Investimento' },
+  { id: '115', nome: 'Trading212', valor: 100, data: '2026-02-09', conta: 'Revolut', categoria: 'Investimento' },
+  { id: '116', nome: 'Trading212', valor: 100, data: '2026-02-08', conta: 'Revolut', categoria: 'Investimento' },
+  { id: '117', nome: 'XTB', valor: 200, data: '2026-02-08', conta: 'Revolut', categoria: 'Investimento' },
+  { id: '118', nome: 'Semanada Gonçalo', valor: 5, data: '2026-02-08', conta: 'Revolut', categoria: 'Pessoal' },
+  { id: '119', nome: 'XTB', valor: 200, data: '2026-02-04', conta: 'Revolut', categoria: 'Investimento' },
+  { id: '120', nome: 'XTB', valor: 100, data: '2026-02-04', conta: 'Revolut', categoria: 'Investimento' },
+  { id: '121', nome: 'Transferência', valor: -500, data: '2026-02-04', conta: 'Revolut', categoria: 'Transferência' },
+  { id: '122', nome: 'Transferência', valor: -500, data: '2026-02-04', conta: 'Revolut', categoria: 'Transferência' },
+  { id: '123', nome: 'Transferência', valor: -500, data: '2026-02-04', conta: 'Revolut', categoria: 'Transferência' },
+  { id: '124', nome: 'Trading212', valor: 100, data: '2026-02-04', conta: 'Revolut', categoria: 'Investimento' },
+  { id: '125', nome: 'Semanada Gonçalo', valor: 5, data: '2026-02-01', conta: 'Revolut', categoria: 'Pessoal' },
+
+  // Revolut Transactions - Janeiro 2026
+  { id: '126', nome: 'Semanada Gonçalo', valor: 5, data: '2026-01-25', conta: 'Revolut', categoria: 'Pessoal' },
+  { id: '127', nome: 'Semanada Gonçalo', valor: 5, data: '2026-01-18', conta: 'Revolut', categoria: 'Pessoal' },
+  { id: '128', nome: 'Semanada Gonçalo', valor: 5, data: '2026-01-11', conta: 'Revolut', categoria: 'Pessoal' },
+  { id: '129', nome: 'Semanada Gonçalo', valor: 5, data: '2026-01-04', conta: 'Revolut', categoria: 'Pessoal' },
+  { id: '130', nome: 'Robo Advisor', valor: 100, data: '2026-01-02', conta: 'Revolut', categoria: 'Investimento' },
+  { id: '131', nome: 'Transferência', valor: -120, data: '2026-01-02', conta: 'Revolut', categoria: 'Transferência' },
 ];
 
 const initialIncome: Income[] = [
-  { id: '1', nome: 'Clínica [CSA]', valor: 1000, frequencia: 'mensal', data: 8, conta: 'Montepio' },
-  { id: '2', nome: 'amo.CLINICS', valor: 300, frequencia: 'mensal', data: 10, conta: 'Montepio' },
-  { id: '3', nome: 'Las Muns', valor: 600, frequencia: 'mensal', data: 20, conta: 'Montepio' },
+  // Valor Transportado
+  { id: 'inc-0', nome: 'Valor transportado Dez 2025', valor: 1104.54, frequencia: 'unico', data: 1, data_especifica: '2026-01-01', conta: 'Montepio' },
+  
+  // Janeiro 2026
+  { id: 'inc-jan-1', nome: 'Clinica [CSA]', valor: 700, frequencia: 'unico', data: 7, data_especifica: '2026-01-07', conta: 'Montepio' },
+  { id: 'inc-jan-2', nome: 'amo.CLINICS', valor: 300, frequencia: 'unico', data: 13, data_especifica: '2026-01-13', conta: 'Montepio' },
+  { id: 'inc-jan-3', nome: 'Subsidio Desemprego', valor: 1173.51, frequencia: 'unico', data: 28, data_especifica: '2026-01-28', conta: 'Montepio' },
+  { id: 'inc-jan-4', nome: 'Depósito Cheque', valor: 2115.72, frequencia: 'unico', data: 30, data_especifica: '2026-01-30', conta: 'Montepio' },
+  { id: 'inc-jan-5', nome: 'Venda CEX', valor: 78.42, frequencia: 'unico', data: 30, data_especifica: '2026-01-30', conta: 'Montepio' },
+  { id: 'inc-jan-6', nome: 'Venda CEX', valor: 72.11, frequencia: 'unico', data: 30, data_especifica: '2026-01-30', conta: 'Montepio' },
+
+  // Fevereiro 2026
+  { id: 'inc-feb-1', nome: 'Venda CEX', valor: 38.00, frequencia: 'unico', data: 1, data_especifica: '2026-02-01', conta: 'Montepio' },
+  { id: 'inc-feb-2', nome: 'Ebay', valor: 0.01, frequencia: 'unico', data: 2, data_especifica: '2026-02-02', conta: 'Montepio' },
+  { id: 'inc-feb-3', nome: 'Clínica [CSA]', valor: 700, frequencia: 'unico', data: 4, data_especifica: '2026-02-04', conta: 'Montepio' },
+  { id: 'inc-feb-4', nome: 'Depósito Cash', valor: 90, frequencia: 'unico', data: 5, data_especifica: '2026-02-05', conta: 'Montepio' },
+  { id: 'inc-feb-5', nome: 'amo.CLINICS', valor: 300, frequencia: 'unico', data: 9, data_especifica: '2026-02-09', conta: 'Montepio' },
+  { id: 'inc-feb-6', nome: 'Venda CEX', valor: 57, frequencia: 'unico', data: 21, data_especifica: '2026-02-21', conta: 'Montepio' },
+  { id: 'inc-feb-7', nome: 'Las Muns', valor: 600, frequencia: 'unico', data: 23, data_especifica: '2026-02-23', conta: 'Montepio' },
+  { id: 'inc-feb-8', nome: 'Subsidio Desemprego', valor: 1173.51, frequencia: 'unico', data: 27, data_especifica: '2026-02-27', conta: 'Montepio' },
+
+  // Março 2026
+  { id: 'inc-mar-0', nome: 'Valor transportado Fev 2026', valor: 832.29, frequencia: 'unico', data: 1, data_especifica: '2026-03-01', conta: 'Montepio' },
+  { id: 'inc-mar-1', nome: 'Clínica [CSA]', valor: 700, frequencia: 'unico', data: 4, data_especifica: '2026-03-04', conta: 'Montepio' },
+  { id: 'inc-mar-2', nome: 'Transferência', valor: 10, frequencia: 'unico', data: 5, data_especifica: '2026-03-05', conta: 'Montepio' },
+  { id: 'inc-mar-3', nome: 'amo.CLINICS', valor: 300, frequencia: 'unico', data: 7, data_especifica: '2026-03-07', conta: 'Montepio' },
+  { id: 'inc-mar-4', nome: 'Las Muns', valor: 600, frequencia: 'unico', data: 23, data_especifica: '2026-03-23', conta: 'Montepio' },
+
+  // Recurring (for future)
+  { id: '1', nome: 'Clínica [CSA]', valor: 700, frequencia: 'mensal', data: 4, conta: 'Montepio', data_inicio: '2026-04-01' },
+  { id: '2', nome: 'amo.CLINICS', valor: 300, frequencia: 'mensal', data: 10, conta: 'Montepio', data_inicio: '2026-04-01' },
+  { id: '3', nome: 'Las Muns', valor: 600, frequencia: 'mensal', data: 23, conta: 'Montepio', data_inicio: '2026-04-01' },
+  { id: '4', nome: 'Subsídio Desemprego', valor: 1173.51, frequencia: 'mensal', data: 27, conta: 'Montepio', data_inicio: '2026-03-01' },
 ];
 
 // Initial data loader function
@@ -161,6 +556,9 @@ interface FinanceContextType {
   getDashboardSummary: () => DashboardSummary;
   getPlatformSummaries: () => PlatformSummary[];
   getExpensesByCategory: () => Record<string, number>;
+  
+  selectedMonth: string;
+  setSelectedMonth: (month: string) => void;
 }
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
@@ -175,6 +573,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [variableExpenses, setVariableExpenses] = useState<VariableExpense[]>(() => initialData.variableExpenses);
   const [income, setIncome] = useState<Income[]>(() => initialData.income);
   const [customWallets, setCustomWallets] = useState<string[]>(() => initialData.customWallets || []);
+  const [selectedMonth, setSelectedMonth] = useState('2026-03');
 
   // Save to localStorage on change
   useEffect(() => {
@@ -387,61 +786,112 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   // Computed values
   const getDashboardSummary = (): DashboardSummary => {
     // Calculate "Real-time" current balance based on day of month (matching /accounts page)
-    const now = new Date('2026-03-20T00:00:00Z');
-    const currentDay = now.getDate();
+    const now = new Date('2026-03-24T00:00:00Z');
+    const currentMonthStr = now.toISOString().substring(0, 7);
+    
+    let currentDay = now.getDate();
+    if (selectedMonth < currentMonthStr) {
+      // Past month: show full month
+      const [y, m] = selectedMonth.split('-');
+      currentDay = new Date(parseInt(y), parseInt(m), 0).getDate();
+    } else if (selectedMonth > currentMonthStr) {
+      // Future month: show start of month
+      currentDay = 0;
+    }
     
     const totalBase = accounts.reduce((sum, account) => {
       const accIncomeSoFar = income
-        .filter(inc => inc.conta === account.nome && inc.data <= currentDay)
+        .filter(inc => inc.conta === account.nome)
+        .filter(inc => {
+          if (inc.frequencia === 'mensal') {
+            if (inc.data_inicio && inc.data_inicio > `${selectedMonth}-31`) return false;
+            return inc.data <= currentDay;
+          }
+          if (inc.frequencia === 'unico' && inc.data_especifica) {
+            return inc.data_especifica.startsWith(selectedMonth) && parseInt(inc.data_especifica.split('-')[2]) <= currentDay;
+          }
+          return false;
+        })
         .reduce((sum, inc) => sum + inc.valor, 0);
       return sum + account.saldo + accIncomeSoFar;
     }, 0);
 
     const totalAccounts = accounts.reduce((sum, account) => {
       const accIncomeSoFar = income
-        .filter(inc => inc.conta === account.nome && inc.data <= currentDay)
+        .filter(inc => inc.conta === account.nome)
+        .filter(inc => {
+          if (inc.frequencia === 'mensal') {
+            if (inc.data_inicio && inc.data_inicio > `${selectedMonth}-31`) return false;
+            return inc.data <= currentDay;
+          }
+          if (inc.frequencia === 'unico' && inc.data_especifica) {
+            return inc.data_especifica.startsWith(selectedMonth) && parseInt(inc.data_especifica.split('-')[2]) <= currentDay;
+          }
+          return false;
+        })
         .reduce((sum, inc) => sum + inc.valor, 0);
 
       const accFixed = fixedExpenses
         .filter(exp => exp.conta === account.nome && exp.frequencia === 'mensal' && exp.data_pagamento <= currentDay)
+        .filter(exp => {
+          // Exclude if already paid (exists in variableExpenses for this month)
+          const isPaid = variableExpenses.some(vExp => 
+            vExp.conta === account.nome && 
+            vExp.categoria === 'Fixa' && 
+            vExp.data.startsWith(selectedMonth) &&
+            (vExp.nome.includes(exp.nome) || exp.nome.includes(vExp.nome))
+          );
+          return !isPaid;
+        })
         .reduce((sum, exp) => sum + exp.valor, 0);
         
       const accVariable = variableExpenses
-        .filter(exp => exp.conta === account.nome && exp.data && exp.data.startsWith('2026-03'))
+        .filter(exp => exp.conta === account.nome && exp.data && exp.data.startsWith(selectedMonth))
         .reduce((sum, exp) => sum + exp.valor, 0);
         
       const accDebts = debts
         .filter(d => d.conta === account.nome && d.data_pagamento <= currentDay)
+        .filter(d => {
+          // Exclude if already paid (exists in variableExpenses for this month)
+          const isPaid = variableExpenses.some(exp => 
+            exp.conta === account.nome && 
+            exp.categoria === 'Dívida' && 
+            exp.data.startsWith(selectedMonth) &&
+            (exp.nome.includes(d.nome) || d.nome.includes(exp.nome))
+          );
+          return !isPaid;
+        })
         .reduce((sum, d) => sum + d.prestacao_mensal, 0);
         
       return sum + (account.saldo + accIncomeSoFar) - (accFixed + accVariable + accDebts);
     }, 0);
 
     const totalInvestments = investments.reduce((sum, i) => sum + i.valor_atual, 0);
+    const totalDividends = investments.reduce((sum, i) => sum + (i.dividendos_ganhos || 0), 0);
     const totalDebts = debts.reduce((sum, d) => sum + d.valor_total, 0);
     
     const monthlyIncome = income.reduce((sum, i) => {
-      switch (i.frequencia) {
-        case 'mensal': return sum + i.valor;
-        case 'trimestral': return sum + i.valor / 3;
-        case 'anual': return sum + i.valor / 12;
-        default: return sum;
+      if (i.frequencia === 'mensal') {
+        if (i.data_inicio && i.data_inicio > `${selectedMonth}-31`) return sum;
+        return sum + i.valor;
       }
+      if (i.frequencia === 'unico' && i.data_especifica && i.data_especifica.startsWith(selectedMonth)) {
+        return sum + i.valor;
+      }
+      return sum;
     }, 0);
     
     const monthlyFixedExpenses = fixedExpenses.reduce((sum, e) => {
-      switch (e.frequencia) {
-        case 'mensal': return sum + e.valor;
-        case 'trimestral': return sum + e.valor / 3;
-        case 'anual': return sum + e.valor / 12;
-        default: return sum;
-      }
+      if (e.frequencia === 'mensal') return sum + e.valor;
+      return sum;
     }, 0);
     
     const monthlyDebts = debts.reduce((sum, d) => sum + d.prestacao_mensal, 0);
     
-    // Average variable expenses
-    const averageVariableExpenses = variableExpenses.reduce((sum, e) => sum + e.valor, 0);
+    // Variable expenses for selected month
+    const averageVariableExpenses = variableExpenses
+      .filter(exp => exp.data && exp.data.startsWith(selectedMonth))
+      .reduce((sum, e) => sum + e.valor, 0);
     
     const totalExpenses = monthlyFixedExpenses + monthlyDebts + averageVariableExpenses;
     
@@ -455,6 +905,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       monthlyIncome,
       monthlyFixedExpenses,
       averageVariableExpenses,
+      totalDividends,
     };
   };
 
@@ -465,6 +916,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       const platformInvestments = investments.filter(i => i.plataforma === plataforma);
       const totalValue = platformInvestments.reduce((sum, i) => sum + i.valor_atual, 0);
       const totalInvested = platformInvestments.reduce((sum, i) => sum + (i.quantidade * i.preco_medio), 0);
+      const totalDividends = platformInvestments.reduce((sum, i) => sum + (i.dividendos_ganhos || 0), 0);
       const profitability = totalValue - totalInvested;
       const profitabilityPercent = totalInvested > 0 ? (profitability / totalInvested) * 100 : 0;
       
@@ -474,15 +926,18 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         totalInvested,
         profitability,
         profitabilityPercent,
+        totalDividends,
       };
     }).filter(p => p.totalValue > 0);
   };
 
   const getExpensesByCategory = (): Record<string, number> => {
     const categories: Record<string, number> = {};
-    variableExpenses.forEach(e => {
-      categories[e.categoria] = (categories[e.categoria] || 0) + e.valor;
-    });
+    variableExpenses
+      .filter(e => e.data && e.data.startsWith(selectedMonth))
+      .forEach(e => {
+        categories[e.categoria] = (categories[e.categoria] || 0) + e.valor;
+      });
     return categories;
   };
 
@@ -520,6 +975,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       customWallets,
       addCustomWallet,
       deleteCustomWallet,
+      selectedMonth,
+      setSelectedMonth,
     }}>
       {children}
     </FinanceContext.Provider>

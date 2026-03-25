@@ -1,32 +1,32 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { FinanceProvider, useFinance } from '@/context/FinanceContext';
 import { useSidebar } from '@/context/SidebarContext';
 import Sidebar from '@/components/Sidebar';
 import PremiumHeader from '@/components/PremiumHeader';
-import { Plus, Edit2, Trash2, PiggyBank, X, BarChart3, ReceiptEuro, CalendarRange, Layers2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, PiggyBank, X, ReceiptEuro, CalendarRange, Layers2 } from 'lucide-react';
 import { formatCurrency, formatDate, getCategoryColor } from '@/lib/utils';
 import { VariableExpense } from '@/types';
 import { getPieChartColor } from '@/lib/theme';
 
 const VariableExpensesCategoryPieChart = dynamic(() => import('@/components/charts/VariableExpensesCategoryPieChart'), { ssr: false });
 const VariableExpensesTopExpensesChart = dynamic(() => import('@/components/charts/VariableExpensesTopExpensesChart'), { ssr: false });
-const VariableExpensesDailyChart = dynamic(() => import('@/components/charts/VariableExpensesDailyChart'), { ssr: false });
 
 function VariableExpensesContent() {
-  const { variableExpenses, addVariableExpense, updateVariableExpense, deleteVariableExpense, accounts, income } = useFinance();
+  const { variableExpenses, addVariableExpense, updateVariableExpense, deleteVariableExpense, accounts, income, selectedMonth, setSelectedMonth } = useFinance();
   const { isCollapsed } = useSidebar();
   const [showModal, setShowModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [editingExpense, setEditingExpense] = useState<VariableExpense | null>(null);
   const [filterCategory, setFilterCategory] = useState<string>('all');
+  
   const [formData, setFormData] = useState({
     nome: '',
     valor: 0,
-    data: '2026-03-20',
+    data: '2026-03-24',
     conta: 'Montepio',
     categoria: 'Supermercado' as string,
   });
@@ -35,79 +35,72 @@ function VariableExpensesContent() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  const sortedExpenses = [...variableExpenses].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
-
-  // Calculate current month expenses (March 2026)
-  const currentMonthExpenses = variableExpenses.filter(e => e && e.data && e.data.startsWith('2026-03'));
+  // Base variable expenses (excluding Fixa and Dívida)
+  const baseVariableExpenses = variableExpenses.filter(e => e && e.categoria !== 'Fixa' && e.categoria !== 'Dívida');
   
+  // Filtered by selected month
+  const monthFilteredExpenses = baseVariableExpenses.filter(e => e.data && e.data.startsWith(selectedMonth));
+
+  const sortedExpenses = [...monthFilteredExpenses].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+
   const filteredExpenses = filterCategory === 'all' 
     ? sortedExpenses 
     : sortedExpenses.filter(e => e.categoria === filterCategory);
 
   const totalFilteredExpenses = filteredExpenses.reduce((sum, e) => sum + e.valor, 0);
-  const totalAllExpenses = currentMonthExpenses.reduce((sum, e) => sum + e.valor, 0);
+  const totalAllExpenses = monthFilteredExpenses.reduce((sum, e) => sum + e.valor, 0);
+
+  // Montepio specific calculations
+  const montepioExpenses = monthFilteredExpenses
+    .filter(e => e.conta === 'Montepio')
+    .reduce((sum, e) => sum + e.valor, 0);
+
+  // Use the same logic as Income page for received so far
+  const today = new Date();
+  const currentMonthStr = today.toISOString().substring(0, 7);
+  
+  let effectiveDay = today.getDate();
+  if (selectedMonth < currentMonthStr) {
+    effectiveDay = 32;
+  } else if (selectedMonth > currentMonthStr) {
+    effectiveDay = -1;
+  }
+
+  const montepioIncomeReceived = income
+    .filter(inc => inc.conta === 'Montepio' && inc.categoria !== 'Valor transportado') // Exclude carry over as per user's 1610 example
+    .filter(i => {
+      if (!i) return false;
+      if (i.frequencia === 'unico' && i.data_especifica) {
+        if (!i.data_especifica.startsWith(selectedMonth)) return false;
+        const day = parseInt(i.data_especifica.split('-')[2]);
+        return day <= effectiveDay;
+      }
+      if (i.frequencia === 'mensal') {
+        if (i.data_inicio && i.data_inicio > `${selectedMonth}-31`) return false;
+        if (i.data_fim && i.data_fim < `${selectedMonth}-01`) return false;
+        return i.data <= effectiveDay;
+      }
+      return false;
+    })
+    .reduce((sum, i) => sum + i.valor, 0);
+
+  const montepioPercentage = montepioIncomeReceived > 0 ? (montepioExpenses / montepioIncomeReceived) * 100 : 0;
+
+  // Total available calculations
+  const totalAvailable = accounts.reduce((sum, acc) => sum + acc.saldo, 0);
+  const totalPercentage = totalAvailable > 0 ? (totalAllExpenses / totalAvailable) * 100 : 0;
 
   // Pagination logic
   const totalPages = Math.ceil(filteredExpenses.length / itemsPerPage);
   const paginatedExpenses = filteredExpenses.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  // Calculate monthly income
-  const monthlyIncome = income.reduce((sum, inc) => {
-    switch (inc.frequencia) {
-      case 'mensal': return sum + inc.valor;
-      case 'quinzenal': return sum + inc.valor * 2;
-      case 'semanal': return sum + inc.valor * 4;
-      case 'trimestral': return sum + inc.valor / 3;
-      case 'semestral': return sum + inc.valor / 6;
-      case 'anual': return sum + inc.valor / 12;
-      default: return sum + inc.valor;
-    }
-  }, 0);
-
-  const variablePercentage = monthlyIncome > 0 ? (totalAllExpenses / monthlyIncome) * 100 : 0;
-
-  // Calculate daily expenses for the current and previous month
-  // Use a fixed date for SSR to avoid hydration mismatches
-  const fixedDate = new Date('2026-03-20T00:00:00Z');
-  const currentMonth = fixedDate.getMonth();
-  const currentYear = fixedDate.getFullYear();
-  
-  // Previous month logic
-  const prevMonthDate = new Date(currentYear, currentMonth - 1, 1);
-  const prevMonth = prevMonthDate.getMonth();
-  const prevYear = prevMonthDate.getFullYear();
-  
-  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-  
-  const dailyExpensesData = Array.from({ length: daysInMonth }, (_, i) => {
-    const day = i + 1;
-    
-    const currentValue = variableExpenses.filter(e => {
-      if (!e || !e.data) return false;
-      const expenseDate = new Date(e.data);
-      return expenseDate.getDate() === day && 
-             expenseDate.getMonth() === currentMonth && 
-             expenseDate.getFullYear() === currentYear;
-    }).reduce((sum, e) => sum + e.valor, 0);
-    
-    const previousValue = variableExpenses.filter(e => {
-      if (!e || !e.data) return false;
-      const expenseDate = new Date(e.data);
-      return expenseDate.getDate() === day && 
-             expenseDate.getMonth() === prevMonth && 
-             expenseDate.getFullYear() === prevYear;
-    }).reduce((sum, e) => sum + e.valor, 0);
-    
-    return { day, currentValue, previousValue };
-  });
-
-  // Derive categories that actually have expenses
-  const categoriesWithExpenses = Array.from(new Set(variableExpenses.map(e => e.categoria)))
+  // Derive categories that actually have expenses in the selected month
+  const categoriesInMonth = Array.from(new Set(monthFilteredExpenses.map(e => e.categoria)))
     .filter(cat => cat && cat.trim() !== '');
 
-  const categoryData = categoriesWithExpenses
+  const categoryData = categoriesInMonth
     .map(cat => {
-      const value = variableExpenses.filter(e => e.categoria === cat).reduce((sum, e) => sum + e.valor, 0);
+      const value = monthFilteredExpenses.filter(e => e.categoria === cat).reduce((sum, e) => sum + e.valor, 0);
       return {
         name: cat,
         value: value,
@@ -117,7 +110,7 @@ function VariableExpensesContent() {
     .filter(cat => cat.value > 0)
     .sort((a, b) => b.value - a.value);
 
-  const topExpensesData = [...variableExpenses]
+  const topExpensesData = [...monthFilteredExpenses]
     .sort((a, b) => b.valor - a.valor)
     .slice(0, 8)
     .map(e => ({
@@ -125,6 +118,12 @@ function VariableExpensesContent() {
       value: Math.round(e.valor),
       percent: totalAllExpenses > 0 ? ((e.valor / totalAllExpenses) * 100).toFixed(1) : 0
     }));
+
+  const getMonthName = (monthYear: string) => {
+    const [y, m] = monthYear.split('-');
+    const date = new Date(parseInt(y), parseInt(m) - 1, 1);
+    return date.toLocaleString('pt-PT', { month: 'long', year: 'numeric' }).toUpperCase();
+  };
 
   const handleOpenModal = (expense?: VariableExpense) => {
     if (expense) {
@@ -183,13 +182,12 @@ function VariableExpensesContent() {
             <h1 className="page-title" style={{ fontSize: '1.5rem', lineHeight: 0.5 }}>Despesas Variáveis</h1>
             <p className="page-subtitle">Gerencie as suas despesas variáveis</p>
           </div>
-          <button className="btn btn-primary" style={{ float: 'right', marginTop: '-8px' }} onClick={() => handleOpenModal()}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M5 12h14"></path>
-              <path d="M12 5v14"></path>
-            </svg>
-            Nova Despesa
-          </button>
+          <div style={{ float: 'right', display: 'flex', gap: '12px', alignItems: 'center', marginTop: '-8px' }}>
+            <button className="btn btn-primary" onClick={() => handleOpenModal()}>
+              <Plus size={18} />
+              Nova Despesa
+            </button>
+          </div>
         </div>
 
         {/* Summary Cards */}
@@ -200,29 +198,50 @@ function VariableExpensesContent() {
               <div className="w-9 h-9 rounded-full bg-white/[0.03] border border-white/[0.05] flex items-center justify-center">
                 <ReceiptEuro size={16} className="text-slate-400" />
               </div>
-              <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">DESPESAS ESTE MÊS</p>
+              <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">DESPESAS DE {getMonthName(selectedMonth).split(' ')[0]}</p>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0px', flex: 1, justifyContent: 'space-between' }}>
-              <div style={{ marginTop: '-12px' }}>
-                <div className="text-3xl font-bold text-white mb-3" style={{ fontFamily: 'Inter, sans-serif' }}>
-                  {formatCurrency(totalAllExpenses)}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', flex: 1, justifyContent: 'center' }}>
+              {/* Montepio Section */}
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-[10px] text-slate-500 uppercase tracking-[0.1em]">CONTA ORDENADO</span>
+                </div>
+                <div className="text-2xl font-bold text-white mb-3" style={{ fontFamily: 'Inter, sans-serif' }}>
+                  {formatCurrency(montepioExpenses)}
                 </div>
                 <div className="w-full h-1.5 bg-white/[0.03] rounded-full overflow-hidden border border-white/[0.02] mb-2">
                   <div className="h-full rounded-full" style={{ 
-                    width: `${Math.min(100, (totalAllExpenses / (monthlyIncome || 1)) * 100)}%`,
+                    width: `${Math.min(100, montepioPercentage)}%`,
                     background: 'linear-gradient(to right, var(--danger-500), var(--danger-400))'
                   }}></div>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-[9px] text-slate-600 uppercase tracking-wider">vs Income Mensal</span>
-                  <span className="text-[10px] font-semibold" style={{ color: 'var(--danger-400)' }}>{((totalAllExpenses / (monthlyIncome || 1)) * 100).toFixed(1)}%</span>
+                  <span className="text-[9px] text-slate-600 uppercase tracking-wider">VS INCOME CONTA ORDENADO</span>
+                  <span className="text-[10px] font-semibold" style={{ color: 'var(--danger-400)' }}>{montepioPercentage.toFixed(1)}%</span>
                 </div>
               </div>
 
-              {/* Daily Expenses Chart - Expands to fill bottom space */}
-              <div style={{ height: '210px', width: '100%', marginTop: 'auto' }}>
-                <VariableExpensesDailyChart data={dailyExpensesData} />
+              <div style={{ height: '1px', background: 'var(--border-subtle)', width: '100%' }}></div>
+
+              {/* All Accounts Section */}
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-[10px] text-slate-500 uppercase tracking-[0.1em]">TODAS AS CONTAS</span>
+                </div>
+                <div className="text-2xl font-bold text-white mb-3" style={{ fontFamily: 'Inter, sans-serif' }}>
+                  {formatCurrency(totalAllExpenses)}
+                </div>
+                <div className="w-full h-1.5 bg-white/[0.03] rounded-full overflow-hidden border border-white/[0.02] mb-2">
+                  <div className="h-full rounded-full" style={{ 
+                    width: `${Math.min(100, totalPercentage)}%`,
+                    background: 'linear-gradient(to right, var(--warning-500), var(--warning-400))'
+                  }}></div>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[9px] text-slate-600 uppercase tracking-wider">VS TOTAL DO MÊS</span>
+                  <span className="text-[10px] font-semibold" style={{ color: 'var(--warning-400)' }}>{totalPercentage.toFixed(1)}%</span>
+                </div>
               </div>
             </div>
           </div>
@@ -233,7 +252,7 @@ function VariableExpensesContent() {
               <div className="w-9 h-9 rounded-full bg-white/[0.03] border border-white/[0.05] flex items-center justify-center">
                 <Layers2 size={16} className="text-slate-400" />
               </div>
-              <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">Por Categoria</p>
+              <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">DESPESAS POR CATEGORIA</p>
             </div>
             
             <div style={{ height: '180px', width: '100%', position: 'relative' }}>
@@ -264,7 +283,7 @@ function VariableExpensesContent() {
               <div className="w-9 h-9 rounded-full bg-white/[0.03] border border-white/[0.05] flex items-center justify-center">
                 <CalendarRange size={16} className="text-slate-400" />
               </div>
-              <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">Por Valor</p>
+              <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">DESPESAS POR VALOR</p>
             </div>
             
             <div style={{ height: '180px', width: '100%', position: 'relative' }}>
@@ -314,8 +333,8 @@ function VariableExpensesContent() {
               {formatCurrency(totalAllExpenses)}
             </span>
           </div>
-          {categories.map((cat) => {
-            const catTotal = variableExpenses.filter(e => e.categoria === cat).reduce((sum, e) => sum + e.valor, 0);
+          {categoriesInMonth.map((cat) => {
+            const catTotal = monthFilteredExpenses.filter(e => e.categoria === cat).reduce((sum, e) => sum + e.valor, 0);
             return (
               <div 
                 key={cat}

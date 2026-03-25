@@ -26,6 +26,9 @@ export interface Investment {
   posicao?: 'long' | 'short'; // For CFDs
   alocacao_alvo?: number; // For Robo Advisor
   isAutoPrice?: boolean;
+  dividendos_ganhos?: number;
+  dividendos_cash?: number;
+  dividendos_reinvestidos?: number;
 }
 
 // Debt Types
@@ -56,7 +59,7 @@ export interface FixedExpense {
 }
 
 // Variable Expense Types
-export type CategoriaDespesa = 'Supermercado' | 'Combustível' | 'Restaurantes' | 'Compras' | 'Diversos' | 'Transferência' | 'Investimento';
+export type CategoriaDespesa = 'Supermercado' | 'Combustível' | 'Restaurantes' | 'Compras' | 'Diversos' | 'Transferência' | 'Investimento' | 'Lazer' | 'Pessoal';
 
 export interface VariableExpense {
   id: string;
@@ -102,6 +105,7 @@ export interface DashboardSummary {
   monthlyIncome: number;
   monthlyFixedExpenses: number;
   averageVariableExpenses: number;
+  totalDividends: number;
 }
 
 // Platform Summary
@@ -111,4 +115,5 @@ export interface PlatformSummary {
   totalInvested: number;
   profitability: number;
   profitabilityPercent: number;
+  totalDividends?: number;
 }

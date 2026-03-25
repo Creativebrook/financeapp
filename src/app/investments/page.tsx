@@ -161,6 +161,9 @@ function InvestmentsContent() {
     alocacao_alvo: 0,
     isAutoPrice: false,
     accountId: '',
+    dividendos_ganhos: 0,
+    dividendos_cash: 0,
+    dividendos_reinvestidos: 0,
   });
 
   const platformSummaries = getPlatformSummaries();
@@ -201,6 +204,7 @@ function InvestmentsContent() {
   
   const platformTotal = filteredInvestments.reduce((sum, i) => sum + i.valor_atual, 0);
   const platformInvested = filteredInvestments.reduce((sum, i) => sum + (i.quantidade * i.preco_medio), 0);
+  const platformDividends = filteredInvestments.reduce((sum, i) => sum + (i.dividendos_ganhos || 0), 0);
   const platformProfitability = platformTotal - platformInvested;
   const platformProfitabilityPercent = platformInvested > 0 ? (platformProfitability / platformInvested) * 100 : 0;
   
@@ -257,6 +261,9 @@ function InvestmentsContent() {
         alocacao_alvo: investment.alocacao_alvo || 0,
         isAutoPrice: investment.isAutoPrice || false,
         accountId: '',
+        dividendos_ganhos: investment.dividendos_ganhos || 0,
+        dividendos_cash: investment.dividendos_cash || 0,
+        dividendos_reinvestidos: investment.dividendos_reinvestidos || 0,
       });
     } else {
       setEditingInvestment(null);
@@ -272,6 +279,9 @@ function InvestmentsContent() {
         alocacao_alvo: 0,
         isAutoPrice: false,
         accountId: '',
+        dividendos_ganhos: 0,
+        dividendos_cash: 0,
+        dividendos_reinvestidos: 0,
       });
     }
     setShowModal(true);
@@ -292,6 +302,9 @@ function InvestmentsContent() {
       alocacao_alvo: investment.alocacao_alvo || 0,
       isAutoPrice: investment.isAutoPrice || false,
       accountId: '',
+      dividendos_ganhos: 0,
+      dividendos_cash: 0,
+      dividendos_reinvestidos: 0,
     });
     setShowModal(true);
   };
@@ -400,6 +413,9 @@ function InvestmentsContent() {
         posicao: editingInvestment.posicao,
         alocacao_alvo: editingInvestment.alocacao_alvo,
         isAutoPrice: formData.isAutoPrice,
+        dividendos_ganhos: formData.dividendos_ganhos,
+        dividendos_cash: formData.dividendos_cash,
+        dividendos_reinvestidos: formData.dividendos_reinvestidos,
       };
       
       updateInvestment(editingInvestment.id, investmentData);
@@ -424,6 +440,9 @@ function InvestmentsContent() {
         posicao: formData.plataforma === 'Revolut Metals' ? undefined : formData.posicao,
         alocacao_alvo: formData.alocacao_alvo || undefined,
         isAutoPrice: formData.isAutoPrice,
+        dividendos_ganhos: formData.dividendos_ganhos || undefined,
+        dividendos_cash: formData.dividendos_cash || undefined,
+        dividendos_reinvestidos: formData.dividendos_reinvestidos || undefined,
       };
       updateInvestment(editingInvestment.id, investmentData);
     } else {
@@ -438,6 +457,9 @@ function InvestmentsContent() {
         posicao: formData.plataforma === 'Revolut Metals' ? undefined : formData.posicao,
         alocacao_alvo: formData.alocacao_alvo || undefined,
         isAutoPrice: formData.isAutoPrice,
+        dividendos_ganhos: formData.dividendos_ganhos || undefined,
+        dividendos_cash: formData.dividendos_cash || undefined,
+        dividendos_reinvestidos: formData.dividendos_reinvestidos || undefined,
       };
       addInvestment(investmentData, formData.accountId || undefined);
     }
@@ -693,8 +715,14 @@ function InvestmentsContent() {
             </div>
             <div style={{ textAlign: 'right', color: 'var(--text-muted)' }}>
               <div style={{ fontSize: '0.8125rem' }}>Investido</div>
-              <div  style={{ fontWeight: 600 }}>{formatCurrency(platformInvested)}</div>
-              <div style={{ fontSize: '0.75rem', marginTop: '36px', color: 'var(--text-muted)' }}>
+              <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{formatCurrency(platformInvested)}</div>
+              {platformDividends > 0 && (
+                <div style={{ marginTop: '8px' }}>
+                  <div style={{ fontSize: '0.8125rem' }}>Dividendos</div>
+                  <div style={{ fontWeight: 600, color: 'var(--accent-success)' }}>{formatCurrency(platformDividends)}</div>
+                </div>
+              )}
+              <div style={{ fontSize: '0.75rem', marginTop: '16px', color: 'var(--text-muted)' }}>
                 {formatPercentVariation(platformPortfolioPercent)} do portfólio
               </div>
             </div>
@@ -823,7 +851,7 @@ function InvestmentsContent() {
                     </div>
 
                     {/* Portfolio Weight & Progress Bar */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: investment.dividendos_ganhos ? '12px' : '24px' }}>
                       <div style={{ color: 'rgba(255, 255, 255, 0.4)', fontSize: '0.7rem', fontWeight: 400, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
                         {weightPercent.toFixed(1).replace('.', ',')}% DO PORTFÓLIO
                       </div>
@@ -837,6 +865,18 @@ function InvestmentsContent() {
                         }}></div>
                       </div>
                     </div>
+
+                    {investment.dividendos_ganhos && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', padding: '10px 12px', background: 'rgba(0, 230, 118, 0.05)', borderRadius: '8px', border: '1px solid rgba(0, 230, 118, 0.1)' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.6)', fontWeight: 500 }}>DIVIDENDOS ACUMULADOS</div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ color: 'var(--accent-success)', fontWeight: 700, fontSize: '0.9rem' }}>{formatCurrency(investment.dividendos_ganhos)}</div>
+                          {investment.dividendos_reinvestidos && (
+                            <div style={{ fontSize: '0.65rem', color: 'rgba(255, 255, 255, 0.4)' }}>Reinvestidos: {formatCurrency(investment.dividendos_reinvestidos)}</div>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Action Bar */}
                     <div style={{ 
@@ -938,6 +978,7 @@ function InvestmentsContent() {
                     <th>TOTAL</th>
                     <th>RENT (%)</th>
                     <th>PESO (%)</th>
+                    <th>DIVIDENDOS</th>
                     <th>Ações</th>
                   </tr>
                 </thead>
@@ -996,6 +1037,26 @@ function InvestmentsContent() {
                               ? `${investment.alocacao_alvo || 0}%` 
                               : `${weightPercent.toFixed(1).replace('.', ',')}%`}
                           </span>
+                        </td>
+                        <td>
+                          {investment.dividendos_ganhos ? (
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <span style={{ fontWeight: 600, color: 'var(--accent-success)', fontSize: '0.8rem' }}>
+                                {formatCurrency(investment.dividendos_ganhos)}
+                              </span>
+                              {investment.dividendos_reinvestidos ? (
+                                <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+                                  Reinv: {formatCurrency(investment.dividendos_reinvestidos)}
+                                </span>
+                              ) : investment.dividendos_cash ? (
+                                <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+                                  Cash: {formatCurrency(investment.dividendos_cash)}
+                                </span>
+                              ) : null}
+                            </div>
+                          ) : (
+                            <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>-</span>
+                          )}
                         </td>
                         <td>
                           <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-start' }}>
@@ -1216,6 +1277,44 @@ function InvestmentsContent() {
                     onChange={(e) => setFormData({ ...formData, alocacao_alvo: parseFloat(e.target.value) || 0 })}
                     max="100"
                   />
+                </div>
+              )}
+
+              {(formData.plataforma === 'Trading212' || formData.plataforma === 'XTB' || formData.plataforma === 'Revolut Stocks') && (
+                <div style={{ marginTop: '16px', padding: '16px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                  <h3 style={{ fontSize: '0.875rem', fontWeight: 600, marginBottom: '12px', color: 'var(--accent-success)' }}>Dividendos</h3>
+                  <div className="grid-3">
+                    <div className="form-group">
+                      <label className="form-label">Ganhos (€)</label>
+                      <input
+                        type="number"
+                        className="form-input"
+                        value={formData.dividendos_ganhos}
+                        onChange={(e) => setFormData({ ...formData, dividendos_ganhos: parseFloat(e.target.value) || 0 })}
+                        step="0.01"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Cash (€)</label>
+                      <input
+                        type="number"
+                        className="form-input"
+                        value={formData.dividendos_cash}
+                        onChange={(e) => setFormData({ ...formData, dividendos_cash: parseFloat(e.target.value) || 0 })}
+                        step="0.01"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Reinvestidos (€)</label>
+                      <input
+                        type="number"
+                        className="form-input"
+                        value={formData.dividendos_reinvestidos}
+                        onChange={(e) => setFormData({ ...formData, dividendos_reinvestidos: parseFloat(e.target.value) || 0 })}
+                        step="0.01"
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
 

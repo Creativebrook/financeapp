@@ -1,26 +1,38 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { TrendingUp, RefreshCw, Bell, Menu, X } from 'lucide-react';
+import { TrendingUp, Bell, Menu, X, Calendar, ChevronDown } from 'lucide-react';
 import { useSidebar } from '@/context/SidebarContext';
+import { useFinance } from '@/context/FinanceContext';
 
 interface PremiumHeaderProps {
   pageName?: string;
-  onRefresh?: () => void;
   style?: React.CSSProperties;
 }
 
-export default function PremiumHeader({ pageName, onRefresh, style }: PremiumHeaderProps) {
-  const [refreshing, setRefreshing] = useState(false);
+export default function PremiumHeader({ pageName, style }: PremiumHeaderProps) {
   const { isMobileOpen, setIsMobileOpen } = useSidebar();
+  const { selectedMonth, setSelectedMonth, variableExpenses } = useFinance();
+  const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState(false);
+  const [isMobileMonthDropdownOpen, setIsMobileMonthDropdownOpen] = useState(false);
 
-  const handleRefresh = async () => {
-    if (onRefresh) {
-      setRefreshing(true);
-      await onRefresh();
-      setRefreshing(false);
-    }
+  const availableMonths = useMemo(() => {
+    const months = new Set<string>();
+    variableExpenses.forEach(e => {
+      if (e.data) {
+        months.add(e.data.substring(0, 7));
+      }
+    });
+    // Ensure current month is there
+    months.add('2026-03');
+    return Array.from(months).sort().reverse();
+  }, [variableExpenses]);
+
+  const getMonthName = (monthYear: string) => {
+    const [y, m] = monthYear.split('-');
+    const date = new Date(parseInt(y), parseInt(m) - 1, 1);
+    return date.toLocaleString('pt-PT', { month: 'long', year: 'numeric' }).toUpperCase();
   };
 
   return (
@@ -41,14 +53,56 @@ export default function PremiumHeader({ pageName, onRefresh, style }: PremiumHea
           </div>
         </div>
         <div className="premium-header-right">
-          <button 
-            className="premium-header-btn"
-            onClick={handleRefresh}
-            disabled={refreshing}
-            title="Atualizar dados"
-          >
-            <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
-          </button>
+          {/* Month Filter Dropdown */}
+          <div className="relative">
+            <button 
+              className={`premium-header-btn flex items-center justify-between gap-3 px-4 min-w-[160px] ${isMonthDropdownOpen ? 'bg-white/[0.08] text-white border-white/[0.15]' : 'border-white/[0.05]'} border transition-all duration-200`}
+              onClick={() => setIsMonthDropdownOpen(!isMonthDropdownOpen)}
+              title="Filtrar por mês"
+            >
+              <div className="flex items-center gap-2">
+                <Calendar size={16} className="text-accent-primary" />
+                <span className="text-[10px] font-bold uppercase tracking-widest hidden md:inline whitespace-nowrap">
+                  {getMonthName(selectedMonth)}
+                </span>
+              </div>
+              <ChevronDown size={14} className={`opacity-50 transition-transform duration-300 ${isMonthDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isMonthDropdownOpen && (
+              <>
+                <div 
+                  className="fixed inset-0 z-40" 
+                  onClick={() => setIsMonthDropdownOpen(false)}
+                />
+                <div className="absolute right-0 mt-2 w-56 bg-[#1a1c23] border border-white/[0.08] rounded-xl shadow-2xl z-50 py-2 animate-fadeIn overflow-hidden">
+                  <div className="px-4 py-2 border-bottom border-white/[0.04] mb-1">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Selecionar Mês</span>
+                  </div>
+                  <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
+                    {availableMonths.map(month => (
+                      <button
+                        key={month}
+                        className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center justify-between ${
+                          selectedMonth === month 
+                            ? 'bg-accent-primary/10 text-accent-primary font-medium' 
+                            : 'text-slate-400 hover:bg-white/[0.04] hover:text-white'
+                        }`}
+                        onClick={() => {
+                          setSelectedMonth(month);
+                          setIsMonthDropdownOpen(false);
+                        }}
+                      >
+                        <span>{getMonthName(month)}</span>
+                        {selectedMonth === month && <div className="w-1.5 h-1.5 rounded-full bg-accent-primary" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
           <button 
             className="premium-header-btn"
             title="Notificações"
@@ -76,14 +130,49 @@ export default function PremiumHeader({ pageName, onRefresh, style }: PremiumHea
           </Link>
         </div>
         <div className="mobile-header-right">
-          <button 
-            className="mobile-header-btn"
-            onClick={handleRefresh}
-            disabled={refreshing}
-            title="Atualizar dados"
-          >
-            <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
-          </button>
+          <div className="relative">
+            <button 
+              className={`mobile-header-btn flex items-center gap-1.5 px-2 ${isMobileMonthDropdownOpen ? 'bg-white/[0.08] text-white' : ''}`}
+              onClick={() => setIsMobileMonthDropdownOpen(!isMobileMonthDropdownOpen)}
+              title="Filtrar por mês"
+            >
+              <Calendar size={14} className="text-accent-primary" />
+              <span className="text-[9px] font-bold uppercase tracking-tight">
+                {getMonthName(selectedMonth).split(' ')[0]}
+              </span>
+              <ChevronDown size={10} className="opacity-50" />
+            </button>
+
+            {isMobileMonthDropdownOpen && (
+              <>
+                <div 
+                  className="fixed inset-0 z-40" 
+                  onClick={() => setIsMobileMonthDropdownOpen(false)}
+                />
+                <div className="absolute right-0 mt-2 w-48 bg-[#1a1c23] border border-white/[0.08] rounded-xl shadow-2xl z-50 py-1 animate-fadeIn overflow-hidden">
+                  <div className="max-h-[250px] overflow-y-auto custom-scrollbar">
+                    {availableMonths.map(month => (
+                      <button
+                        key={month}
+                        className={`w-full text-left px-4 py-2 text-xs transition-colors flex items-center justify-between ${
+                          selectedMonth === month 
+                            ? 'bg-accent-primary/10 text-accent-primary font-medium' 
+                            : 'text-slate-400 hover:bg-white/[0.04] hover:text-white'
+                        }`}
+                        onClick={() => {
+                          setSelectedMonth(month);
+                          setIsMobileMonthDropdownOpen(false);
+                        }}
+                      >
+                        <span>{getMonthName(month)}</span>
+                        {selectedMonth === month && <div className="w-1 h-1 rounded-full bg-accent-primary" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
           <button 
             className="mobile-header-btn"
             title="Notificações"

@@ -4,13 +4,13 @@ import { useState, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { FinanceProvider, useFinance } from '@/context/FinanceContext';
 import Sidebar from '@/components/Sidebar';
+import PremiumHeader from '@/components/PremiumHeader';
 import { 
   Wallet, 
   TrendingUp, 
   CreditCard, 
   ArrowUpRight, 
   ArrowDownRight,
-  RefreshCw,
   Calendar,
   PieChart as PieChartIcon,
   BarChart3,
@@ -380,7 +380,8 @@ function DashboardContent() {
     getPlatformSummaries,
     getExpensesByCategory,
     refreshPrices,
-    transferFunds
+    transferFunds,
+    selectedMonth
   } = useFinance();
   
   const [refreshing, setRefreshing] = useState(false);
@@ -627,11 +628,10 @@ function DashboardContent() {
 
   // Filter variable expenses by time range
   const getFilteredExpensesByCategory = () => {
-    // Use a fixed date for SSR to avoid hydration mismatch
-    // In a real app, you'd update this in useEffect if needed
-    const now = new Date('2026-03-20T00:00:00Z'); 
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth();
+    // Use the selected month from context
+    const [selectedYear, selectedMonthIdx] = selectedMonth.split('-').map(Number);
+    const currentYear = selectedYear;
+    const currentMonth = selectedMonthIdx - 1;
     
     // Determine which time range to use based on data availability
     let effectiveTimeRange = expensesTimeRange;
@@ -746,83 +746,8 @@ function DashboardContent() {
       <Sidebar />
       
       <main className={`main-content ${isCollapsed ? 'sidebar-collapsed' : ''}`}>
-        {/* Premium Header - Desktop */}
-        <header className="premium-header">
-          <div className="premium-header-left">
-            <Link href="/" className="premium-header-logo-link">
-              <div className="premium-header-logo">
-                <TrendingUpIcon size={20} strokeWidth={2.5} />
-              </div>
-            </Link>
-            <div className="premium-header-info">
-              <h1 className="premium-header-title">Finance 360º</h1>
-              <p className="premium-header-subtitle">
-                <span className="subtitle-label">Finance and portfolio overview</span>
-              </p>
-            </div>
-          </div>
-          <div className="premium-header-right">
-            <button 
-              className="premium-header-btn"
-              onClick={handleRefresh}
-              disabled={refreshing}
-              title="Atualizar dados"
-            >
-              <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
-            </button>
-            <button 
-              className="premium-header-btn"
-              onClick={() => setShowNotifications(!showNotifications)}
-              title="Notificações"
-            >
-              <Bell size={16} />
-            </button>
-          </div>
-        </header>
+        <PremiumHeader />
         
-        {/* Mobile Header */}
-        <header className="mobile-header">
-          <div className="mobile-header-left">
-            <Link href="/" className="mobile-header-logo-link" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div className="mobile-header-logo">
-                <TrendingUpIcon size={18} strokeWidth={2.5} />
-              </div>
-              <div className="mobile-header-info">
-                <h1 className="mobile-header-title">Finance 360º</h1>
-                <p className="mobile-header-subtitle">
-                  <span className="subtitle-label">Finance and portfolio overview</span>
-                </p>
-              </div>
-            </Link>
-          </div>
-          <div className="mobile-header-right">
-            <button 
-              className="mobile-header-btn"
-              onClick={handleRefresh}
-              disabled={refreshing}
-              title="Atualizar dados"
-            >
-              <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
-            </button>
-            <button 
-              className="mobile-header-btn"
-              onClick={() => setShowNotifications(!showNotifications)}
-              title="Notificações"
-            >
-              <Bell size={14} />
-            </button>
-            <button 
-              className="mobile-header-btn"
-              onClick={() => setIsMobileOpen(!isMobileOpen)}
-              aria-label="Toggle menu"
-            >
-              {isMobileOpen ? <X size={18} /> : <Menu size={18} />}
-            </button>
-          </div>
-        </header>
-        
-
-
         {/* NOVO DASHBOARD LAYOUT - 2 COLUNAS */}
         <div className="flex flex-col xl:flex-row gap-8 items-stretch mt-[5%] xl:mt-0">
           

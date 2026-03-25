@@ -13,7 +13,7 @@ function CalendarContent() {
   const { isCollapsed } = useSidebar();
   const [currentDate, setCurrentDate] = useState(new Date(2026, 2, 1)); // March 2026
   const [selectedDayEvents, setSelectedDayEvents] = useState<{ day: number, events: any[] } | null>(null);
-  const [selectedDay, setSelectedDay] = useState<number | null>(20); // Default to today (20th)
+  const [selectedDay, setSelectedDay] = useState<number | null>(24); // Default to today (24th)
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -37,7 +37,7 @@ function CalendarContent() {
 
   const isToday = (day: number) => {
     // Use a fixed date for SSR to avoid hydration mismatches
-    const today = new Date('2026-03-20T00:00:00Z');
+    const today = new Date('2026-03-24T00:00:00Z');
     return day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
   };
 

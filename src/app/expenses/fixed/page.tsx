@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { FinanceProvider, useFinance } from '@/context/FinanceContext';
 import { useSidebar } from '@/context/SidebarContext';
@@ -14,17 +14,40 @@ import { FixedExpense, Frequencia } from '@/types';
 const FixedExpensesCategoryBarChart = dynamic(() => import('@/components/charts/FixedExpensesCategoryBarChart'), { ssr: false });
 
 function FixedExpensesContent() {
-  const { fixedExpenses, addFixedExpense, updateFixedExpense, deleteFixedExpense, accounts, income } = useFinance();
+  const { fixedExpenses, addFixedExpense, updateFixedExpense, deleteFixedExpense, variableExpenses, updateVariableExpense, deleteVariableExpense, accounts, income, selectedMonth } = useFinance();
   const { isCollapsed } = useSidebar();
+  const today = new Date('2026-03-25T00:00:00Z');
+  
+  const getMonthName = (monthYear: string) => {
+    const [y, m] = monthYear.split('-');
+    const date = new Date(parseInt(y), parseInt(m) - 1, 1);
+    return date.toLocaleString('pt-PT', { month: 'long', year: 'numeric' }).toUpperCase();
+  };
+
+  const getOnlyMonthName = (monthYear: string) => {
+    const [y, m] = monthYear.split('-');
+    const date = new Date(parseInt(y), parseInt(m) - 1, 1);
+    return date.toLocaleString('pt-PT', { month: 'long' }).toUpperCase();
+  };
+
   const [showModal, setShowModal] = useState(false);
-  const [editingExpense, setEditingExpense] = useState<FixedExpense | null>(null);
+  const [editingExpense, setEditingExpense] = useState<any>(null);
+  const [isEditingHistory, setIsEditingHistory] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [prevMonth, setPrevMonth] = useState(selectedMonth);
+
+  if (selectedMonth !== prevMonth) {
+    setPrevMonth(selectedMonth);
+    setCurrentPage(1);
+  }
+
   const itemsPerPage = 10;
   const [formData, setFormData] = useState({
     nome: '',
     valor: 0,
     frequencia: 'mensal' as Frequencia,
     data_pagamento: 1,
+    data: '', // for history items
     conta: 'Montepio',
     categoria: 'Subscrição',
   });
@@ -41,125 +64,111 @@ function FixedExpensesContent() {
     }
   };
 
-  // Calculate actual expenses that occurred this month so far (March 2026)
-  const calculateMonthlySoFar = () => {
-    const today = new Date('2026-03-20T00:00:00Z');
-    const currentDay = today.getDate();
-    
-    return fixedExpenses.reduce((sum, e) => {
-      // Only count monthly expenses that have passed their payment day
-      if (e.frequencia === 'mensal' && e.data_pagamento <= currentDay) {
-        return sum + e.valor;
-      }
-      // For other frequencies, we assume they are not due this month unless specified.
-      // The user says they count 5 expenses totaling 590, which matches the monthly ones so far.
-      return sum;
-    }, 0);
-  };
-
-  const totalMonthly = calculateMonthlySoFar();
-  const totalMonthlyEquivalent = fixedExpenses.reduce((sum, e) => sum + calculateMonthlyEquivalent(e), 0);
-  
-  // Calculate annual expenses up to current date
-  const calculateAnnualSoFar = () => {
-    const today = new Date('2026-03-20T00:00:00Z');
-    const currentMonth = today.getMonth(); // 0-indexed
-    const currentDay = today.getDate();
-    
-    return fixedExpenses.reduce((sum, e) => {
-      let occurrences = 0;
-      switch (e.frequencia) {
-        case 'mensal':
-          // Paid every month. If current day >= payment day, it's paid this month too.
-          occurrences = currentMonth + (currentDay >= e.data_pagamento ? 1 : 0);
-          break;
-        case 'quinzenal':
-          // Paid twice a month.
-          occurrences = (currentMonth * 2) + (currentDay >= e.data_pagamento ? 1 : 0) + (currentDay >= e.data_pagamento + 15 ? 1 : 0);
-          break;
-        case 'semanal':
-          // Paid 4 times a month roughly.
-          occurrences = (currentMonth * 4) + Math.floor(currentDay / 7);
-          break;
-        case 'trimestral':
-          // Paid every 3 months. Assuming Jan, Apr, Jul, Oct.
-          const quarters = [0, 3, 6, 9];
-          occurrences = quarters.filter(m => m < currentMonth || (m === currentMonth && currentDay >= e.data_pagamento)).length;
-          break;
-        case 'semestral':
-          // Paid every 6 months. Assuming Jan, Jul.
-          const semesters = [0, 6];
-          occurrences = semesters.filter(m => m < currentMonth || (m === currentMonth && currentDay >= e.data_pagamento)).length;
-          break;
-        case 'anual':
-          // Paid once a year. Assuming Jan.
-          occurrences = (0 < currentMonth || (0 === currentMonth && currentDay >= e.data_pagamento)) ? 1 : 0;
-          break;
-      }
-      return sum + (e.valor * occurrences);
-    }, 0);
-  };
-
-  const totalAnnualSoFar = calculateAnnualSoFar();
-  const totalAnnualValue = totalMonthly * 12;
-
-  const today = new Date('2026-03-20T00:00:00Z');
-  const currentDay = today.getDate();
-
-  // Expenses that already happened this month
-  const pastExpenses = fixedExpenses
-    .filter(e => e.frequencia === 'mensal' && e.data_pagamento <= currentDay)
-    .sort((a, b) => b.data_pagamento - a.data_pagamento);
+  // Filter history by selected month and exclude future/incorrect items
+  const filteredHistory = variableExpenses
+    .filter(v => v && v.categoria === 'Fixa' && v.data.startsWith(selectedMonth))
+    .filter(v => {
+      // Remove "Pensão Alimentos" on 2026-03-28 specifically as requested
+      if (v.nome === 'Pensão Alimentos' && v.data === '2026-03-28') return false;
+      // Also ensure we don't show future expenses in the history table
+      return v.data <= today.toISOString().split('T')[0];
+    })
+    .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
 
   // Pagination logic
-  const totalPages = Math.ceil(pastExpenses.length / itemsPerPage);
-  const paginatedExpenses = pastExpenses.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const totalPages = Math.ceil(filteredHistory.length / itemsPerPage);
+  const paginatedExpenses = filteredHistory.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  // Upcoming expenses (next 4, even if next month)
+  // Summary calculations for the selected month
+  const totalMonthly = filteredHistory.reduce((sum, e) => sum + e.valor, 0);
+
+  // Montepio specific calculations
+  const montepioFixedExpenses = filteredHistory
+    .filter(e => e.conta === 'Montepio')
+    .reduce((sum, e) => sum + e.valor, 0);
+
+  // Use the same logic as Income page for received so far
+  const currentMonthStr = today.toISOString().substring(0, 7);
+  
+  let effectiveDay = today.getDate();
+  if (selectedMonth < currentMonthStr) {
+    effectiveDay = 32;
+  } else if (selectedMonth > currentMonthStr) {
+    effectiveDay = -1;
+  }
+
+  const montepioIncomeReceived = income
+    .filter(inc => inc.conta === 'Montepio' && inc.categoria !== 'Valor transportado')
+    .filter(i => {
+      if (!i) return false;
+      if (i.frequencia === 'unico' && i.data_especifica) {
+        if (!i.data_especifica.startsWith(selectedMonth)) return false;
+        const day = parseInt(i.data_especifica.split('-')[2]);
+        return day <= effectiveDay;
+      }
+      if (i.frequencia === 'mensal') {
+        if (i.data_inicio && i.data_inicio > `${selectedMonth}-31`) return false;
+        if (i.data_fim && i.data_fim < `${selectedMonth}-01`) return false;
+        return i.data <= effectiveDay;
+      }
+      return false;
+    })
+    .reduce((sum, i) => sum + i.valor, 0);
+
+  const montepioPercentage = montepioIncomeReceived > 0 ? (montepioFixedExpenses / montepioIncomeReceived) * 100 : 0;
+
+  // Total available calculations
+  const totalAvailable = accounts.reduce((sum, acc) => sum + acc.saldo, 0);
+  const totalPercentage = totalAvailable > 0 ? (totalMonthly / totalAvailable) * 100 : 0;
+  
+  const getOriginalCategory = (name: string) => {
+    const original = fixedExpenses.find(f => f.nome === name);
+    return original ? original.categoria : 'Subscrição';
+  };
+
+  // Upcoming expenses (next 4, even if next month) - User said NOT TO CHANGE LOGIC
   const upcomingFixedExpenses = fixedExpenses
     .map(e => ({ ...e, nextDate: getNextPaymentDate(e.data_pagamento) }))
     .sort((a, b) => a.nextDate.getTime() - b.nextDate.getTime())
     .slice(0, 4);
 
-  // Calculate monthly income
-  const monthlyIncome = income.reduce((sum, inc) => {
-    switch (inc.frequencia) {
-      case 'mensal': return sum + inc.valor;
-      case 'quinzenal': return sum + inc.valor * 2;
-      case 'semanal': return sum + inc.valor * 4;
-      case 'trimestral': return sum + inc.valor / 3;
-      case 'semestral': return sum + inc.valor / 6;
-      case 'anual': return sum + inc.valor / 12;
-      default: return sum + inc.valor;
-    }
-  }, 0);
-
-  const annualIncome = monthlyIncome * 12;
-  const monthlyPercentage = monthlyIncome > 0 ? (totalMonthly / monthlyIncome) * 100 : 0;
-  const annualPercentage = annualIncome > 0 ? (totalAnnualSoFar / annualIncome) * 100 : 0;
-
-  const expensesByCategory = fixedExpenses.reduce((acc, e) => {
-    acc[e.categoria] = (acc[e.categoria] || 0) + calculateMonthlyEquivalent(e);
-    return acc;
-  }, {} as Record<string, number>);
-
-  const categoryData = Object.entries(expensesByCategory).map(([name, value]) => ({
+  const categoryData = Object.entries(
+    filteredHistory.reduce((acc, e) => {
+      const cat = getOriginalCategory(e.nome);
+      acc[cat] = (acc[cat] || 0) + e.valor;
+      return acc;
+    }, {} as Record<string, number>)
+  ).map(([name, value]) => ({
     name,
     value,
     percent: totalMonthly > 0 ? Math.round((value / totalMonthly) * 100) : 0
   })).sort((a, b) => b.value - a.value);
 
-  const handleOpenModal = (expense?: FixedExpense) => {
+  const handleOpenModal = (expense?: any, isHistory: boolean = false) => {
+    setIsEditingHistory(isHistory);
     if (expense) {
       setEditingExpense(expense);
-      setFormData({
-        nome: expense.nome,
-        valor: expense.valor,
-        frequencia: expense.frequencia,
-        data_pagamento: expense.data_pagamento,
-        conta: expense.conta,
-        categoria: expense.categoria,
-      });
+      if (isHistory) {
+        setFormData({
+          nome: expense.nome,
+          valor: expense.valor,
+          frequencia: 'mensal', // Default for history
+          data_pagamento: new Date(expense.data).getDate(),
+          data: expense.data,
+          conta: expense.conta,
+          categoria: 'Fixa',
+        });
+      } else {
+        setFormData({
+          nome: expense.nome,
+          valor: expense.valor,
+          frequencia: expense.frequencia,
+          data_pagamento: expense.data_pagamento,
+          data: '',
+          conta: expense.conta,
+          categoria: expense.categoria,
+        });
+      }
     } else {
       setEditingExpense(null);
       setFormData({
@@ -167,6 +176,7 @@ function FixedExpensesContent() {
         valor: 0,
         frequencia: 'mensal',
         data_pagamento: 1,
+        data: new Date().toISOString().split('T')[0],
         conta: accounts[0]?.nome || 'Montepio',
         categoria: 'Subscrição',
       });
@@ -177,22 +187,51 @@ function FixedExpensesContent() {
   const handleCloseModal = () => {
     setShowModal(false);
     setEditingExpense(null);
+    setIsEditingHistory(false);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     if (editingExpense) {
-      updateFixedExpense(editingExpense.id, formData);
+      if (isEditingHistory) {
+        updateVariableExpense(editingExpense.id, {
+          nome: formData.nome,
+          valor: formData.valor,
+          data: formData.data,
+          conta: formData.conta,
+          categoria: 'Fixa'
+        });
+      } else {
+        updateFixedExpense(editingExpense.id, {
+          nome: formData.nome,
+          valor: formData.valor,
+          frequencia: formData.frequencia,
+          data_pagamento: formData.data_pagamento,
+          conta: formData.conta,
+          categoria: formData.categoria
+        });
+      }
     } else {
-      addFixedExpense(formData);
+      addFixedExpense({
+        nome: formData.nome,
+        valor: formData.valor,
+        frequencia: formData.frequencia,
+        data_pagamento: formData.data_pagamento,
+        conta: formData.conta,
+        categoria: formData.categoria
+      });
     }
     handleCloseModal();
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = (id: string, isHistory: boolean = false) => {
     if (confirm('Tem certeza que deseja eliminar esta despesa?')) {
-      deleteFixedExpense(id);
+      if (isHistory) {
+        deleteVariableExpense(id);
+      } else {
+        deleteFixedExpense(id);
+      }
     }
   };
 
@@ -237,49 +276,49 @@ function FixedExpensesContent() {
               <div className="w-9 h-9 rounded-full bg-white/[0.03] border border-white/[0.05] flex items-center justify-center">
                 <ReceiptEuro size={16} className="text-slate-400" />
               </div>
-              <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">Total Despesas</p>
+              <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">DESPESAS DE {getOnlyMonthName(selectedMonth)}</p>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', flex: 1, justifyContent: 'center' }}>
-              {/* Monthly Section */}
+              {/* Montepio Section */}
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-[10px] text-slate-500 uppercase tracking-[0.1em]">Despesa Mensal</span>
+                  <span className="text-[10px] text-slate-500 uppercase tracking-[0.1em]">CONTA ORDENADO</span>
+                </div>
+                <div className="text-2xl font-bold text-white mb-3" style={{ fontFamily: 'Inter, sans-serif' }}>
+                  {formatCurrency(montepioFixedExpenses)}
+                </div>
+                <div className="w-full h-1.5 bg-white/[0.03] rounded-full overflow-hidden border border-white/[0.02] mb-2">
+                  <div className="h-full rounded-full" style={{ 
+                    width: `${Math.min(100, montepioPercentage)}%`,
+                    background: 'linear-gradient(to right, var(--danger-500), var(--danger-400))'
+                  }}></div>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[9px] text-slate-600 uppercase tracking-wider">VS INCOME CONTA ORDENADO</span>
+                  <span className="text-[10px] font-semibold" style={{ color: 'var(--danger-400)' }}>{montepioPercentage.toFixed(1)}%</span>
+                </div>
+              </div>
+
+              <div style={{ height: '1px', background: 'var(--border-subtle)', width: '100%' }}></div>
+
+              {/* All Accounts Section */}
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-[10px] text-slate-500 uppercase tracking-[0.1em]">TODAS AS CONTAS</span>
                 </div>
                 <div className="text-2xl font-bold text-white mb-3" style={{ fontFamily: 'Inter, sans-serif' }}>
                   {formatCurrency(totalMonthly)}
                 </div>
                 <div className="w-full h-1.5 bg-white/[0.03] rounded-full overflow-hidden border border-white/[0.02] mb-2">
                   <div className="h-full rounded-full" style={{ 
-                    width: `${Math.min(100, monthlyPercentage)}%`,
-                    background: 'linear-gradient(to right, var(--danger-500), var(--danger-400))'
-                  }}></div>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-[9px] text-slate-600 uppercase tracking-wider">vs Income Mensal</span>
-                  <span className="text-[10px] font-semibold" style={{ color: 'var(--danger-400)' }}>{monthlyPercentage.toFixed(1)}%</span>
-                </div>
-              </div>
-
-              <div style={{ height: '1px', background: 'var(--border-subtle)', width: '100%' }}></div>
-
-              {/* Annual Section */}
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-[10px] text-slate-500 uppercase tracking-[0.1em]">Despesa Anual (YTD)</span>
-                </div>
-                <div className="text-2xl font-bold text-white mb-3" style={{ fontFamily: 'Inter, sans-serif' }}>
-                  {formatCurrency(totalAnnualSoFar)}
-                </div>
-                <div className="w-full h-1.5 bg-white/[0.03] rounded-full overflow-hidden border border-white/[0.02] mb-2">
-                  <div className="h-full rounded-full" style={{ 
-                    width: `${Math.min(100, annualPercentage)}%`,
+                    width: `${Math.min(100, totalPercentage)}%`,
                     background: 'linear-gradient(to right, var(--warning-500), var(--warning-400))'
                   }}></div>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-[9px] text-slate-600 uppercase tracking-wider">vs Income Anual Esperado</span>
-                  <span className="text-[10px] font-semibold" style={{ color: 'var(--warning-400)' }}>{annualPercentage.toFixed(1)}%</span>
+                  <span className="text-[9px] text-slate-600 uppercase tracking-wider">VS TOTAL DO MÊS</span>
+                  <span className="text-[10px] font-semibold" style={{ color: 'var(--warning-400)' }}>{totalPercentage.toFixed(1)}%</span>
                 </div>
               </div>
             </div>
@@ -291,7 +330,7 @@ function FixedExpensesContent() {
               <div className="w-9 h-9 rounded-full bg-white/[0.03] border border-white/[0.05] flex items-center justify-center">
                 <Layers2 size={16} className="text-slate-400" />
               </div>
-              <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">Por Categoria</p>
+              <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">DESPESAS POR CATEGORIA</p>
             </div>
             
             <div style={{ height: '220px', width: '100%', position: 'relative' }}>
@@ -323,7 +362,7 @@ function FixedExpensesContent() {
                 <div className="w-9 h-9 rounded-full bg-white/[0.03] border border-white/[0.05] flex items-center justify-center">
                   <Calendar size={16} className="text-slate-400" />
                 </div>
-                <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">Próximas Despesas</p>
+                <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">PROXIMAS DESPESAS</p>
               </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -370,69 +409,81 @@ function FixedExpensesContent() {
               <thead>
                 <tr>
                   <th style={{ textAlign: 'left' }}>Nome</th>
-                  <th style={{ textAlign: 'left' }}>Frequência</th>
                   <th style={{ textAlign: 'left' }}>Valor</th>
+                  <th style={{ textAlign: 'left' }}>Frequência</th>
                   <th style={{ textAlign: 'left' }}>Data</th>
+                  <th style={{ textAlign: 'left' }}>Peso</th>
                   <th style={{ textAlign: 'left' }}>Conta</th>
                   <th style={{ textAlign: 'left' }}>Categoria</th>
                   <th style={{ textAlign: 'left' }}>Ações</th>
                 </tr>
               </thead>
               <tbody>
-                {paginatedExpenses.map((expense) => (
-                  <tr key={expense.id}>
-                    <td style={{ textAlign: 'left' }}>
-                      <div style={{ fontWeight: 400, fontSize: '0.9rem' }}>{expense.nome}</div>
-                    </td>
-                    <td style={{ textAlign: 'left' }}>
-                      <span className={`badge ${getFrequencyBadge(expense.frequencia)}`}>
-                        {expense.frequencia}
-                      </span>
-                    </td>
-                    <td style={{ textAlign: 'left' }}>
-                      <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>
-                        {formatCurrency(expense.valor)}
-                      </span>
-                    </td>
-                    <td style={{ textAlign: 'left' }}>
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                        {formatDate(new Date(2026, 2, expense.data_pagamento).toISOString())}
-                      </span>
-                    </td>
-                    <td style={{ textAlign: 'left' }}>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{expense.conta}</span>
-                    </td>
-                    <td style={{ textAlign: 'left' }}>
-                      <span 
-                        style={{ 
-                          background: `${getCategoryColor(expense.categoria)}20`,
-                          color: getCategoryColor(expense.categoria),
-                          fontSize: '0.75rem',
-                          borderRadius: '4px',
-                          padding: '2px 8px'
-                        }}
-                      >
-                        {expense.categoria}
-                      </span>
-                    </td>
-                    <td style={{ textAlign: 'left' }}>
-                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-start' }}>
-                        <button 
-                          className="btn btn-icon btn-secondary"
-                          onClick={() => handleOpenModal(expense)}
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                        <button 
-                          className="btn btn-icon btn-danger"
-                          onClick={() => handleDelete(expense.id)}
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {paginatedExpenses.map((expense) => {
+                  const expenseDate = new Date(expense.data);
+                  const month = expenseDate.getMonth();
+                  const year = expenseDate.getFullYear();
+                  
+                  // Calculate total fixed expenses for that specific month
+                  const monthTotal = variableExpenses
+                    .filter(v => v && v.categoria === 'Fixa' && new Date(v.data).getMonth() === month && new Date(v.data).getFullYear() === year)
+                    .reduce((sum, v) => sum + v.valor, 0);
+                  
+                  const peso = monthTotal > 0 ? (expense.valor / monthTotal) * 100 : 0;
+                  const originalExpense = fixedExpenses.find(f => f.nome === expense.nome);
+                  const frequencia = originalExpense ? originalExpense.frequencia : 'mensal';
+                  const categoria = originalExpense ? originalExpense.categoria : 'Subscrição';
+
+                  return (
+                    <tr key={expense.id}>
+                      <td style={{ textAlign: 'left' }}>
+                        <div style={{ fontWeight: 400, fontSize: '0.9rem' }}>{expense.nome}</div>
+                      </td>
+                      <td style={{ textAlign: 'left' }}>
+                        <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'white' }}>
+                          -{formatCurrency(expense.valor)}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'left' }}>
+                        <span className={`badge ${getFrequencyBadge(frequencia as Frequencia)}`} style={{ fontSize: '0.65rem' }}>
+                          {frequencia}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'left' }}>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                          {formatDate(expense.data)}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'left' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                          {peso.toFixed(1)}%
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'left' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{expense.conta}</span>
+                      </td>
+                      <td style={{ textAlign: 'left' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{categoria}</span>
+                      </td>
+                      <td style={{ textAlign: 'left' }}>
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-start' }}>
+                          <button 
+                            className="btn btn-icon btn-secondary"
+                            onClick={() => handleOpenModal(expense, true)}
+                          >
+                            <Edit2 size={16} />
+                          </button>
+                          <button 
+                            className="btn btn-icon btn-danger"
+                            onClick={() => handleDelete(expense.id, true)}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
 
@@ -459,10 +510,10 @@ function FixedExpensesContent() {
               </div>
             )}
             
-            {pastExpenses.length === 0 && (
+            {filteredHistory.length === 0 && (
               <div className="empty-state">
                 <Receipt size={48} style={{ opacity: 0.3, marginBottom: '16px' }} />
-                <p>Nenhuma despesa fixa adicionada</p>
+                <p>Nenhuma despesa fixa encontrada para este mês</p>
                 <button className="btn btn-primary" style={{ marginTop: '16px' }} onClick={() => handleOpenModal()}>
                   <Plus size={18} />
                   Adicionar Despesa
@@ -475,27 +526,43 @@ function FixedExpensesContent() {
         {/* Mobile List */}
         <div className="md:hidden space-y-3">
           {paginatedExpenses.map((expense) => {
-            const weight = totalMonthly > 0 ? (calculateMonthlyEquivalent(expense) / totalMonthly) * 100 : 0;
+            const expenseDate = new Date(expense.data);
+            const month = expenseDate.getMonth();
+            const year = expenseDate.getFullYear();
+            
+            const monthTotal = variableExpenses
+              .filter(v => v && v.categoria === 'Fixa' && new Date(v.data).getMonth() === month && new Date(v.data).getFullYear() === year)
+              .reduce((sum, v) => sum + v.valor, 0);
+            
+            const weight = monthTotal > 0 ? (expense.valor / monthTotal) * 100 : 0;
+            const originalExpense = fixedExpenses.find(f => f.nome === expense.nome);
+            const frequencia = originalExpense ? originalExpense.frequencia : 'mensal';
+            const categoria = originalExpense ? originalExpense.categoria : 'Subscrição';
 
             return (
-              <div key={expense.id} className="card p-4 space-y-2" style={{ backgroundColor: 'var(--card-bg)', borderRadius: '16px', border: '1px solid var(--card-border)' }}>
+              <div key={expense.id} className="card p-4 space-y-3" style={{ backgroundColor: 'var(--card-bg)', borderRadius: '16px', border: '1px solid var(--card-border)' }}>
                 {/* Line 1: Name and Value */}
                 <div className="flex justify-between items-start">
                   <div>
                     <h3 className="font-bold !text-[1rem] text-white leading-tight">{expense.nome}</h3>
-                    <p className="text-[10px] text-slate-500 uppercase tracking-wider mt-0.5">
-                      DATA: {formatDate(new Date(2026, 2, expense.data_pagamento).toISOString())}
-                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className={`badge ${getFrequencyBadge(frequencia as Frequencia)}`} style={{ fontSize: '0.6rem', padding: '1px 6px' }}>
+                        {frequencia}
+                      </span>
+                      <span className="text-[10px] text-slate-500 uppercase tracking-wider">
+                        {categoria}
+                      </span>
+                    </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold !text-[1rem] text-white leading-tight">{formatCurrency(expense.valor)}</p>
+                    <p className="font-bold !text-[1rem] text-white leading-tight">-{formatCurrency(expense.valor)}</p>
                     <p className="text-[10px] text-slate-500 uppercase tracking-wider mt-0.5">
-                      {expense.frequencia}
+                      {formatDate(expense.data)}
                     </p>
                   </div>
                 </div>
 
-                {/* Line 3: Progress Bar (Weight) - Closer to top */}
+                {/* Line 3: Progress Bar (Weight) */}
                 <div className="flex items-center gap-3">
                   <p className="text-[10px] text-slate-500 uppercase tracking-wider whitespace-nowrap">
                     PESO: {weight.toFixed(1)}%
@@ -516,14 +583,14 @@ function FixedExpensesContent() {
                   <div className="flex items-center justify-center rounded-xl border border-slate-800 bg-slate-900/30 overflow-hidden" style={{ height: '40px' }}>
                     <button 
                       className="flex-1 h-full flex items-center justify-center hover:bg-white/5 transition-colors"
-                      onClick={() => handleOpenModal(expense)}
+                      onClick={() => handleOpenModal(expense, true)}
                     >
                       <Edit2 size={18} className="text-blue-400/80" />
                     </button>
                     <div className="w-[1px] h-6 bg-slate-800/50"></div>
                     <button 
                       className="flex-1 h-full flex items-center justify-center hover:bg-white/5 transition-colors"
-                      onClick={() => handleDelete(expense.id)}
+                      onClick={() => handleDelete(expense.id, true)}
                     >
                       <Trash2 size={18} className="text-red-400/80" />
                     </button>
@@ -574,56 +641,74 @@ function FixedExpensesContent() {
                   />
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label">Frequência</label>
-                  <select
-                    className="form-select"
-                    value={formData.frequencia}
-                    onChange={(e) => setFormData({ ...formData, frequencia: e.target.value as Frequencia })}
-                  >
-                    <option value="mensal">Mensal</option>
-                    <option value="trimestral">Trimestral</option>
-                    <option value="semestral">Semestral</option>
-                    <option value="anual">Anual</option>
-                  </select>
-                </div>
+                {!isEditingHistory && (
+                  <div className="form-group">
+                    <label className="form-label">Frequência</label>
+                    <select
+                      className="form-select"
+                      value={formData.frequencia}
+                      onChange={(e) => setFormData({ ...formData, frequencia: e.target.value as Frequencia })}
+                    >
+                      <option value="mensal">Mensal</option>
+                      <option value="trimestral">Trimestral</option>
+                      <option value="semestral">Semestral</option>
+                      <option value="anual">Anual</option>
+                    </select>
+                  </div>
+                )}
+                {isEditingHistory && (
+                  <div className="form-group">
+                    <label className="form-label">Data</label>
+                    <input
+                      type="date"
+                      className="form-input"
+                      value={formData.data}
+                      onChange={(e) => setFormData({ ...formData, data: e.target.value })}
+                      required
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="grid-2">
-                <div className="form-group">
-                  <label className="form-label">Data de Pagamento (dia)</label>
-                  <input
-                    type="number"
-                    className="form-input"
-                    value={formData.data_pagamento}
-                    onChange={(e) => setFormData({ ...formData, data_pagamento: parseInt(e.target.value) || 1 })}
-                    min="1"
-                    max="31"
-                    required
-                  />
-                </div>
+                {!isEditingHistory && (
+                  <div className="form-group">
+                    <label className="form-label">Data de Pagamento (dia)</label>
+                    <input
+                      type="number"
+                      className="form-input"
+                      value={formData.data_pagamento}
+                      onChange={(e) => setFormData({ ...formData, data_pagamento: parseInt(e.target.value) || 1 })}
+                      min="1"
+                      max="31"
+                      required
+                    />
+                  </div>
+                )}
 
-                <div className="form-group">
-                  <label className="form-label">Categoria</label>
-                  <select
-                    className="form-select"
-                    value={formData.categoria}
-                    onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
-                  >
-                    <option value="Desporto">Desporto</option>
-                    <option value="Educação">Educação</option>
-                    <option value="Família">Família</option>
-                    <option value="Habitação">Habitação</option>
-                    <option value="Impostos">Impostos</option>
-                    <option value="Saúde">Saúde</option>
-                    <option value="Seguros">Seguros</option>
-                    <option value="Telemóveis">Telemóveis</option>
-                    <option value="Subscrição">Subscrição</option>
-                    <option value="Tecnologia">Tecnologia</option>
-                    <option value="Transportes">Transportes</option>
-                    <option value="Outros">Outros</option>
-                  </select>
-                </div>
+                {!isEditingHistory && (
+                  <div className="form-group">
+                    <label className="form-label">Categoria</label>
+                    <select
+                      className="form-select"
+                      value={formData.categoria}
+                      onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
+                    >
+                      <option value="Desporto">Desporto</option>
+                      <option value="Educação">Educação</option>
+                      <option value="Família">Família</option>
+                      <option value="Habitação">Habitação</option>
+                      <option value="Impostos">Impostos</option>
+                      <option value="Saúde">Saúde</option>
+                      <option value="Seguros">Seguros</option>
+                      <option value="Telemóveis">Telemóveis</option>
+                      <option value="Subscrição">Subscrição</option>
+                      <option value="Tecnologia">Tecnologia</option>
+                      <option value="Transportes">Transportes</option>
+                      <option value="Outros">Outros</option>
+                    </select>
+                  </div>
+                )}
               </div>
 
               <div className="form-group">

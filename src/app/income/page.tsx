@@ -5,7 +5,7 @@ import { FinanceProvider, useFinance } from '@/context/FinanceContext';
 import { useSidebar } from '@/context/SidebarContext';
 import Sidebar from '@/components/Sidebar';
 import PremiumHeader from '@/components/PremiumHeader';
-import { Plus, Edit2, Trash2, DollarSign, X, TrendingUp, CalendarRange } from 'lucide-react';
+import { Plus, Edit2, Trash2, DollarSign, X, TrendingUp, CalendarRange, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatCurrency, formatCurrencyNoDecimals, getNextPaymentDate, formatDate } from '@/lib/utils';
 import { Income, Frequencia } from '@/types';
 import dynamic from 'next/dynamic';
@@ -14,10 +14,25 @@ const AnnualIncomeProjectionChart = dynamic(() => import('@/components/charts/An
 const IncomeSourcesPieChart = dynamic(() => import('@/components/charts/IncomeSourcesPieChart'), { ssr: false });
 
 function IncomeContent() {
-  const { income, addIncomeEntry, updateIncome, deleteIncome, accounts } = useFinance();
+  const { selectedMonth, income, addIncomeEntry, updateIncome, deleteIncome, accounts, fixedExpenses, variableExpenses, debts } = useFinance();
   const { isCollapsed } = useSidebar();
   const [showModal, setShowModal] = useState(false);
   const [editingIncome, setEditingIncome] = useState<Income | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  const getOnlyMonthName = (monthStr: string) => {
+    const [year, month] = monthStr.split('-');
+    const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+    return date.toLocaleString('pt-PT', { month: 'long' }).toUpperCase();
+  };
+
+  const getPrevMonthName = (monthStr: string) => {
+    const [year, month] = monthStr.split('-');
+    const date = new Date(parseInt(year), parseInt(month) - 2, 1);
+    return date.toLocaleString('pt-PT', { month: 'long' }).toUpperCase();
+  };
+
   const [formData, setFormData] = useState({
     nome: '',
     valor: 0,
@@ -54,78 +69,154 @@ function IncomeContent() {
     }
   };
 
-  const totalMonthly = income.filter(i => !i.isExtra).reduce((sum, i) => sum + calculateMonthlyEquivalent(i), 0);
-  const totalAnnual = income.reduce((sum, i) => sum + calculateAnnualEquivalent(i), 0);
-
-  // Calculate monthly income received so far this month
-  const today = new Date();
-  const currentDay = today.getDate();
-  const currentMonth = today.getMonth();
-  const currentYear = today.getFullYear();
-
-  const incomeReceivedSoFar = income
-    .filter(i => !i.isExtra)
-    .filter(i => {
-      if (!i) return false;
-      if (i.frequencia === 'mensal') {
-        return i.data <= currentDay;
-      }
-      if (i.frequencia === 'unico' && i.data_especifica) {
-        const date = new Date(i.data_especifica);
-        return date.getMonth() === currentMonth && 
-               date.getFullYear() === currentYear && 
-               date.getDate() <= currentDay;
-      }
-      return false;
-    })
-    .reduce((sum, i) => sum + i.valor, 0);
-
-  const extraIncomeReceived = income
-    .filter(i => i.isExtra)
-    .filter(i => {
-      if (!i) return false;
-      if (i.frequencia === 'mensal') {
-        return i.data <= currentDay;
-      }
-      if (i.frequencia === 'unico' && i.data_especifica) {
-        const date = new Date(i.data_especifica);
-        return date.getMonth() === currentMonth && 
-               date.getFullYear() === currentYear && 
-               date.getDate() <= currentDay;
-      }
-      return false;
-    })
-    .reduce((sum, i) => sum + i.valor, 0);
-  
-  const monthlyProgress = totalMonthly > 0 ? (incomeReceivedSoFar / totalMonthly) * 100 : 0;
-  const extraProgress = totalMonthly > 0 ? (extraIncomeReceived / totalMonthly) * 100 : 0;
+  const totalMonthly = income.filter(i => i && !i.isExtra).reduce((sum, i) => sum + calculateMonthlyEquivalent(i), 0);
+  const totalAnnual = income.filter(i => i).reduce((sum, i) => sum + calculateAnnualEquivalent(i), 0);
 
   // Annual projection data (mock for now based on monthly income)
   const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
   const annualProjectionData = months.map((month, i) => {
-    // Mocking some variation
     const base = totalMonthly;
-    const currentYear = base * (1 + (Math.sin(i) * 0.1));
-    const prevYear = base * 0.9 * (1 + (Math.cos(i) * 0.1));
-    return { month, currentYear, prevYear };
+    const currentYearVal = base * (1 + (Math.sin(i) * 0.1));
+    const prevYearVal = base * 0.9 * (1 + (Math.cos(i) * 0.1));
+    return { month, currentYear: currentYearVal, prevYear: prevYearVal };
   });
 
-  // Income sources data for pie chart
-  const incomeSourcesData = income.map(i => ({
-    name: i.nome,
-    value: totalMonthly > 0 ? (calculateMonthlyEquivalent(i) / totalMonthly) * 100 : 0
-  }));
+  // Calculate monthly income received so far this month
+  const today = new Date();
+  const currentMonthStr = today.toISOString().substring(0, 7);
+  
+  let effectiveDay = today.getDate();
+  if (selectedMonth < currentMonthStr) {
+    effectiveDay = 32; // All days in past months
+  } else if (selectedMonth > currentMonthStr) {
+    effectiveDay = -1; // No days in future months
+  }
 
-  // Sort income by next payment date
-  const sortedIncome = [...income].sort((a, b) => {
-    const getSortDate = (item: Income) => {
+  // Filter income entries for the selected month
+  const monthIncomeEntries = income.filter(i => {
+    if (!i) return false;
+    
+    // Single entries
+    if (i.frequencia === 'unico' && i.data_especifica) {
+      return i.data_especifica.startsWith(selectedMonth);
+    }
+    
+    // Recurring entries
+    if (i.frequencia === 'mensal') {
+      // Check start date
+      if (i.data_inicio) {
+        if (i.data_inicio > `${selectedMonth}-31`) return false;
+      }
+      // Check end date
+      if (i.data_fim) {
+        if (i.data_fim < `${selectedMonth}-01`) return false;
+      }
+      return true;
+    }
+    
+    return false;
+  });
+
+  const expectedIncomeTotal = monthIncomeEntries.reduce((sum, i) => sum + i.valor, 0);
+  
+  const monthIncomeNoCarry = monthIncomeEntries.filter(i => !i.nome.toLowerCase().includes('valor transportado'));
+  const expectedIncomeNoCarry = monthIncomeNoCarry.reduce((sum, i) => sum + i.valor, 0);
+
+  const receivedIncomeNoCarry = monthIncomeNoCarry.filter(i => {
+    if (i.frequencia === 'unico' && i.data_especifica) {
+      const day = parseInt(i.data_especifica.split('-')[2]);
+      return day <= effectiveDay;
+    }
+    return i.data <= effectiveDay;
+  }).reduce((sum, i) => sum + i.valor, 0);
+
+  const pendingIncome = expectedIncomeNoCarry - receivedIncomeNoCarry;
+
+  const carriedOverEntry = monthIncomeEntries.find(i => i.nome.toLowerCase().includes('valor transportado'));
+  const carriedOverValue = carriedOverEntry ? carriedOverEntry.valor : 0;
+
+  const accumulatedValue = receivedIncomeNoCarry + carriedOverValue;
+
+  const currentMonthName = getOnlyMonthName(selectedMonth);
+  const prevMonthName = getPrevMonthName(selectedMonth);
+
+  // Filter only received income (date <= today) and exclude carry over from the table
+  const receivedIncome = income.filter(i => {
+    if (!i) return false;
+    if (i.nome.toLowerCase().includes('valor transportado')) return false;
+    
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth();
+
+    if (i.frequencia === 'unico' && i.data_especifica) {
+      const date = new Date(i.data_especifica);
+      return date <= today;
+    }
+    
+    if (i.frequencia === 'mensal') {
+      // Check if it has started
+      if (i.data_inicio) {
+        const startDate = new Date(i.data_inicio);
+        if (startDate > today) return false;
+      }
+      // For recurring, if it's before or on current day of this month
+      return i.data <= today.getDate();
+    }
+    
+    // For others, assume they are received if they are before today
+    const nextDate = getNextPaymentDate(i.data);
+    return nextDate <= today;
+  });
+
+  // Sort by date descending
+  const sortedReceivedIncome = [...monthIncomeEntries.filter(i => !i.nome.toLowerCase().includes('valor transportado'))].sort((a, b) => {
+    const getDate = (item: Income) => {
+      if (!item) return 0;
       if (item.frequencia === 'unico' && item.data_especifica) {
         return new Date(item.data_especifica).getTime();
       }
-      return getNextPaymentDate(item.data).getTime();
+      // For recurring, get the date in the selected month
+      const [year, month] = selectedMonth.split('-');
+      const date = new Date(parseInt(year), parseInt(month) - 1, item.data);
+      return date.getTime();
     };
-    return getSortDate(a) - getSortDate(b);
+    return getDate(b) - getDate(a);
   });
+
+  // Pagination
+  const totalPages = Math.ceil(sortedReceivedIncome.length / itemsPerPage);
+  const paginatedIncome = sortedReceivedIncome.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  // Calculate expenses paid in selected month
+  const selectedMonthFixedPaid = fixedExpenses.filter(e => {
+    if (!e) return false;
+    const isPaid = variableExpenses.some(v => 
+      v && v.categoria === 'Fixa' && 
+      v.data && v.data.startsWith(selectedMonth) && 
+      (v.nome.includes(e.nome) || e.nome.includes(v.nome))
+    );
+    return isPaid;
+  }).reduce((sum, e) => sum + (e?.valor || 0), 0);
+
+  const selectedMonthVariablePaid = variableExpenses.filter(v => v && v.data && v.data.startsWith(selectedMonth) && v.categoria !== 'Fixa' && v.categoria !== 'Dívida').reduce((sum, v) => sum + (v?.valor || 0), 0);
+  
+  const selectedMonthDebtsPaid = debts.filter(d => {
+    if (!d) return false;
+    const isPaid = variableExpenses.some(v => 
+      v && v.categoria === 'Dívida' && 
+      v.data && v.data.startsWith(selectedMonth) && 
+      (v.nome.includes(d.nome) || d.nome.includes(v.nome))
+    );
+    return isPaid;
+  }).reduce((sum, d) => sum + (d?.prestacao_mensal || 0), 0);
+
+  const totalExpensesPaid = selectedMonthFixedPaid + selectedMonthVariablePaid + selectedMonthDebtsPaid;
+
+  // Income sources for pie chart (all selected month sources including carry over)
+  const incomeSourcesData = monthIncomeEntries.map(i => ({
+    name: i.nome,
+    value: expectedIncomeTotal > 0 ? (i.valor / expectedIncomeTotal) * 100 : 0
+  })).sort((a, b) => b.value - a.value);
 
   const handleOpenModal = (incomeItem?: Income) => {
     if (incomeItem) {
@@ -241,52 +332,82 @@ function IncomeContent() {
               <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">Rendimento Mensal</p>
             </div>
             <div className="card-value" style={{ color: 'var(--accent-success)', fontSize: '1.75rem', fontWeight: 700, fontFamily: 'Inter, sans-serif' }}>
-              {formatCurrency(incomeReceivedSoFar + extraIncomeReceived)}
+              {formatCurrency(receivedIncomeNoCarry)}
             </div>
             <div className="mt-4 space-y-4">
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-[10px] text-slate-500 uppercase">Expectável: {formatCurrency(totalMonthly)}</span>
-                  <span className="text-[10px] text-slate-400 font-bold">{monthlyProgress.toFixed(0)}%</span>
+                  <span className="text-[10px] text-slate-500 uppercase">Rendimento expectável: {formatCurrency(expectedIncomeNoCarry)}</span>
+                  <span className={`text-[10px] font-bold ${receivedIncomeNoCarry > expectedIncomeNoCarry ? 'text-orange-400' : 'text-slate-400'}`}>
+                    {expectedIncomeNoCarry > 0 ? ((receivedIncomeNoCarry / expectedIncomeNoCarry) * 100).toFixed(0) : 0}%
+                  </span>
                 </div>
                 <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
                   <div 
-                    className="h-full bg-emerald-500 rounded-full transition-all duration-1000" 
-                    style={{ width: `${Math.min(monthlyProgress, 100)}%` }}
+                    className={`h-full rounded-full transition-all duration-1000 ${
+                      receivedIncomeNoCarry > expectedIncomeNoCarry 
+                        ? 'bg-gradient-to-r from-orange-500 to-red-600' 
+                        : 'bg-emerald-500'
+                    }`} 
+                    style={{ width: `${Math.min(expectedIncomeNoCarry > 0 ? (receivedIncomeNoCarry / expectedIncomeNoCarry) * 100 : 0, 100)}%` }}
                   />
                 </div>
               </div>
 
-              {extraIncomeReceived > 0 && (
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-[10px] text-slate-500 uppercase">Income Extra: {formatCurrency(extraIncomeReceived)}</span>
-                    <span className="text-[10px] text-indigo-400 font-bold">+{extraProgress.toFixed(0)}%</span>
-                  </div>
-                  <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-indigo-500 rounded-full transition-all duration-1000" 
-                      style={{ width: `${Math.min(extraProgress, 100)}%` }}
-                    />
-                  </div>
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-[10px] text-slate-500 uppercase">Valor em Falta: {formatCurrency(pendingIncome)}</span>
+                  <span className="text-[10px] text-indigo-400 font-bold">{expectedIncomeNoCarry > 0 ? ((pendingIncome / expectedIncomeNoCarry) * 100).toFixed(0) : 0}%</span>
                 </div>
-              )}
+                <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-indigo-500 rounded-full transition-all duration-1000" 
+                    style={{ width: `${Math.min(expectedIncomeNoCarry > 0 ? (pendingIncome / expectedIncomeNoCarry) * 100 : 0, 100)}%` }}
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Card 2: Annual Projection */}
+          {/* Card 2: Accumulated Value */}
           <div className="card animate-slideUp" style={{ background: 'linear-gradient(180deg, rgba(99, 102, 241, 0.15) 0%, transparent 100%)' }}>
             <div className="flex items-center gap-3 mb-4">
               <div className="w-9 h-9 rounded-full bg-white/[0.03] border border-white/[0.05] flex items-center justify-center">
                 <TrendingUp size={16} className="text-slate-400" />
               </div>
-              <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">Projeção Anual</p>
+              <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">VALOR ACUMULADO</p>
             </div>
-            <div className="flex items-baseline gap-2 mb-4">
-              <span className="card-value" style={{ fontSize: '1.5rem', fontWeight: 700, fontFamily: 'Inter, sans-serif' }}>{formatCurrency(totalAnnual)}</span>
+            <div className="card-value" style={{ fontSize: '1.75rem', fontWeight: 700, fontFamily: 'Inter, sans-serif' }}>
+              {formatCurrency(accumulatedValue)}
             </div>
-            <div style={{ height: '140px', width: '100%' }}>
-              <AnnualIncomeProjectionChart data={annualProjectionData} tooltipStyle={tooltipStyle} />
+            <div className="mt-4 space-y-4">
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-[10px] text-slate-500 uppercase">Rendimento atual: {formatCurrency(receivedIncomeNoCarry)}</span>
+                  <span className="text-[10px] text-emerald-400 font-bold">
+                    {accumulatedValue > 0 ? ((receivedIncomeNoCarry / accumulatedValue) * 100).toFixed(0) : 0}%
+                  </span>
+                </div>
+                <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-emerald-500 rounded-full transition-all duration-1000" 
+                    style={{ width: `${Math.min(accumulatedValue > 0 ? (receivedIncomeNoCarry / accumulatedValue) * 100 : 0, 100)}%` }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-[10px] text-slate-500 uppercase">VALOR DE {prevMonthName}: {formatCurrency(carriedOverValue)}</span>
+                  <span className="text-[10px] text-indigo-400 font-bold">{accumulatedValue > 0 ? ((carriedOverValue / accumulatedValue) * 100).toFixed(0) : 0}%</span>
+                </div>
+                <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-indigo-500 rounded-full transition-all duration-1000" 
+                    style={{ width: `${Math.min(accumulatedValue > 0 ? (carriedOverValue / accumulatedValue) * 100 : 0, 100)}%` }}
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
@@ -303,10 +424,10 @@ function IncomeContent() {
                 <IncomeSourcesPieChart data={incomeSourcesData} tooltipStyle={tooltipStyle} />
               </div>
               <div className="space-y-2">
-                {incomeSourcesData.slice(0, 3).map((source, idx) => (
+                {incomeSourcesData.slice(0, 5).map((source, idx) => (
                   <div key={idx} className="flex justify-between items-center">
                     <span className="text-[10px] text-slate-400 truncate max-w-[80px]">{source.name}</span>
-                    <span className="text-[10px] text-slate-500 font-bold">{source.value.toFixed(0)}%</span>
+                    <span className="text-[10px] text-slate-500 font-bold">{source.value.toFixed(1)}%</span>
                   </div>
                 ))}
               </div>
@@ -330,11 +451,29 @@ function IncomeContent() {
                 </tr>
               </thead>
               <tbody>
-                {sortedIncome.map((incomeItem) => {
-                  const peso = totalMonthly > 0 ? (calculateMonthlyEquivalent(incomeItem) / totalMonthly) * 100 : 0;
-                  const displayDate = incomeItem.frequencia === 'unico' && incomeItem.data_especifica 
+                {paginatedIncome.map((incomeItem) => {
+                  const [year, month] = selectedMonth.split('-');
+                  const itemDate = incomeItem.frequencia === 'unico' && incomeItem.data_especifica 
                     ? new Date(incomeItem.data_especifica)
-                    : getNextPaymentDate(incomeItem.data);
+                    : new Date(parseInt(year), parseInt(month) - 1, incomeItem.data);
+                  
+                  // Calculate total income for the month of this item
+                  const itemMonthStr = itemDate.toISOString().substring(0, 7);
+                  const totalForMonth = income.filter(i => {
+                    if (!i) return false;
+                    if (i.frequencia === 'unico' && i.data_especifica) {
+                      return i.data_especifica.startsWith(itemMonthStr);
+                    }
+                    if (i.frequencia === 'mensal') {
+                      if (i.data_inicio) {
+                        if (i.data_inicio > `${itemMonthStr}-31`) return false;
+                      }
+                      return true;
+                    }
+                    return false;
+                  }).reduce((sum, i) => sum + i.valor, 0);
+
+                  const peso = totalForMonth > 0 ? (incomeItem.valor / totalForMonth) * 100 : 0;
                   
                   return (
                     <tr key={incomeItem.id}>
@@ -361,7 +500,7 @@ function IncomeContent() {
                       </td>
                       <td style={{ textAlign: 'right' }}>
                         <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                          {formatDate(displayDate.toISOString())}
+                          {formatDate(itemDate.toISOString())}
                         </span>
                       </td>
                       <td style={{ textAlign: 'right' }}>
@@ -386,6 +525,44 @@ function IncomeContent() {
               </tbody>
             </table>
             
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between px-4 py-3 border-t border-white/5">
+                <div className="text-xs text-slate-500">
+                  Mostrando <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> a <span className="font-medium">{Math.min(currentPage * itemsPerPage, sortedReceivedIncome.length)}</span> de <span className="font-medium">{sortedReceivedIncome.length}</span> rendimentos
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="p-1 rounded hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronLeft size={18} />
+                  </button>
+                  <div className="flex items-center gap-1">
+                    {[...Array(totalPages)].map((_, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setCurrentPage(i + 1)}
+                        className={`w-7 h-7 flex items-center justify-center rounded text-xs transition-colors ${
+                          currentPage === i + 1 ? 'bg-indigo-600 text-white' : 'hover:bg-white/5 text-slate-400'
+                        }`}
+                      >
+                        {i + 1}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="p-1 rounded hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronRight size={18} />
+                  </button>
+                </div>
+              </div>
+            )}
+            
             {income.length === 0 && (
               <div className="empty-state">
                 <DollarSign size={48} style={{ opacity: 0.3, marginBottom: '16px' }} />
@@ -401,11 +578,22 @@ function IncomeContent() {
 
         {/* Mobile List */}
         <div className="md:hidden space-y-3">
-          {sortedIncome.map((incomeItem) => {
-            const peso = totalMonthly > 0 ? (calculateMonthlyEquivalent(incomeItem) / totalMonthly) * 100 : 0;
-            const displayDate = incomeItem.frequencia === 'unico' && incomeItem.data_especifica 
+          {paginatedIncome.map((incomeItem) => {
+            const [year, month] = selectedMonth.split('-');
+            const itemDate = incomeItem.frequencia === 'unico' && incomeItem.data_especifica 
               ? new Date(incomeItem.data_especifica)
-              : getNextPaymentDate(incomeItem.data);
+              : new Date(parseInt(year), parseInt(month) - 1, incomeItem.data);
+            
+            // Calculate total income for the month of this item
+            const itemMonthStr = itemDate.toISOString().substring(0, 7);
+            const totalForMonth = income.filter(i => {
+              if (i.frequencia === 'unico' && i.data_especifica) {
+                return i.data_especifica.startsWith(itemMonthStr);
+              }
+              return i.frequencia === 'mensal'; // Simplification for recurring
+            }).reduce((sum, i) => sum + i.valor, 0);
+
+            const peso = totalForMonth > 0 ? (incomeItem.valor / totalForMonth) * 100 : 0;
 
             return (
               <div key={incomeItem.id} className="card space-y-3" style={{ padding: '16px' }}>
@@ -420,7 +608,7 @@ function IncomeContent() {
                 {/* Line 2: Date and Frequency */}
                 <div className="flex justify-between items-center">
                   <p className="text-[10px] text-slate-500 uppercase tracking-wider">
-                    {formatDate(displayDate.toISOString())}
+                    {formatDate(itemDate.toISOString())}
                   </p>
                   <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', padding: 0, background: 'none' }}>
                     {getFrequencyLabel(incomeItem.frequencia)}
@@ -462,6 +650,29 @@ function IncomeContent() {
               </div>
             );
           })}
+
+          {/* Mobile Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 py-4">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="p-2 rounded bg-slate-900 border border-white/5 disabled:opacity-30"
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <span className="text-xs text-slate-400">
+                Página {currentPage} de {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="p-2 rounded bg-slate-900 border border-white/5 disabled:opacity-30"
+              >
+                <ChevronRight size={18} />
+              </button>
+            </div>
+          )}
 
           {income.length === 0 && (
             <div className="empty-state card">
