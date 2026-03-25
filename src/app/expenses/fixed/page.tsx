@@ -98,7 +98,7 @@ function FixedExpensesContent() {
   }
 
   const montepioIncomeReceived = income
-    .filter(inc => inc.conta === 'Montepio' && inc.categoria !== 'Valor transportado')
+    .filter(inc => inc.conta === 'Montepio' && !inc.nome.toLowerCase().includes('valor transportado'))
     .filter(i => {
       if (!i) return false;
       if (i.frequencia === 'unico' && i.data_especifica) {

@@ -67,7 +67,7 @@ function VariableExpensesContent() {
   }
 
   const montepioIncomeReceived = income
-    .filter(inc => inc.conta === 'Montepio' && inc.categoria !== 'Valor transportado') // Exclude carry over as per user's 1610 example
+    .filter(inc => inc.conta === 'Montepio' && !inc.nome.toLowerCase().includes('valor transportado')) // Exclude carry over as per user's 1610 example
     .filter(i => {
       if (!i) return false;
       if (i.frequencia === 'unico' && i.data_especifica) {
