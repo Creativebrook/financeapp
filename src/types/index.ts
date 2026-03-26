@@ -10,7 +10,7 @@ export interface Account {
 }
 
 // Investment Types
-export type Plataforma = 'XTB' | 'Trading212' | 'Revolut Stocks' | 'Revolut Cripto' | 'Revolut Metals' | 'Robo Advisor';
+export type Plataforma = 'XTB' | 'Trading212' | 'Revolut Stocks' | 'Revolut Cripto' | 'Robo Advisor';
 
 export interface Investment {
   id: string;

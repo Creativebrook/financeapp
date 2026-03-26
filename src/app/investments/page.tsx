@@ -12,7 +12,7 @@ import { Investment, Plataforma } from '@/types';
 
 const InvestmentPlatformChart = dynamic(() => import('@/components/charts/InvestmentPlatformChart'), { ssr: false });
 
-const plataformas: Plataforma[] = ['XTB', 'Trading212', 'Revolut Stocks', 'Revolut Cripto', 'Revolut Metals', 'Robo Advisor'];
+const plataformas: Plataforma[] = ['XTB', 'Trading212', 'Revolut Stocks', 'Revolut Cripto', 'Robo Advisor'];
 
 const getProfitColor = (value: number) => {
   if (value > 0) return 'var(--success-400)';
@@ -169,17 +169,6 @@ function InvestmentsContent() {
   const platformSummaries = getPlatformSummaries();
   
   const allPlatforms = [...platformSummaries];
-  const hasRevolutMetals = allPlatforms.some(ps => ps.plataforma === 'Revolut Metals');
-  
-  if (!hasRevolutMetals) {
-    allPlatforms.push({
-      plataforma: 'Revolut Metals' as Plataforma,
-      totalValue: 0,
-      totalInvested: 0,
-      profitability: 0,
-      profitabilityPercent: 0,
-    });
-  }
   
   allPlatforms.sort((a, b) => b.profitabilityPercent - a.profitabilityPercent);
   
@@ -437,7 +426,7 @@ function InvestmentsContent() {
         quantidade: formData.quantidade,
         preco_medio: formData.preco_medio,
         preco_atual: formData.preco_atual,
-        posicao: formData.plataforma === 'Revolut Metals' ? undefined : formData.posicao,
+        posicao: formData.posicao,
         alocacao_alvo: formData.alocacao_alvo || undefined,
         isAutoPrice: formData.isAutoPrice,
         dividendos_ganhos: formData.dividendos_ganhos || undefined,
@@ -454,7 +443,7 @@ function InvestmentsContent() {
         quantidade: formData.quantidade,
         preco_medio: formData.preco_medio,
         preco_atual: formData.preco_atual,
-        posicao: formData.plataforma === 'Revolut Metals' ? undefined : formData.posicao,
+        posicao: formData.posicao,
         alocacao_alvo: formData.alocacao_alvo || undefined,
         isAutoPrice: formData.isAutoPrice,
         dividendos_ganhos: formData.dividendos_ganhos || undefined,
@@ -485,7 +474,6 @@ function InvestmentsContent() {
       case 'Trading212': return <PieChart size={16} />;
       case 'Revolut Stocks': return <TrendingUp size={16} />;
       case 'Revolut Cripto': return <Bitcoin size={16} />;
-      case 'Revolut Metals': return <TrendingUp size={16} />;
       case 'Robo Advisor': return <Wallet size={16} />;
       default: return <TrendingUp size={16} />;
     }
@@ -601,7 +589,6 @@ function InvestmentsContent() {
           onScroll={handleScroll}
         >
           {allPlatforms.map((ps) => {
-            const isRevolutMetals = ps.plataforma === 'Revolut Metals';
             return (
               <div 
                 key={ps.plataforma}
@@ -609,7 +596,7 @@ function InvestmentsContent() {
                 style={{ 
                   cursor: 'pointer',
                   borderColor: activePlatform === ps.plataforma 
-                    ? (isRevolutMetals ? '#94a3b8' : getPlatformColor(ps.plataforma)) 
+                    ? getPlatformColor(ps.plataforma) 
                     : 'var(--border-color)',
                   padding: 'var(--space-md)',
                   boxShadow: activePlatform === ps.plataforma ? `0 0 15px ${getPlatformColor(ps.plataforma)}60` : 'none',
@@ -623,7 +610,7 @@ function InvestmentsContent() {
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <span style={{ fontWeight: 600, color: isRevolutMetals ? '#94a3b8' : getPlatformColor(ps.plataforma) }}>{ps.plataforma}</span>
+                  <span style={{ fontWeight: 600, color: getPlatformColor(ps.plataforma) }}>{ps.plataforma}</span>
                   {getPlatformIcon(ps.plataforma)}
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
@@ -887,7 +874,7 @@ function InvestmentsContent() {
                       height: '46px',
                       overflow: 'hidden'
                     }}>
-                      {(activePlatform === 'Revolut Stocks' || activePlatform === 'Revolut Cripto' || activePlatform === 'Revolut Metals') && (
+                      {(activePlatform === 'Revolut Stocks' || activePlatform === 'Revolut Cripto') && (
                         <>
                           <button 
                             style={{ 
@@ -1060,7 +1047,7 @@ function InvestmentsContent() {
                         </td>
                         <td>
                           <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-start' }}>
-                            {(activePlatform === 'Revolut Stocks' || activePlatform === 'Revolut Cripto' || activePlatform === 'Revolut Metals') && (
+                            {(activePlatform === 'Revolut Stocks' || activePlatform === 'Revolut Cripto') && (
                               <button 
                                 className="btn btn-icon btn-secondary" 
                                 onClick={() => handleOpenAddMoreModal(investment)}
@@ -1265,7 +1252,6 @@ function InvestmentsContent() {
                 </div>
               </div>
 
-              {/* Removed Posição field for Revolut Metals */}
 
               {formData.plataforma === 'Robo Advisor' && (
                 <div className="form-group">

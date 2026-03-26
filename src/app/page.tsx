@@ -529,13 +529,13 @@ function DashboardContent() {
       // Get real transactions for this account (including income)
       const accountTransactions = [
         ...variableExpenses.filter(exp => exp.conta === account.nome).map(e => ({ ...e, type: 'expense' })),
-        ...income.filter(inc => inc.conta === account.nome && inc.data_especifica).map(i => ({ ...i, data: i.data_especifica, type: 'income' }))
+        ...income.filter(inc => inc.conta === account.nome && inc.data_especifica).map(i => ({ ...i, data: i.data_especifica as string, type: 'income', categoria: 'Rendimento' }))
       ]
-        .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
+        .sort((a, b) => new Date(b.data as string).getTime() - new Date(a.data as string).getTime())
         .slice(0, 4)
         .map(tx => ({
           name: tx.nome,
-          date: new Date(tx.data).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' }),
+          date: new Date(tx.data as string).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' }),
           amount: (tx.type === 'income' ? '+' : '-') + tx.valor.toLocaleString('pt-PT', { minimumFractionDigits: 2 }),
           icon: tx.categoria === 'Supermercado' ? 'ShoppingCart' : 
                 tx.categoria === 'Combustivel' ? 'Fuel' : 
@@ -565,11 +565,11 @@ function DashboardContent() {
         // Get real transactions for this credit card (if any in variableExpenses)
         const cardTransactions = variableExpenses
           .filter(exp => exp.conta === debt.nome)
-          .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
+          .sort((a, b) => new Date(b.data as string).getTime() - new Date(a.data as string).getTime())
           .slice(0, 4)
           .map(tx => ({
             name: tx.nome,
-            date: new Date(tx.data).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' }),
+            date: new Date(tx.data as string).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' }),
             amount: '-' + tx.valor.toLocaleString('pt-PT', { minimumFractionDigits: 2 }),
             icon: tx.categoria === 'Supermercado' ? 'ShoppingCart' : 
                   tx.categoria === 'Combustivel' ? 'Fuel' : 

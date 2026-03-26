@@ -840,7 +840,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   };
 
   const getPlatformSummaries = (): PlatformSummary[] => {
-    const platforms: Plataforma[] = ['XTB', 'Trading212', 'Revolut Stocks', 'Revolut Cripto', 'Revolut Metals', 'Robo Advisor'];
+    const platforms: Plataforma[] = ['XTB', 'Trading212', 'Revolut Stocks', 'Revolut Cripto', 'Robo Advisor'];
     
     return platforms.map(plataforma => {
       const platformInvestments = investments.filter(i => i.plataforma === plataforma);
