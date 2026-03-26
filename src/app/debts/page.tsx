@@ -12,10 +12,15 @@ import { Debt } from '@/types';
 import DebtDistributionChart from '@/components/charts/DebtDistributionChart';
 
 function DebtsContent() {
-  const { debts, addDebt, updateDebt, deleteDebt, accounts, getDashboardSummary, income, selectedMonth } = useFinance();
+  const { debts, addDebt, updateDebt, deleteDebt, accounts, getDashboardSummary, income, selectedMonth, variableExpenses } = useFinance();
   const { isCollapsed } = useSidebar();
   const summary = getDashboardSummary();
   
+  const now = new Date();
+  const currentDay = now.getDate();
+  const currentMonthStr = now.toISOString().slice(0, 7); // YYYY-MM
+  const currentFullDate = now.toISOString().slice(0, 10); // YYYY-MM-DD
+
   const monthIncomeEntries = income.filter(i => {
     if (!i) return false;
     if (i.frequencia === 'unico' && i.data_especifica) {
@@ -33,7 +38,52 @@ function DebtsContent() {
     .filter(i => !i.nome.toLowerCase().includes('valor transportado'))
     .reduce((sum, i) => sum + i.valor, 0);
 
+  const receivedIncomeNoCarry = monthIncomeEntries
+    .filter(i => !i.nome.toLowerCase().includes('valor transportado'))
+    .filter(i => {
+      if (selectedMonth < currentMonthStr) return true;
+      if (selectedMonth > currentMonthStr) return false;
+      
+      if (i.frequencia === 'mensal') {
+        return i.data <= currentDay;
+      }
+      if (i.frequencia === 'unico' && i.data_especifica) {
+        return i.data_especifica <= currentFullDate;
+      }
+      return false;
+    })
+    .reduce((sum, i) => sum + i.valor, 0);
+
+  const paidDebtsSoFar = variableExpenses
+    .filter(v => v && v.categoria === 'Dívida' && v.data && v.data.startsWith(selectedMonth))
+    .reduce((sum, v) => sum + v.valor, 0);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const [activeCardIndex, setActiveCardIndex] = useState(0);
+
+  const paidDebtsList = variableExpenses
+    .filter(v => v && v.categoria === 'Dívida' && v.data && v.data.startsWith(selectedMonth))
+    .sort((a, b) => {
+      if (!a || !b || !a.data || !b.data) return 0;
+      return new Date(b.data).getTime() - new Date(a.data).getTime();
+    });
+
+  const sortedDebts = [...debts].sort((a, b) => {
+    const dateA = getNextPaymentDate(a.data_pagamento).getTime();
+    const dateB = getNextPaymentDate(b.data_pagamento).getTime();
+    return dateA - dateB;
+  });
+
+  const totalPages = Math.ceil(sortedDebts.length / itemsPerPage);
+  const paginatedDebts = sortedDebts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const getDebtForExpense = (expenseName: string) => {
+    return debts.find(d => 
+      expenseName.toLowerCase().includes(d.nome.toLowerCase()) || 
+      d.nome.toLowerCase().includes(expenseName.toLowerCase())
+    );
+  };
   const [showCreditCardModal, setShowCreditCardModal] = useState(false);
   const [creditCardFormData, setCreditCardFormData] = useState({
     nome: '',
@@ -45,11 +95,12 @@ function DebtsContent() {
   const creditCards = debts.filter(d => d.categoria === 'Cartão de Crédito');
 
   const calculateMonthsRemaining = (debt: Debt): number => {
-    if (debt.prestacao_mensal === 0) return 0;
+    if (!debt || debt.prestacao_mensal === 0) return 0;
     return Math.ceil(debt.valor_total / debt.prestacao_mensal);
   };
 
   const calculatePayoffDate = (debt: Debt): string => {
+    if (!debt) return '';
     const months = calculateMonthsRemaining(debt);
     // Use a fixed date for SSR to avoid hydration mismatches
     const payoffDate = new Date('2026-03-20T00:00:00Z');
@@ -77,20 +128,16 @@ function DebtsContent() {
   const totalInitialDebt = debts.reduce((sum, d) => sum + (d.valor_inicial || d.valor_total), 0);
   const debtPercentage = totalInitialDebt > 0 ? (totalDebt / totalInitialDebt) * 100 : 0;
   const totalMonthly = debts.reduce((sum, d) => sum + d.prestacao_mensal, 0);
-  const taxaEsforco = expectedIncomeNoCarry > 0 ? (totalMonthly / expectedIncomeNoCarry) * 100 : 0;
+  const taxaEsforco = receivedIncomeNoCarry > 0 ? (paidDebtsSoFar / receivedIncomeNoCarry) * 100 : 0;
   
-  const debtDistributionData = debts.map(d => ({
-    name: d.nome,
-    value: d.valor_total
-  })).sort((a, b) => b.value - a.value);
+  const debtDistributionData = debts
+    .filter(d => d)
+    .map(d => ({
+      name: d.nome,
+      value: d.valor_total
+    })).sort((a, b) => b.value - a.value);
   
-  const sortedDebts = [...debts].sort((a, b) => {
-    const dateA = getNextPaymentDate(a.data_pagamento).getTime();
-    const dateB = getNextPaymentDate(b.data_pagamento).getTime();
-    return dateA - dateB;
-  });
-
-  const maxMonths = debts.length > 0 ? Math.max(...debts.map(d => calculateMonthsRemaining(d))) : 0;
+  const maxMonths = debts.length > 0 ? Math.max(...debts.filter(d => d).map(d => calculateMonthsRemaining(d))) : 0;
   // Use a fixed date for SSR to avoid hydration mismatches
   const latestPayoffDate = new Date('2026-03-20T00:00:00Z');
   latestPayoffDate.setMonth(latestPayoffDate.getMonth() + maxMonths);
@@ -256,8 +303,8 @@ function DebtsContent() {
               </div>
             </div>
 
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 500, marginBottom: '12px' }}>
-              VALOR INICIAL: {formatCurrency(totalInitialDebt)}
+            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 500, marginBottom: '12px', textAlign: 'right' }}>
+              START: {formatCurrency(totalInitialDebt)}
             </div>
 
             <div style={{ width: '100%', height: '6px', backgroundColor: 'rgba(255, 255, 255, 0.05)', borderRadius: '3px', overflow: 'hidden', marginBottom: '24px' }}>
@@ -267,13 +314,13 @@ function DebtsContent() {
             <div className="space-y-4 pt-4 border-t border-white/[0.05]">
               <div>
                 <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] mb-1">PRESTAÇÕES MENSAIS</p>
-                <p className="text-lg font-bold text-white">{formatCurrency(totalMonthly)}</p>
+                <p className="text-lg font-bold text-white">{formatCurrency(paidDebtsSoFar)}</p>
               </div>
               
               <div className="flex justify-between items-end">
                 <div>
                   <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] mb-1">INCOME</p>
-                  <p className="text-sm font-semibold text-slate-300">{formatCurrency(expectedIncomeNoCarry)}</p>
+                  <p className="text-sm font-semibold text-slate-300">{formatCurrency(receivedIncomeNoCarry)}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] mb-1">TAXA DE ESFORÇO</p>
@@ -300,18 +347,21 @@ function DebtsContent() {
               </div>
             </div>
 
-            <div className="flex-1 flex items-center justify-center min-h-[160px]">
-              <DebtDistributionChart data={debtDistributionData} />
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 mt-4">
-              {debtDistributionData.slice(0, 4).map((debt, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getPieChartColor(index) }}></div>
-                  <span className="text-[10px] text-slate-400 truncate">{debt.name}</span>
-                  <span className="text-[10px] text-slate-500 ml-auto">{(debt.value / totalDebt * 100).toFixed(0)}%</span>
-                </div>
-              ))}
+            <div className="grid grid-cols-2 gap-4 items-center flex-1">
+              <div style={{ height: '180px', width: '100%' }}>
+                <DebtDistributionChart data={debtDistributionData} />
+              </div>
+              <div className="space-y-2">
+                {debtDistributionData.slice(0, 5).map((debt, index) => (
+                  <div key={index} className="flex justify-between items-center">
+                    <div className="flex items-center gap-2 truncate">
+                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: getPieChartColor(index) }}></div>
+                      <span className="text-[10px] text-slate-400 truncate">{debt.name}</span>
+                    </div>
+                    <span className="text-[10px] text-slate-500 font-bold">{(debt.value / totalDebt * 100).toFixed(1)}%</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -428,96 +478,145 @@ function DebtsContent() {
                   </tr>
                 </thead>
                 <tbody>
-                  {sortedDebts.map((debt) => (
-                    <tr key={debt.id}>
-                      <td>
-                        <div style={{ fontSize: '0.9rem', fontWeight: 400 }}>{debt.nome}</div>
-                        {debt.taxa_juro && (
-                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                            {debt.taxa_juro}% TAEG
+                  {paginatedDebts.map((debt) => {
+                    const peso = expectedIncomeNoCarry > 0 ? (debt.prestacao_mensal / expectedIncomeNoCarry) * 100 : 0;
+                    return (
+                      <tr key={debt.id}>
+                        <td>
+                          <div style={{ fontSize: '0.9rem', fontWeight: 500 }}>{debt.nome}</div>
+                        </td>
+                        <td>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                            {debt.categoria}
+                          </span>
+                        </td>
+                        <td>
+                          <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'white' }}>
+                            {formatCurrency(debt.valor_total)}
+                          </span>
+                        </td>
+                        <td>
+                          <span style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--accent-danger)' }}>
+                            {formatCurrency(debt.prestacao_mensal)}
+                          </span>
+                        </td>
+                        <td>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                            {peso.toFixed(1)}%
+                          </span>
+                        </td>
+                        <td>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                            Dia {debt.data_pagamento}
+                          </span>
+                        </td>
+                        <td>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{debt.conta}</span>
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-start' }}>
+                            <button 
+                              className="btn btn-icon btn-secondary"
+                              onClick={() => handleOpenModal(debt)}
+                            >
+                              <Edit2 size={16} />
+                            </button>
+                            <button 
+                              className="btn btn-icon btn-danger"
+                              onClick={() => handleDelete(debt.id)}
+                            >
+                              <Trash2 size={16} />
+                            </button>
                           </div>
-                        )}
-                      </td>
-                      <td>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{debt.categoria}</span>
-                      </td>
-                      <td>
-                        <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--accent-danger)' }}>
-                          {formatCurrency(debt.valor_total)}
-                        </span>
-                      </td>
-                      <td>
-                        <span style={{ fontSize: '0.9rem' }}>{formatCurrency(debt.prestacao_mensal)}</span>
-                      </td>
-                      <td>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                          {expectedIncomeNoCarry > 0 ? ((debt.prestacao_mensal / expectedIncomeNoCarry) * 100).toFixed(1) : 0}%
-                        </span>
-                      </td>
-                      <td>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '-5px' }}>
-                          {formatDate(getNextPaymentDate(debt.data_pagamento).toISOString())}
-                        </div>
-                      </td>
-                      <td>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{debt.conta}</span>
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-start' }}>
-                          <button 
-                            className="btn btn-icon btn-secondary"
-                            onClick={() => handleOpenModal(debt)}
-                          >
-                            <Edit2 size={16} />
-                          </button>
-                          <button 
-                            className="btn btn-icon btn-danger"
-                            onClick={() => handleDelete(debt.id)}
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'center', 
+                alignItems: 'center', 
+                gap: '8px', 
+                marginTop: '24px',
+                padding: '0 16px 16px'
+              }}>
+                <button 
+                  className="btn btn-secondary"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  style={{ padding: '4px 12px', fontSize: '0.8rem' }}
+                >
+                  Anterior
+                </button>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '6px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.8rem',
+                        cursor: 'pointer',
+                        border: '1px solid var(--border-color)',
+                        background: currentPage === page ? 'var(--accent-primary)' : 'transparent',
+                        color: currentPage === page ? 'white' : 'var(--text-secondary)',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
+                <button 
+                  className="btn btn-secondary"
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  style={{ padding: '4px 12px', fontSize: '0.8rem' }}
+                >
+                  Próximo
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Mobile List */}
           <div className="md:hidden space-y-4">
-            {sortedDebts.map((debt) => {
-              const progress = debt.valor_inicial > 0 
-                ? Math.min(100, Math.max(0, ((debt.valor_inicial - debt.valor_total) / debt.valor_inicial) * 100))
-                : 0;
-              
+            {paginatedDebts.map((debt) => {
+              const peso = expectedIncomeNoCarry > 0 ? (debt.prestacao_mensal / expectedIncomeNoCarry) * 100 : 0;
               return (
                 <div key={debt.id} className="card p-4 space-y-4" style={{ backgroundColor: 'var(--card-bg)', borderRadius: '16px', border: '1px solid var(--card-border)' }}>
                   <div className="flex justify-between items-start">
                     <div>
-                      <h3 className="font-bold text-[1.25rem] text-white">{debt.nome}</h3>
+                      <h3 className="font-bold text-[1.1rem] text-white">{debt.nome}</h3>
                       <p className="text-[10px] text-slate-500 uppercase tracking-wider">
-                        DATA: {formatDate(getNextPaymentDate(debt.data_pagamento).toISOString())}
+                        DIA: {debt.data_pagamento} | {debt.categoria}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-lg text-white">{formatCurrency(debt.valor_total)}</p>
-                      <p className="text-xs text-red-500 font-medium">-{formatCurrency(debt.prestacao_mensal)}</p>
+                      <p className="font-bold text-lg text-red-500">-{formatCurrency(debt.prestacao_mensal)}</p>
+                      <p className="text-[10px] text-slate-500 uppercase">TOTAL: {formatCurrency(debt.valor_total)}</p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-3">
                     <p className="text-[10px] text-slate-500 uppercase tracking-wider whitespace-nowrap">
-                      PROGRESSO: {progress.toFixed(0)}%
+                      PESO: {peso.toFixed(1)}%
                     </p>
-                    <div className="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden">
+                    <div className="flex-1 h-1.5 bg-slate-800/50 rounded-full overflow-hidden">
                       <div 
-                        className="h-full bg-green-500 rounded-full" 
-                        style={{ 
-                          width: `${progress}%`,
-                          boxShadow: '0 0 10px rgba(34, 197, 94, 0.5)'
-                        }}
+                        className="h-full bg-blue-500 rounded-full" 
+                        style={{ width: `${Math.min(peso, 100)}%` }}
                       ></div>
                     </div>
                   </div>
@@ -540,6 +639,28 @@ function DebtsContent() {
                 </div>
               );
             })}
+            {/* Mobile Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 py-4">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="p-2 rounded bg-slate-900 border border-white/5 disabled:opacity-30"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <span className="text-xs text-slate-400">
+                  Página {currentPage} de {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="p-2 rounded bg-slate-900 border border-white/5 disabled:opacity-30"
+                >
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+            )}
           </div>
           
           {debts.length === 0 && (

@@ -20,7 +20,7 @@ export default function PremiumHeader({ pageName, style }: PremiumHeaderProps) {
   const availableMonths = useMemo(() => {
     const months = new Set<string>();
     variableExpenses.forEach(e => {
-      if (e.data) {
+      if (e && e.data) {
         months.add(e.data.substring(0, 7));
       }
     });

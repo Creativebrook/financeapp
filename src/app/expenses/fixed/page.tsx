@@ -6,7 +6,7 @@ import { FinanceProvider, useFinance } from '@/context/FinanceContext';
 import { useSidebar } from '@/context/SidebarContext';
 import Sidebar from '@/components/Sidebar';
 import PremiumHeader from '@/components/PremiumHeader';
-import { Plus, Edit2, Trash2, Receipt, X, Calendar, ReceiptEuro, Layers2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, Receipt, X, Calendar, ReceiptEuro, Layers2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatCurrency, getNextPaymentDate, formatDate, getPlatformColor, getCategoryColor } from '@/lib/utils';
 import { getPieChartColor } from '@/lib/theme';
 import { FixedExpense, Frequencia } from '@/types';
@@ -68,14 +68,18 @@ function FixedExpensesContent() {
 
   // Filter history by selected month and exclude future/incorrect items
   const filteredHistory = variableExpenses
-    .filter(v => v && v.categoria === 'Fixa' && v.data.startsWith(selectedMonth))
+    .filter(v => v && v.categoria === 'Fixa' && v.data && v.data.startsWith(selectedMonth))
     .filter(v => {
+      if (!v) return false;
       // Remove "Pensão Alimentos" on 2026-03-28 specifically as requested
       if (v.nome === 'Pensão Alimentos' && v.data === '2026-03-28') return false;
       // Also ensure we don't show future expenses in the history table
       return v.data <= today.toISOString().split('T')[0];
     })
-    .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+    .sort((a, b) => {
+      if (!a || !b || !a.data || !b.data) return 0;
+      return new Date(b.data).getTime() - new Date(a.data).getTime();
+    });
 
   // Pagination logic
   const totalPages = Math.ceil(filteredHistory.length / itemsPerPage);
@@ -515,25 +519,55 @@ function FixedExpensesContent() {
               </tbody>
             </table>
 
-            {/* Pagination */}
+            {/* Pagination Controls */}
             {totalPages > 1 && (
-              <div className="flex justify-center items-center gap-4 mt-6 pb-4">
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'center', 
+                alignItems: 'center', 
+                gap: '8px', 
+                marginTop: '24px',
+                padding: '0 16px 16px'
+              }}>
                 <button 
-                  className="btn btn-secondary btn-sm"
+                  className="btn btn-secondary"
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
+                  style={{ padding: '4px 12px', fontSize: '0.8rem' }}
                 >
                   Anterior
                 </button>
-                <span className="text-sm text-slate-400">
-                  Página {currentPage} de {totalPages}
-                </span>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '6px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.8rem',
+                        cursor: 'pointer',
+                        border: '1px solid var(--border-color)',
+                        background: currentPage === page ? 'var(--accent-primary)' : 'transparent',
+                        color: currentPage === page ? 'white' : 'var(--text-secondary)',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
                 <button 
-                  className="btn btn-secondary btn-sm"
+                  className="btn btn-secondary"
                   onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                   disabled={currentPage === totalPages}
+                  style={{ padding: '4px 12px', fontSize: '0.8rem' }}
                 >
-                  Próxima
+                  Próximo
                 </button>
               </div>
             )}
@@ -627,6 +661,29 @@ function FixedExpensesContent() {
               </div>
             );
           })}
+
+          {/* Mobile Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 py-4">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="p-2 rounded bg-slate-900 border border-white/5 disabled:opacity-30"
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <span className="text-xs text-slate-400">
+                Página {currentPage} de {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="p-2 rounded bg-slate-900 border border-white/5 disabled:opacity-30"
+              >
+                <ChevronRight size={18} />
+              </button>
+            </div>
+          )}
         </div>
       </main>
 

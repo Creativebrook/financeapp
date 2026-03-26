@@ -29,11 +29,13 @@ const getBarGradient = (value: number) => {
 };
 
 function AccountsContent() {
-  const { accounts, income, fixedExpenses, variableExpenses, debts, addAccount, updateAccount, deleteAccount } = useFinance();
+  const { accounts, income, fixedExpenses, variableExpenses, debts, addAccount, updateAccount, deleteAccount, selectedMonth } = useFinance();
   const { isCollapsed } = useSidebar();
   const [showModal, setShowModal] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [activeDebitCardIndex, setActiveDebitCardIndex] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const [formData, setFormData] = useState({
     nome: '',
     tipo: 'Conta à Ordem',
@@ -68,65 +70,82 @@ function AccountsContent() {
 
   // Calculate "Real-time" current balance based on day of month
   const calculateCurrentMonthProgress = () => {
-    const now = new Date('2026-03-20T00:00:00Z');
-    const currentDay = now.getDate();
+    const now = new Date('2026-03-26T00:00:00Z');
+    const currentMonthStr = now.toISOString().substring(0, 7);
     
-    // Calculate totals so far
-    const incomeSoFar = income.reduce((sum, inc) => {
-      if (inc && inc.data <= currentDay) return sum + inc.valor;
-      return sum;
-    }, 0);
-
-    const fixedSoFar = fixedExpenses.reduce((sum, exp) => {
-      if (exp && exp.frequencia === 'mensal' && exp.data_pagamento <= currentDay) return sum + exp.valor;
-      return sum;
-    }, 0);
-
-    const variableSoFar = variableExpenses
-      .filter(exp => exp && exp.data && exp.data.startsWith('2026-03'))
-      .reduce((sum, exp) => sum + (exp?.valor || 0), 0);
-
-    const debtsSoFar = debts.reduce((sum, d) => {
-      if (d && d.data_pagamento <= currentDay) return sum + d.prestacao_mensal;
-      return sum;
-    }, 0);
-
+    let currentDay = now.getDate();
+    if (selectedMonth < currentMonthStr) {
+      // Past month: show full month
+      const [y, m] = selectedMonth.split('-');
+      currentDay = new Date(parseInt(y), parseInt(m), 0).getDate();
+    } else if (selectedMonth > currentMonthStr) {
+      // Future month: show start of month
+      currentDay = 0;
+    }
+    
     // Calculate per-account balances
     const accountBalances = accounts.map(account => {
-      const accIncomeSoFar = income
-        .filter(inc => inc.conta === account.nome && inc.data <= currentDay)
+      // Income for this account in selected month (excluding carryover for balance calculation from saldo)
+      const accIncome = income
+        .filter(inc => inc.conta === account.nome)
+        .filter(i => {
+          if (i.frequencia === 'mensal') {
+            if (i.data_inicio && i.data_inicio > `${selectedMonth}-31`) return false;
+            return i.data <= currentDay;
+          }
+          if (i.frequencia === 'unico' && i.data_especifica && i.data_especifica.startsWith(selectedMonth)) {
+            if (i.nome.toLowerCase().includes('transportado')) return false;
+            const day = parseInt(i.data_especifica.split('-')[2]);
+            return day <= currentDay;
+          }
+          return false;
+        })
         .reduce((sum, inc) => sum + inc.valor, 0);
 
-      const accFixed = fixedExpenses
-        .filter(exp => exp.conta === account.nome && exp.frequencia === 'mensal' && exp.data_pagamento <= currentDay)
+      // Variable expenses for this account in selected month
+      const accVariableSpent = variableExpenses
+        .filter(exp => exp && exp.conta === account.nome && exp.data && exp.data.startsWith(selectedMonth))
+        .filter(exp => {
+          const day = parseInt(exp.data.split('-')[2]);
+          return day <= currentDay;
+        })
         .reduce((sum, exp) => sum + exp.valor, 0);
-        
-      const accVariable = variableExpenses
-        .filter(exp => exp.conta === account.nome && exp.data && exp.data.startsWith('2026-03'))
-        .reduce((sum, exp) => sum + exp.valor, 0);
-        
-      const accDebts = debts
-        .filter(d => d.conta === account.nome && d.data_pagamento <= currentDay)
-        .reduce((sum, d) => sum + d.prestacao_mensal, 0);
-        
-      const accountBase = account.saldo + accIncomeSoFar;
-      const realTimeBalance = accountBase - (accFixed + accVariable + accDebts);
+
+      // The real-time balance is based on the initial saldo + income - expenses
+      const realTimeBalance = account.saldo + accIncome - accVariableSpent;
 
       return {
         ...account,
-        accountBase,
+        accountBase: account.saldo + accIncome,
         realTimeBalance
       };
     });
 
     const saldoInicialSoFar = accountBalances.reduce((sum, a) => sum + a.accountBase, 0);
-    const totalExpensesSoFar = fixedSoFar + variableSoFar + debtsSoFar;
+    
+    const totalVariableSoFar = variableExpenses
+      .filter(exp => exp && exp.data && exp.data.startsWith(selectedMonth))
+      .filter(exp => {
+        const day = parseInt(exp.data.split('-')[2]);
+        return day <= currentDay;
+      })
+      .reduce((sum, exp) => sum + (exp?.valor || 0), 0);
+
+    const totalFixedSoFar = fixedExpenses
+      .filter(exp => exp.frequencia === 'mensal' && exp.data_pagamento <= currentDay)
+      .reduce((sum, exp) => sum + exp.valor, 0);
+
+    const totalDebtsSoFar = debts
+      .filter(d => d.data_pagamento <= currentDay)
+      .reduce((sum, d) => sum + d.prestacao_mensal, 0);
+
+    const totalExpensesSoFar = totalVariableSoFar + totalFixedSoFar + totalDebtsSoFar;
     const saldoAtual = saldoInicialSoFar - totalExpensesSoFar;
 
     return {
       saldoInicialSoFar,
       saldoAtual,
-      incomeSoFar,
+      incomeSoFar: saldoInicialSoFar,
       expensesSoFar: totalExpensesSoFar,
       accountBalances
     };
@@ -134,6 +153,10 @@ function AccountsContent() {
 
   const { saldoInicialSoFar, saldoAtual, incomeSoFar, expensesSoFar, accountBalances } = calculateCurrentMonthProgress();
   
+  // Pagination logic
+  const totalPages = Math.ceil(accountBalances.length / itemsPerPage);
+  const paginatedAccounts = accountBalances.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   const debitCards = accountBalances.filter(acc => acc.tipo.toLowerCase() === 'conta à ordem');
   
   // Ensure active index is within bounds
@@ -470,7 +493,7 @@ function AccountsContent() {
                 </tr>
               </thead>
               <tbody>
-                  {accountBalances.map((account) => {
+                  {paginatedAccounts.map((account) => {
                     const accountPercent = saldoInicialSoFar > 0 ? Math.round((account.realTimeBalance / saldoInicialSoFar) * 100) : 0;
                     const percentColor = getPercentageColor(accountPercent);
                     
@@ -534,6 +557,59 @@ function AccountsContent() {
                 })}
               </tbody>
             </table>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'center', 
+                alignItems: 'center', 
+                gap: '8px', 
+                marginTop: '24px',
+                padding: '0 16px 16px'
+              }}>
+                <button 
+                  className="btn btn-secondary"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  style={{ padding: '4px 12px', fontSize: '0.8rem' }}
+                >
+                  Anterior
+                </button>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '6px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.8rem',
+                        cursor: 'pointer',
+                        border: '1px solid var(--border-color)',
+                        background: currentPage === page ? 'var(--accent-primary)' : 'transparent',
+                        color: currentPage === page ? 'white' : 'var(--text-secondary)',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
+                <button 
+                  className="btn btn-secondary"
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  style={{ padding: '4px 12px', fontSize: '0.8rem' }}
+                >
+                  Próximo
+                </button>
+              </div>
+            )}
             
             {accounts.length === 0 && (
               <div className="empty-state">
@@ -549,9 +625,10 @@ function AccountsContent() {
 
           {/* Mobile Card View */}
           <div className="md:hidden">
-            {accountBalances.length > 0 ? (
-              <div style={{ padding: '0' }}>
-                {accountBalances.map((account, index) => {
+            {paginatedAccounts.length > 0 ? (
+              <>
+                <div style={{ padding: '0' }}>
+                  {paginatedAccounts.map((account, index) => {
                   const accountPercent = saldoInicialSoFar > 0 ? Math.round((account.realTimeBalance / saldoInicialSoFar) * 100) : 0;
                   const percentColor = getPercentageColor(accountPercent);
                   // Simulate previous month percentage (deterministic)
@@ -628,7 +705,31 @@ function AccountsContent() {
                     </div>
                   );
                 })}
-              </div>
+                </div>
+
+                {/* Mobile Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-center gap-2 py-4">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                      className="p-2 rounded bg-slate-900 border border-white/5 disabled:opacity-30"
+                    >
+                      <ChevronLeft size={18} />
+                    </button>
+                    <span className="text-xs text-slate-400">
+                      Página {currentPage} de {totalPages}
+                    </span>
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      disabled={currentPage === totalPages}
+                      className="p-2 rounded bg-slate-900 border border-white/5 disabled:opacity-30"
+                    >
+                      <ChevronRight size={18} />
+                    </button>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="empty-state">
                 <Wallet size={48} style={{ opacity: 0.3, marginBottom: '16px' }} />

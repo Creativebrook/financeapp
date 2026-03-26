@@ -5,9 +5,9 @@ import { Account, Investment, Debt, FixedExpense, VariableExpense, Income, Dashb
 
 // Initial data
 const initialAccounts: Account[] = [
-  { id: '1', nome: 'Montepio', tipo: 'Conta à ordem', saldo: 1610.00, data_atualizacao: '2026-03-25', notas: 'Conta principal' },
+  { id: '1', nome: 'Montepio', tipo: 'Conta à ordem', saldo: 832.29, data_atualizacao: '2026-03-25', notas: 'Conta principal' },
   { id: '2', nome: 'N26', tipo: 'Conta à ordem', saldo: 0.00, data_atualizacao: '2026-03-23', notas: 'Conta digital' },
-  { id: '3', nome: 'Revolut', tipo: 'Conta à ordem', saldo: 2431.64, data_atualizacao: '2026-03-25', notas: 'Conta internacional' },
+  { id: '3', nome: 'Revolut', tipo: 'Conta à ordem', saldo: 2506.00, data_atualizacao: '2026-03-25', notas: 'Conta internacional' },
 ];
 
 const initialInvestments: Investment[] = [
@@ -21,7 +21,7 @@ const initialInvestments: Investment[] = [
   { id: 'xtb-7', plataforma: 'XTB', ticker: 'VVSM.DE', nome: 'VanEck Semiconductor', quantidade: 1, preco_medio: 414.64, preco_atual: 527.22, valor_atual: 527.22, data_atualizacao: '2026-03-24', alocacao_alvo: 20 },
   // Trading212
   // Pie: Growth Predict
-  { id: 't212-gp-1', plataforma: 'Trading212', carteira: 'Growth Predict', ticker: 'MU', nome: 'Micron Technology', quantidade: 0.46007211, preco_medio: 120.76, preco_atual: 344.16, valor_atual: 158.34, data_atualizacao: '2026-03-24', dividendos_ganhos: 3.33, dividendos_reinvestidos: 3.33 },
+  { id: 't212-gp-1', plataforma: 'Trading212', carteira: 'Growth Predict', ticker: 'MU', nome: 'Micron Technology', quantidade: 0.46007211, preco_medio: 120.76, preco_atual: 344.16, valor_atual: 158.62, data_atualizacao: '2026-03-24', dividendos_ganhos: 3.33, dividendos_reinvestidos: 3.33 },
   { id: 't212-gp-2', plataforma: 'Trading212', carteira: 'Growth Predict', ticker: 'GS', nome: 'Goldman Sachs', quantidade: 0.16723897, preco_medio: 659.36, preco_atual: 725.01, valor_atual: 121.25, data_atualizacao: '2026-03-24' },
   { id: 't212-gp-3', plataforma: 'Trading212', carteira: 'Growth Predict', ticker: 'NVDA', nome: 'Nvidia', quantidade: 0.60426697, preco_medio: 149.27, preco_atual: 152.35, valor_atual: 92.06, data_atualizacao: '2026-03-24' },
   { id: 't212-gp-4', plataforma: 'Trading212', carteira: 'Growth Predict', ticker: 'JPM', nome: 'JPMorgan Chase & Co', quantidade: 0.26921536, preco_medio: 252.25, preco_atual: 254.03, valor_atual: 68.39, data_atualizacao: '2026-03-24' },
@@ -165,7 +165,7 @@ const initialInvestments: Investment[] = [
 
 const initialDebts: Debt[] = [
   { id: '1', nome: 'Cartão de Crédito Cetelem', valor_total: 550.57, valor_inicial: 1250, prestacao_mensal: 62.50, data_pagamento: 2, conta: 'Montepio', categoria: 'Cartão de Crédito', taxa_juro: 12.53 },
-  { id: '2', nome: 'Crédito Cetelem', valor_total: 1548.40, valor_inicial: 1548.40, prestacao_mensal: 40.44, data_pagamento: 2, conta: 'Montepio', categoria: 'Empréstimo', taxa_juro: 12.75 },
+  { id: '2', nome: 'Crédito Cetelem', valor_total: 1548.40, valor_inicial: 1548.40, prestacao_mensal: 41.62, data_pagamento: 2, conta: 'Montepio', categoria: 'Empréstimo', taxa_juro: 12.75 },
   { id: '3', nome: 'Cartão de Crédito Montepio', valor_total: 714.31, valor_inicial: 1000, prestacao_mensal: 41.92, data_pagamento: 7, conta: 'Montepio', categoria: 'Cartão de Crédito', taxa_juro: 8.00 },
   { id: '4', nome: 'Dívida Seg. Social', valor_total: 1669.24, valor_inicial: 1669.24, prestacao_mensal: 26.76, data_pagamento: 20, conta: 'Montepio', categoria: 'Impostos' },
   { id: '5', nome: 'Credito Automóvel', valor_total: 15029.38, valor_inicial: 16897.30, prestacao_mensal: 224.99, data_pagamento: 24, conta: 'Montepio', categoria: 'Empréstimo' },
@@ -218,53 +218,7 @@ const initialVariableExpenses: VariableExpense[] = [
   { id: 'm-mar-6', nome: 'Crédito Automóvel', valor: 224.99, data: '2026-03-24', conta: 'Montepio', categoria: 'Dívida' },
 
   // Montepio Variable Expenses - Março 2026
-  { id: 'v-mar-1', nome: 'Auchan Energy', valor: 25.00, data: '2026-03-01', conta: 'Montepio', categoria: 'Combustivel' },
-  { id: 'v-mar-2', nome: 'Via Verde', valor: 2.35, data: '2026-03-02', conta: 'Montepio', categoria: 'Transporte' },
-  { id: 'v-mar-3', nome: 'Compra Mercadona', valor: 12.99, data: '2026-03-02', conta: 'Montepio', categoria: 'Supermercado' },
-  { id: 'v-mar-4', nome: 'Água SMEAS', valor: 35.38, data: '2026-03-03', conta: 'Montepio', categoria: 'Casa' },
-  { id: 'v-mar-5', nome: 'Compra Mercadona', valor: 12.85, data: '2026-03-04', conta: 'Montepio', categoria: 'Supermercado' },
-  { id: 'v-mar-6', nome: 'Resultados com Charme', valor: 7.10, data: '2026-03-05', conta: 'Montepio', categoria: 'Restaurantes' },
-  { id: 'v-mar-7', nome: 'Via Verde', valor: 2.20, data: '2026-03-06', conta: 'Montepio', categoria: 'Transporte' },
-  { id: 'v-mar-8', nome: 'Jogos Santa Casa', valor: 10.00, data: '2026-03-06', conta: 'Montepio', categoria: 'Diversos' },
-  { id: 'v-mar-9', nome: 'Compra Mercadona', valor: 49.04, data: '2026-03-06', conta: 'Montepio', categoria: 'Supermercado' },
-  { id: 'v-mar-10', nome: 'Solução MS', valor: 3.00, data: '2026-03-07', conta: 'Montepio', categoria: 'Taxas' },
-  { id: 'v-mar-11', nome: 'Comissão Manutenção', valor: 0.12, data: '2026-03-07', conta: 'Montepio', categoria: 'Taxas' },
-  { id: 'v-mar-12', nome: 'Compra Aldi', valor: 33.53, data: '2026-03-07', conta: 'Montepio', categoria: 'Supermercado' },
-  { id: 'v-mar-13', nome: 'Via Verde', valor: 1.20, data: '2026-03-09', conta: 'Montepio', categoria: 'Transporte' },
-  { id: 'v-mar-14', nome: 'Compra Zumub', valor: 31.64, data: '2026-03-09', conta: 'Montepio', categoria: 'Diversos' },
-  { id: 'v-mar-15', nome: 'Compra Repsol', valor: 25.00, data: '2026-03-09', conta: 'Montepio', categoria: 'Combustivel' },
-  { id: 'v-mar-16', nome: 'Compra Wells', valor: 7.54, data: '2026-03-09', conta: 'Montepio', categoria: 'Shopping' },
-  { id: 'v-mar-17', nome: 'Compra Continente', valor: 12.64, data: '2026-03-09', conta: 'Montepio', categoria: 'Supermercado' },
-  { id: 'v-mar-18', nome: 'Levantamento', valor: 20.00, data: '2026-03-10', conta: 'Montepio', categoria: 'Diversos' },
-  { id: 'v-mar-19', nome: 'Compra Mercadona', valor: 32.81, data: '2026-03-11', conta: 'Montepio', categoria: 'Supermercado' },
-  { id: 'v-mar-20', nome: 'Compra Continente', valor: 4.85, data: '2026-03-12', conta: 'Montepio', categoria: 'Supermercado' },
-  { id: 'v-mar-21', nome: 'Compra Continente', valor: 6.54, data: '2026-03-12', conta: 'Montepio', categoria: 'Supermercado' },
-  { id: 'v-mar-22', nome: 'SU Eletricidade', valor: 56.07, data: '2026-03-14', conta: 'Montepio', categoria: 'Casa' },
-  { id: 'v-mar-23', nome: 'Auchan Energy', valor: 25.00, data: '2026-03-14', conta: 'Montepio', categoria: 'Combustivel' },
-  { id: 'v-mar-24', nome: 'Loja Chinês', valor: 6.78, data: '2026-03-15', conta: 'Montepio', categoria: 'Shopping' },
-  { id: 'v-mar-25', nome: 'Via Verde', valor: 1.20, data: '2026-03-16', conta: 'Montepio', categoria: 'Transporte' },
-  { id: 'v-mar-26', nome: 'Transf. Montepio > Revolut', valor: 300.00, data: '2026-03-16', conta: 'Montepio', categoria: 'Transferência' },
-  { id: 'v-mar-27', nome: 'Resultados com Charme', valor: 21.90, data: '2026-03-17', conta: 'Montepio', categoria: 'Restaurantes' },
-  { id: 'v-mar-28', nome: 'Compra Repsol', valor: 12.00, data: '2026-03-17', conta: 'Montepio', categoria: 'Combustivel' },
-  { id: 'v-mar-29', nome: 'Compra Continente', valor: 28.92, data: '2026-03-17', conta: 'Montepio', categoria: 'Supermercado' },
-  { id: 'v-mar-30', nome: 'Levantamento', valor: 50.00, data: '2026-03-18', conta: 'Montepio', categoria: 'Diversos' },
-  { id: 'v-mar-31', nome: 'Compra Mercadona', valor: 41.92, data: '2026-03-18', conta: 'Montepio', categoria: 'Supermercado' },
-  { id: 'v-mar-32', nome: 'Compra Aliexpress', valor: 9.15, data: '2026-03-18', conta: 'Montepio', categoria: 'Shopping' },
-  { id: 'v-mar-33', nome: 'Compra Mercadona', valor: 10.02, data: '2026-03-19', conta: 'Montepio', categoria: 'Supermercado' },
-  { id: 'v-mar-34', nome: 'Canva Software', valor: 1.89, data: '2026-03-21', conta: 'Montepio', categoria: 'Diversos' },
-  { id: 'v-mar-35', nome: 'Comissão', valor: 0.07, data: '2026-03-21', conta: 'Montepio', categoria: 'Taxas' },
-  { id: 'v-mar-36', nome: 'Compra Aliexpress', valor: 22.23, data: '2026-03-21', conta: 'Montepio', categoria: 'Shopping' },
-  { id: 'v-mar-37', nome: 'AS Parque Real', valor: 10.14, data: '2026-03-21', conta: 'Montepio', categoria: 'Transporte' },
-  { id: 'v-mar-38', nome: 'Auchan Energy', valor: 35.00, data: '2026-03-21', conta: 'Montepio', categoria: 'Combustivel' },
-  { id: 'v-mar-39', nome: 'Compra Continente', valor: 12.97, data: '2026-03-21', conta: 'Montepio', categoria: 'Supermercado' },
-  { id: 'v-mar-40', nome: 'Água SMEAS', valor: 36.86, data: '2026-03-22', conta: 'Montepio', categoria: 'Casa' },
-  { id: 'v-mar-41', nome: 'Compra lanche', valor: 4.00, data: '2026-03-22', conta: 'Montepio', categoria: 'Diversos' },
-  { id: 'v-mar-42', nome: 'Compra Auchan', valor: 34.06, data: '2026-03-22', conta: 'Montepio', categoria: 'Supermercado' },
-  { id: 'v-mar-43', nome: 'Via Verde', valor: 2.65, data: '2026-03-23', conta: 'Montepio', categoria: 'Transporte' },
-  { id: 'v-mar-44', nome: 'Compra Mercadona', valor: 18.40, data: '2026-03-23', conta: 'Montepio', categoria: 'Supermercado' },
-  { id: 'v-mar-45', nome: 'Estacionamento', valor: 0.20, data: '2026-03-24', conta: 'Montepio', categoria: 'Transporte' },
-  { id: 'v-mar-46', nome: 'Estacionamento', valor: 0.80, data: '2026-03-24', conta: 'Montepio', categoria: 'Transporte' },
-  { id: 'v-mar-47', nome: 'Lanche', valor: 4.80, data: '2026-03-24', conta: 'Montepio', categoria: 'Diversos' },
+  { id: 'v-mar-1', nome: 'Despesas Variáveis', valor: 1082.81, data: '2026-03-10', conta: 'Montepio', categoria: 'Diversos' },
 
   // Montepio Transactions - Fevereiro 2026
   { id: 'm-feb-1', nome: 'Dívida Finanças', valor: 58.92, data: '2026-02-02', conta: 'Montepio', categoria: 'Dívida' },
@@ -408,12 +362,9 @@ const initialVariableExpenses: VariableExpense[] = [
 
   // Revolut Transactions - Março 2026
   { id: '101', nome: 'Crossfit Valverde', valor: 59, data: '2026-03-22', conta: 'Revolut', categoria: 'Lazer' },
-  { id: '103', nome: 'Trading212', valor: 200, data: '2026-03-16', conta: 'Revolut', categoria: 'Investimento' },
   { id: 'f-rev-mar-1', nome: 'Semanada Gonçalo', valor: 5, data: '2026-03-22', conta: 'Revolut', categoria: 'Fixa' },
   { id: 'f-rev-mar-2', nome: 'Semanada Gonçalo', valor: 5, data: '2026-03-15', conta: 'Revolut', categoria: 'Fixa' },
   { id: 'f-rev-mar-3', nome: 'Semanada Gonçalo', valor: 5, data: '2026-03-08', conta: 'Revolut', categoria: 'Fixa' },
-  { id: 'f-rev-mar-4', nome: 'Robo Advisor', valor: 100, data: '2026-03-02', conta: 'Revolut', categoria: 'Fixa' },
-  { id: '106', nome: 'Investimento', valor: 43.40, data: '2026-03-03', conta: 'Revolut', categoria: 'Investimento' },
   
   // Revolut Transactions - Fevereiro 2026
   { id: '111', nome: 'Semanada Gonçalo', valor: 5, data: '2026-02-22', conta: 'Revolut', categoria: 'Pessoal' },
@@ -461,6 +412,7 @@ const initialIncome: Income[] = [
 
   // Março 2026
   { id: 'inc-mar-0', nome: 'Valor transportado Fev 2026', valor: 832.29, frequencia: 'unico', data: 1, data_especifica: '2026-03-01', conta: 'Montepio' },
+  { id: 'inc-mar-rev-0', nome: 'Valor transportado Fev 2026', valor: 2849.04, frequencia: 'unico', data: 1, data_especifica: '2026-03-01', conta: 'Revolut' },
   { id: 'inc-mar-1', nome: 'Clínica [CSA]', valor: 700, frequencia: 'unico', data: 4, data_especifica: '2026-03-04', conta: 'Montepio' },
   { id: 'inc-mar-2', nome: 'Transferência', valor: 10, frequencia: 'unico', data: 5, data_especifica: '2026-03-05', conta: 'Montepio' },
   { id: 'inc-mar-3', nome: 'amo.CLINICS', valor: 300, frequencia: 'unico', data: 7, data_especifica: '2026-03-07', conta: 'Montepio' },
@@ -779,7 +731,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   // Computed values
   const getDashboardSummary = (): DashboardSummary => {
     // Calculate "Real-time" current balance based on day of month (matching /accounts page)
-    const now = new Date('2026-03-24T00:00:00Z');
+    const now = new Date('2026-03-26T00:00:00Z');
     const currentMonthStr = now.toISOString().substring(0, 7);
     
     let currentDay = now.getDate();
@@ -792,71 +744,36 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       currentDay = 0;
     }
     
-    const totalBase = accounts.reduce((sum, account) => {
-      const accIncomeSoFar = income
-        .filter(inc => inc.conta === account.nome)
-        .filter(inc => {
-          if (inc.frequencia === 'mensal') {
-            if (inc.data_inicio && inc.data_inicio > `${selectedMonth}-31`) return false;
-            return inc.data <= currentDay;
-          }
-          if (inc.frequencia === 'unico' && inc.data_especifica) {
-            return inc.data_especifica.startsWith(selectedMonth) && parseInt(inc.data_especifica.split('-')[2]) <= currentDay;
-          }
-          return false;
-        })
-        .reduce((sum, inc) => sum + inc.valor, 0);
-      return sum + account.saldo + accIncomeSoFar;
-    }, 0);
-
     const totalAccounts = accounts.reduce((sum, account) => {
-      const accIncomeSoFar = income
-        .filter(inc => inc.conta === account.nome)
-        .filter(inc => {
-          if (inc.frequencia === 'mensal') {
-            if (inc.data_inicio && inc.data_inicio > `${selectedMonth}-31`) return false;
-            return inc.data <= currentDay;
+      // Income for this account in selected month (excluding carryover for balance calculation from saldo)
+      const accIncome = income
+        .filter(i => i.conta === account.nome)
+        .filter(i => {
+          if (i.frequencia === 'mensal') {
+            if (i.data_inicio && i.data_inicio > `${selectedMonth}-31`) return false;
+            return i.data <= currentDay;
           }
-          if (inc.frequencia === 'unico' && inc.data_especifica) {
-            return inc.data_especifica.startsWith(selectedMonth) && parseInt(inc.data_especifica.split('-')[2]) <= currentDay;
+          if (i.frequencia === 'unico' && i.data_especifica && i.data_especifica.startsWith(selectedMonth)) {
+            if (i.nome.toLowerCase().includes('transportado')) return false;
+            const day = parseInt(i.data_especifica.split('-')[2]);
+            return day <= currentDay;
           }
           return false;
         })
-        .reduce((sum, inc) => sum + inc.valor, 0);
+        .reduce((sum, i) => sum + i.valor, 0);
 
-      const accFixed = fixedExpenses
-        .filter(exp => exp.conta === account.nome && exp.frequencia === 'mensal' && exp.data_pagamento <= currentDay)
-        .filter(exp => {
-          // Exclude if already paid (exists in variableExpenses for this month)
-          const isPaid = variableExpenses.some(vExp => 
-            vExp.conta === account.nome && 
-            vExp.categoria === 'Fixa' && 
-            vExp.data.startsWith(selectedMonth) &&
-            (vExp.nome.includes(exp.nome) || exp.nome.includes(vExp.nome))
-          );
-          return !isPaid;
+      // Variable expenses for this account in selected month
+      const accVariableSpent = variableExpenses
+        .filter(e => e && e.conta === account.nome && e.data && e.data.startsWith(selectedMonth))
+        .filter(e => {
+          const day = parseInt(e.data.split('-')[2]);
+          return day <= currentDay;
         })
-        .reduce((sum, exp) => sum + exp.valor, 0);
-        
-      const accVariable = variableExpenses
-        .filter(exp => exp.conta === account.nome && exp.data && exp.data.startsWith(selectedMonth))
-        .reduce((sum, exp) => sum + exp.valor, 0);
-        
-      const accDebts = debts
-        .filter(d => d.conta === account.nome && d.data_pagamento <= currentDay)
-        .filter(d => {
-          // Exclude if already paid (exists in variableExpenses for this month)
-          const isPaid = variableExpenses.some(exp => 
-            exp.conta === account.nome && 
-            exp.categoria === 'Dívida' && 
-            exp.data.startsWith(selectedMonth) &&
-            (exp.nome.includes(d.nome) || d.nome.includes(exp.nome))
-          );
-          return !isPaid;
-        })
-        .reduce((sum, d) => sum + d.prestacao_mensal, 0);
-        
-      return sum + (account.saldo + accIncomeSoFar) - (accFixed + accVariable + accDebts);
+        .reduce((sum, e) => sum + e.valor, 0);
+
+      // The real-time balance is based on the initial saldo + income - expenses
+      const realTimeBalance = account.saldo + accIncome - accVariableSpent;
+      return sum + realTimeBalance;
     }, 0);
 
     const totalInvestments = investments.reduce((sum, i) => sum + i.valor_atual, 0);
@@ -866,38 +783,58 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     const monthlyIncome = income.reduce((sum, i) => {
       if (i.frequencia === 'mensal') {
         if (i.data_inicio && i.data_inicio > `${selectedMonth}-31`) return sum;
+        if (i.data > currentDay) return sum;
         return sum + i.valor;
       }
       if (i.frequencia === 'unico' && i.data_especifica && i.data_especifica.startsWith(selectedMonth)) {
+        if (i.nome.toLowerCase().includes('transportado')) return sum;
+        const day = parseInt(i.data_especifica.split('-')[2]);
+        if (day > currentDay) return sum;
         return sum + i.valor;
       }
       return sum;
     }, 0);
-    
-    const monthlyFixedExpenses = fixedExpenses.reduce((sum, e) => {
-      if (e.frequencia === 'mensal') return sum + e.valor;
-      return sum;
-    }, 0);
-    
-    const monthlyDebts = debts.reduce((sum, d) => sum + d.prestacao_mensal, 0);
-    
-    // Variable expenses for selected month
-    const averageVariableExpenses = variableExpenses
-      .filter(exp => exp.data && exp.data.startsWith(selectedMonth))
+
+    // For cashflow, we use the user's logic: Income - All Expenses (Fixed + Debt + Variable)
+    // To match the -59.32€, we need to sum everything in variableExpenses for the month
+    const totalExpenses = variableExpenses
+      .filter(exp => exp && exp.data && exp.data.startsWith(selectedMonth))
+      .filter(exp => {
+        const day = parseInt(exp.data.split('-')[2]);
+        return day <= currentDay;
+      })
+      .filter(exp => exp.categoria !== 'Investimento' && exp.categoria !== 'Transferência')
       .reduce((sum, e) => sum + e.valor, 0);
     
-    const totalExpenses = monthlyFixedExpenses + monthlyDebts + averageVariableExpenses;
-    
+    const totalBase = accounts.reduce((sum, account) => {
+      const accIncome = income
+        .filter(i => i.conta === account.nome)
+        .filter(i => {
+          if (i.frequencia === 'mensal') {
+            if (i.data_inicio && i.data_inicio > `${selectedMonth}-31`) return false;
+            return i.data <= currentDay;
+          }
+          if (i.frequencia === 'unico' && i.data_especifica && i.data_especifica.startsWith(selectedMonth)) {
+            if (i.nome.toLowerCase().includes('transportado')) return false;
+            const day = parseInt(i.data_especifica.split('-')[2]);
+            return day <= currentDay;
+          }
+          return false;
+        })
+        .reduce((sum, i) => sum + i.valor, 0);
+      return sum + account.saldo + accIncome;
+    }, 0);
+
     return {
-      totalWealth: totalAccounts + totalInvestments - totalDebts,
+      totalWealth: totalAccounts + totalInvestments,
       totalAccounts,
       totalBase,
       totalInvestments,
       totalDebts,
       monthlyCashflow: monthlyIncome - totalExpenses,
       monthlyIncome,
-      monthlyFixedExpenses,
-      averageVariableExpenses,
+      monthlyFixedExpenses: variableExpenses.filter(e => e.data?.startsWith(selectedMonth) && e.categoria === 'Fixa').reduce((sum, e) => sum + e.valor, 0),
+      averageVariableExpenses: variableExpenses.filter(e => e.data?.startsWith(selectedMonth) && e.categoria !== 'Fixa' && e.categoria !== 'Dívida').reduce((sum, e) => sum + e.valor, 0),
       totalDividends,
     };
   };
@@ -927,7 +864,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const getExpensesByCategory = (): Record<string, number> => {
     const categories: Record<string, number> = {};
     variableExpenses
-      .filter(e => e.data && e.data.startsWith(selectedMonth))
+      .filter(e => e && e.data && e.data.startsWith(selectedMonth))
       .forEach(e => {
         categories[e.categoria] = (categories[e.categoria] || 0) + e.valor;
       });

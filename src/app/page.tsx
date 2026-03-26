@@ -485,100 +485,119 @@ function DashboardContent() {
 
   // Calculate real-time balances for accounts (matching the logic in /accounts page)
   const accountBalances = useMemo(() => {
-    const now = new Date('2026-03-20T00:00:00Z');
+    const now = new Date('2026-03-26T00:00:00Z');
     const currentDay = now.getDate();
+    const selectedMonth = '2026-03';
     
     return accounts.map(account => {
       const accIncomeSoFar = income
-        .filter(inc => inc.conta === account.nome && inc.data <= currentDay)
+        .filter(inc => inc.conta === account.nome)
+        .filter(i => {
+          if (i.frequencia === 'mensal') {
+            if (i.data_inicio && i.data_inicio > `${selectedMonth}-31`) return false;
+            return i.data <= currentDay;
+          }
+          if (i.frequencia === 'unico' && i.data_especifica && i.data_especifica.startsWith(selectedMonth)) {
+            if (i.nome.toLowerCase().includes('transportado')) return false;
+            const day = parseInt(i.data_especifica.split('-')[2]);
+            return day <= currentDay;
+          }
+          return false;
+        })
         .reduce((sum, inc) => sum + inc.valor, 0);
 
-      const accFixed = fixedExpenses
-        .filter(exp => exp.conta === account.nome && exp.frequencia === 'mensal' && exp.data_pagamento <= currentDay)
-        .reduce((sum, exp) => sum + exp.valor, 0);
-        
       const accVariable = variableExpenses
-        .filter(exp => exp.conta === account.nome && exp.data && exp.data.startsWith('2026-03'))
+        .filter(exp => exp && exp.conta === account.nome && exp.data && exp.data.startsWith(selectedMonth))
+        .filter(exp => {
+          const day = parseInt(exp.data.split('-')[2]);
+          return day <= currentDay;
+        })
         .reduce((sum, exp) => sum + exp.valor, 0);
         
-      const accDebts = debts
-        .filter(d => d.conta === account.nome && d.data_pagamento <= currentDay)
-        .reduce((sum, d) => sum + d.prestacao_mensal, 0);
-        
-      const realTimeBalance = (account.saldo + accIncomeSoFar) - (accFixed + accVariable + accDebts);
+      const realTimeBalance = account.saldo + accIncomeSoFar - accVariable;
 
       return {
         ...account,
         realTimeBalance
       };
     });
-  }, [accounts, income, fixedExpenses, variableExpenses, debts]);
+  }, [accounts, income, variableExpenses]);
 
   // Dynamic cards data based on accounts and credit cards from debts
   const cardsData = useMemo(() => {
     const accountCards = accountBalances.map((account, index) => {
-      const hardcodedAccount = [
-        { name: "Montepio", number: "1024 0606 1502 1979", transactions: [
-          { name: 'Continente', date: '04 Mar 2026', amount: '-42,50', icon: 'ShoppingCart', type: 'Supermercado' },
-          { name: 'Galp Telheiras', date: '03 Mar 2026', amount: '-65,00', icon: 'Fuel', type: 'Combustível' },
-          { name: 'Zara Home', date: '01 Mar 2026', amount: '-129,99', icon: 'ShoppingBag', type: 'Vestuário' },
-          { name: 'Levantamento ATM', date: '28 Fev 2026', amount: '-20,00', icon: 'Banknote', type: 'Dinheiro' },
-        ]},
-        { name: "Revolut", number: "5542 0012 9982 4431", transactions: [
-          { name: 'Apple Store', date: '04 Mar 2026', amount: '-2.499,00', icon: 'ShoppingBag', type: 'Tecnologia' },
-          { name: 'Amazon Prime', date: '02 Mar 2026', amount: '-4,99', icon: 'ShoppingCart', type: 'Serviços' },
-          { name: 'Almoço Executivo', date: '01 Mar 2026', amount: '-35,50', icon: 'Banknote', type: 'Restauração' },
-        ]},
-        { name: "N26", number: "9876 5432 1098 7654", transactions: [
-          { name: 'Netflix', date: '03 Mar 2026', amount: '-15,99', icon: 'ShoppingCart', type: 'Entretenimento' },
-          { name: 'Spotify', date: '02 Mar 2026', amount: '-9,99', icon: 'ShoppingCart', type: 'Música' },
-          { name: 'Uber', date: '01 Mar 2026', amount: '-12,50', icon: 'Banknote', type: 'Transporte' },
-        ]}
-      ].find(h => account.nome === h.name);
+      // Get real transactions for this account (including income)
+      const accountTransactions = [
+        ...variableExpenses.filter(exp => exp.conta === account.nome).map(e => ({ ...e, type: 'expense' })),
+        ...income.filter(inc => inc.conta === account.nome && inc.data_especifica).map(i => ({ ...i, data: i.data_especifica, type: 'income' }))
+      ]
+        .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
+        .slice(0, 4)
+        .map(tx => ({
+          name: tx.nome,
+          date: new Date(tx.data).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' }),
+          amount: (tx.type === 'income' ? '+' : '-') + tx.valor.toLocaleString('pt-PT', { minimumFractionDigits: 2 }),
+          icon: tx.categoria === 'Supermercado' ? 'ShoppingCart' : 
+                tx.categoria === 'Combustivel' ? 'Fuel' : 
+                tx.categoria === 'Shopping' ? 'ShoppingBag' : 'Banknote',
+          type: tx.categoria
+        }));
+
+      const hardcodedNumbers: Record<string, string> = {
+        "Montepio": "1024 0606 1502 1979",
+        "Revolut": "5542 0012 9982 4431",
+        "N26": "9876 5432 1098 7654"
+      };
 
       return {
         id: account.id,
         name: account.nome,
         balance: account.realTimeBalance,
-        number: hardcodedAccount?.number || account.iban || "**** **** **** " + account.id.slice(-4),
+        number: hardcodedNumbers[account.nome] || account.iban || "**** **** **** " + account.id.slice(-4),
         cardAccent: getCardAccent(index),
-        transactions: hardcodedAccount?.transactions || []
+        transactions: accountTransactions
       };
     });
 
     const creditCards = debts
       .filter(debt => debt.categoria === 'Cartão de Crédito')
       .map((debt, index) => {
-        const hardcodedCreditCard = [
-          { name: "Cartão Montepio", number: "4111 1111 1111 1111", transactions: [
-            { name: 'IKEA', date: '04 Mar 2026', amount: '-189,00', icon: 'ShoppingBag', type: 'Casa' },
-            { name: 'CP - Comboios', date: '02 Mar 2026', amount: '-22,50', icon: 'Banknote', type: 'Transporte' },
-            { name: 'Worten', date: '01 Mar 2026', amount: '-79,99', icon: 'ShoppingCart', type: 'Eletrónica' },
-          ]},
-          { name: "Cartão Cetelem", number: "5500 1234 5678 9010", transactions: [
-            { name: 'Worten', date: '04 Mar 2026', amount: '-299,00', icon: 'ShoppingCart', type: 'Eletrónica' },
-            { name: 'Fnac', date: '02 Mar 2026', amount: '-45,90', icon: 'ShoppingBag', type: 'Cultura' },
-            { name: 'MediaMarkt', date: '01 Mar 2026', amount: '-159,00', icon: 'ShoppingCart', type: 'Eletrónica' },
-          ]},
-          { name: "Cartão Oney", number: "6011 1111 1111 1117", transactions: [
-            { name: 'Leroy Merlin', date: '04 Mar 2026', amount: '-89,90', icon: 'ShoppingBag', type: 'Casa' },
-            { name: 'Jumbo', date: '03 Mar 2026', amount: '-56,30', icon: 'ShoppingCart', type: 'Supermercado' },
-            { name: 'Restaurante', date: '01 Mar 2026', amount: '-42,00', icon: 'Banknote', type: 'Restauração' },
-          ]}
-        ].find(h => debt.nome === h.name);
+        // Get real transactions for this credit card (if any in variableExpenses)
+        const cardTransactions = variableExpenses
+          .filter(exp => exp.conta === debt.nome)
+          .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
+          .slice(0, 4)
+          .map(tx => ({
+            name: tx.nome,
+            date: new Date(tx.data).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' }),
+            amount: '-' + tx.valor.toLocaleString('pt-PT', { minimumFractionDigits: 2 }),
+            icon: tx.categoria === 'Supermercado' ? 'ShoppingCart' : 
+                  tx.categoria === 'Combustivel' ? 'Fuel' : 
+                  tx.categoria === 'Shopping' ? 'ShoppingBag' : 'Banknote',
+            type: tx.categoria
+          }));
+
+        const hardcodedNumbers: Record<string, string> = {
+          "Cartão Montepio": "4111 1111 1111 1111",
+          "Cartão Cetelem": "5500 1234 5678 9010",
+          "Cartão Oney": "6011 1111 1111 1117"
+        };
+
+        const linkedAccount = accountBalances.find(acc => acc.nome === debt.conta);
+        const cardBalance = linkedAccount ? linkedAccount.realTimeBalance : -debt.valor_total;
 
         return {
           id: debt.id,
           name: debt.nome,
-          balance: -debt.valor_total, // Used amount as debt
-          number: hardcodedCreditCard?.number || "**** **** **** " + debt.id.slice(-4),
+          balance: cardBalance,
+          number: hardcodedNumbers[debt.nome] || "**** **** **** " + debt.id.slice(-4),
           cardAccent: getCardAccent(accounts.length + index),
-          transactions: hardcodedCreditCard?.transactions || []
+          transactions: cardTransactions
         };
       });
 
     return [...accountCards, ...creditCards];
-  }, [accountBalances, debts, accounts.length]);
+  }, [accountBalances, debts, accounts.length, variableExpenses, income]);
 
   const summary = getDashboardSummary();
   const platformSummaries = getPlatformSummaries();
@@ -605,6 +624,9 @@ function DashboardContent() {
   
   // Calculate cashflow based on the selected time range
   const getCashflowForRange = () => {
+    if (cashflowTimeRange === 'this_month') {
+      return summary.monthlyCashflow;
+    }
     const data = filteredCashflowData;
     const totalReceitas = data.reduce((sum, item) => sum + item.receitas, 0);
     const totalDespesas = data.reduce((sum, item) => sum + item.despesas, 0);
@@ -615,6 +637,10 @@ function DashboardContent() {
   
   // Calculate percentage change based on time range
   const getCashflowPercentage = () => {
+    if (cashflowTimeRange === 'this_month') {
+      if (summary.monthlyIncome === 0) return 0;
+      return Math.round((summary.monthlyCashflow / summary.monthlyIncome) * 100);
+    }
     const data = filteredCashflowData;
     const totalReceitas = data.reduce((sum, item) => sum + item.receitas, 0);
     if (totalReceitas === 0) return 0;
@@ -1148,27 +1174,37 @@ function DashboardContent() {
 
                 <div className="flex-1 space-y-1 overflow-y-auto pr-0 custom-scrollbar">
 
-                  {cardsData[activeCardIndex].transactions.map((tx, i) => (
-                    <div 
-                      key={i} 
-                      onClick={() => window.location.href = '/expenses/variable'}
-                      className="grid grid-cols-12 items-center py-4 px-0 border-b border-white/[0.03] last:border-0 group gradient-center rounded-2xl transition-all cursor-pointer"
-                    >
-                      <div className="col-span-8 flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-white/[0.03] border border-white/[0.05] flex items-center justify-center text-slate-600 group-hover:text-white group-hover:bg-white/[0.08] transition-all">
-                          {tx.icon === 'ShoppingCart' && <ShoppingCart size={16} />}
-                          {tx.icon === 'Fuel' && <Fuel size={16} />}
-                          {tx.icon === 'ShoppingBag' && <ShoppingBag size={16} />}
-                          {tx.icon === 'Banknote' && <Banknote size={16} />}
+                  {cardsData[activeCardIndex].transactions.length > 0 ? (
+                    cardsData[activeCardIndex].transactions.map((tx, i) => (
+                      <div 
+                        key={i} 
+                        onClick={() => window.location.href = '/expenses/variable'}
+                        className="grid grid-cols-12 items-center py-4 px-0 border-b border-white/[0.03] last:border-0 group gradient-center rounded-2xl transition-all cursor-pointer"
+                      >
+                        <div className="col-span-8 flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-xl bg-white/[0.03] border border-white/[0.05] flex items-center justify-center text-slate-600 group-hover:text-white group-hover:bg-white/[0.08] transition-all">
+                            {tx.icon === 'ShoppingCart' && <ShoppingCart size={16} />}
+                            {tx.icon === 'Fuel' && <Fuel size={16} />}
+                            {tx.icon === 'ShoppingBag' && <ShoppingBag size={16} />}
+                            {tx.icon === 'Banknote' && <Banknote size={16} />}
+                          </div>
+                          <div>
+                            <p className="text-[13px] font-bold text-slate-300 group-hover:text-white transition-colors">{tx.name}</p>
+                            <p className="text-[10px] text-slate-600 font-medium mt-0.5">{tx.type} • {tx.date}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-[13px] font-bold text-slate-300 group-hover:text-white transition-colors">{tx.name}</p>
-                          <p className="text-[10px] text-slate-600 font-medium mt-0.5">{tx.type} • {tx.date}</p>
-                        </div>
+                        <span className="col-span-4 text-[13px] font-bold text-white text-right">{tx.amount} €</span>
                       </div>
-                      <span className="col-span-4 text-[13px] font-bold text-white text-right">{tx.amount} €</span>
+                    ))
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-white/[0.02] border border-dashed border-white/[0.05] rounded-3xl">
+                      <div className="w-12 h-12 rounded-full bg-white/[0.03] flex items-center justify-center mb-4">
+                        <Banknote size={20} className="text-slate-600" />
+                      </div>
+                      <p className="text-[13px] font-bold text-slate-400">Sem movimentos registados</p>
+                      <p className="text-[10px] text-slate-600 mt-1 max-w-[180px]">Não existem transações recentes para este cartão.</p>
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
             </div>

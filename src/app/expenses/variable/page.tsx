@@ -6,7 +6,7 @@ import { FinanceProvider, useFinance } from '@/context/FinanceContext';
 import { useSidebar } from '@/context/SidebarContext';
 import Sidebar from '@/components/Sidebar';
 import PremiumHeader from '@/components/PremiumHeader';
-import { Plus, Edit2, Trash2, PiggyBank, X, ReceiptEuro, CalendarRange, Layers2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, PiggyBank, X, ReceiptEuro, CalendarRange, Layers2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatCurrency, formatDate, getCategoryColor } from '@/lib/utils';
 import { VariableExpense } from '@/types';
 import { getPieChartColor } from '@/lib/theme';
@@ -39,9 +39,12 @@ function VariableExpensesContent() {
   const baseVariableExpenses = variableExpenses.filter(e => e && e.categoria !== 'Fixa' && e.categoria !== 'Dívida');
   
   // Filtered by selected month
-  const monthFilteredExpenses = baseVariableExpenses.filter(e => e.data && e.data.startsWith(selectedMonth));
+  const monthFilteredExpenses = baseVariableExpenses.filter(e => e && e.data && e.data.startsWith(selectedMonth));
 
-  const sortedExpenses = [...monthFilteredExpenses].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+  const sortedExpenses = [...monthFilteredExpenses].sort((a, b) => {
+    if (!a || !b || !a.data || !b.data) return 0;
+    return new Date(b.data).getTime() - new Date(a.data).getTime();
+  });
 
   const filteredExpenses = filterCategory === 'all' 
     ? sortedExpenses 
@@ -596,6 +599,29 @@ function VariableExpensesContent() {
             <div className="empty-state card p-8 text-center">
               <PiggyBank size={48} className="mx-auto opacity-20 mb-4" />
               <p className="text-slate-400">Nenhuma despesa variável encontrada</p>
+            </div>
+          )}
+
+          {/* Mobile Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 py-4">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="p-2 rounded bg-slate-900 border border-white/5 disabled:opacity-30"
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <span className="text-xs text-slate-400">
+                Página {currentPage} de {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="p-2 rounded bg-slate-900 border border-white/5 disabled:opacity-30"
+              >
+                <ChevronRight size={18} />
+              </button>
             </div>
           )}
         </div>
