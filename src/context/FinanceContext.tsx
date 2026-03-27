@@ -558,6 +558,13 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     let mounted = true;
     console.log('FinanceProvider: Initializing auth listener');
 
+    // Check for simple auth first to prevent loading hang
+    const isSimpleAuth = typeof window !== 'undefined' && localStorage.getItem("finance_app_auth") === "true";
+    if (isSimpleAuth) {
+      console.log('FinanceProvider: Simple auth detected, setting authLoading to false');
+      setAuthLoading(false);
+    }
+
     // Check active session immediately
     const checkSession = async () => {
       try {
@@ -588,14 +595,14 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    // Safety timeout: ensure loading state is cleared after 8 seconds
+    // Safety timeout: ensure loading state is cleared after 5 seconds
     // This prevents the app from being stuck on the loading screen if Supabase hangs
     const timeout = setTimeout(() => {
       if (mounted) {
         console.warn('FinanceProvider: Auth initialization timed out, forcing loading to false');
         setAuthLoading(false);
       }
-    }, 8000);
+    }, 5000);
 
     return () => {
       mounted = false;
@@ -606,8 +613,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   // Fetch data from Supabase
   const fetchData = useCallback(async () => {
-    if (!user) {
-      console.log('FinanceProvider: No user, skipping fetchData');
+    const isSimpleAuth = typeof window !== 'undefined' && localStorage.getItem("finance_app_auth") === "true";
+    
+    if (!user && !isSimpleAuth) {
+      console.log('FinanceProvider: No user and no simple auth, skipping fetchData');
       setAccounts([]);
       setInvestments([]);
       setDebts([]);
@@ -617,7 +626,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    console.log('FinanceProvider: Starting fetchData for user:', user.email);
+    console.log('FinanceProvider: Starting fetchData. Mode:', user ? `User ${user.email}` : 'Simple Auth');
     setDataLoading(true);
 
     // Safety timeout for data loading
@@ -718,11 +727,16 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    localStorage.removeItem("finance_app_auth");
     await supabase.auth.signOut();
+    window.location.reload();
   };
 
   const seedDatabase = async () => {
-    if (!user) return;
+    const isSimpleAuth = typeof window !== 'undefined' && localStorage.getItem("finance_app_auth") === "true";
+    if (!user && !isSimpleAuth) return;
+    
+    const userId = user?.id || 'default-user';
     setDataLoading(true);
     try {
       console.log('Iniciando povoamento das tabelas...');
@@ -730,7 +744,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       // 1. Accounts
       const accountsToInsert = initialAccounts.map(({ id, ...rest }) => ({
         ...rest,
-        user_id: user.id,
+        user_id: userId,
         data_atualizacao: new Date().toISOString()
       }));
       await supabase.from('accounts').insert(accountsToInsert);
@@ -738,7 +752,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       // 2. Investments
       const investmentsToInsert = initialInvestments.map(({ id, ...rest }) => ({
         ...rest,
-        user_id: user.id,
+        user_id: userId,
         valor_atual: rest.quantidade * rest.preco_atual,
         data_atualizacao: new Date().toISOString()
       }));
@@ -747,28 +761,28 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       // 3. Debts
       const debtsToInsert = initialDebts.map(({ id, ...rest }) => ({
         ...rest,
-        user_id: user.id
+        user_id: userId
       }));
       await supabase.from('debts').insert(debtsToInsert);
 
       // 4. Fixed Expenses
       const fixedToInsert = initialFixedExpenses.map(({ id, ...rest }) => ({
         ...rest,
-        user_id: user.id
+        user_id: userId
       }));
       await supabase.from('fixed_expenses').insert(fixedToInsert);
 
       // 5. Variable Expenses
       const variableToInsert = initialVariableExpenses.map(({ id, ...rest }) => ({
         ...rest,
-        user_id: user.id
+        user_id: userId
       }));
       await supabase.from('variable_expenses').insert(variableToInsert);
 
       // 6. Income
       const incomeToInsert = initialIncome.map(({ id, ...rest }) => ({
         ...rest,
-        user_id: user.id
+        user_id: userId
       }));
       await supabase.from('income').insert(incomeToInsert);
 
@@ -783,17 +797,16 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   // Account actions
   const addAccount = async (account: Omit<Account, 'id' | 'data_atualizacao'>) => {
-    if (!user) return;
+    const userId = user?.id || 'default-user';
     const { error } = await supabase.from('accounts').insert([{
       ...account,
-      user_id: user.id,
+      user_id: userId,
       data_atualizacao: new Date().toISOString()
     }]);
     if (error) console.error('Error adding account:', error);
   };
 
   const updateAccount = async (id: string, account: Partial<Account>) => {
-    if (!user) return;
     const { error } = await supabase.from('accounts').update({
       ...account,
       data_atualizacao: new Date().toISOString()
@@ -802,18 +815,17 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteAccount = async (id: string) => {
-    if (!user) return;
     const { error } = await supabase.from('accounts').delete().eq('id', id);
     if (error) console.error('Error deleting account:', error);
   };
 
   // Investment actions
   const addInvestment = async (investment: Omit<Investment, 'id' | 'data_atualizacao' | 'valor_atual'>, accountId?: string) => {
-    if (!user) return;
+    const userId = user?.id || 'default-user';
     const valor_atual = investment.quantidade * investment.preco_atual;
     const { error } = await supabase.from('investments').insert([{
       ...investment,
-      user_id: user.id,
+      user_id: userId,
       valor_atual,
       data_atualizacao: new Date().toISOString()
     }]);
@@ -834,8 +846,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   };
 
   const updateInvestment = async (id: string, investment: Partial<Investment>) => {
-    if (!user) return;
-    
     // Calculate new valor_atual if needed
     let updatedData = { ...investment, data_atualizacao: new Date().toISOString() };
     const currentInv = investments.find(i => i.id === id);
@@ -851,7 +861,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteInvestment = async (id: string) => {
-    if (!user) return;
     const { error } = await supabase.from('investments').delete().eq('id', id);
     if (error) console.error('Error deleting investment:', error);
   };
@@ -909,57 +918,51 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   // Debt actions
   const addDebt = async (debt: Omit<Debt, 'id'>) => {
-    if (!user) return;
-    const { error } = await supabase.from('debts').insert([{ ...debt, user_id: user.id }]);
+    const userId = user?.id || 'default-user';
+    const { error } = await supabase.from('debts').insert([{ ...debt, user_id: userId }]);
     if (error) console.error('Error adding debt:', error);
   };
 
   const updateDebt = async (id: string, debt: Partial<Debt>) => {
-    if (!user) return;
     const { error } = await supabase.from('debts').update(debt).eq('id', id);
     if (error) console.error('Error updating debt:', error);
   };
 
   const deleteDebt = async (id: string) => {
-    if (!user) return;
     const { error } = await supabase.from('debts').delete().eq('id', id);
     if (error) console.error('Error deleting debt:', error);
   };
 
   // Fixed expense actions
   const addFixedExpense = async (expense: Omit<FixedExpense, 'id'>) => {
-    if (!user) return;
-    const { error } = await supabase.from('fixed_expenses').insert([{ ...expense, user_id: user.id }]);
+    const userId = user?.id || 'default-user';
+    const { error } = await supabase.from('fixed_expenses').insert([{ ...expense, user_id: userId }]);
     if (error) console.error('Error adding fixed expense:', error);
   };
 
   const updateFixedExpense = async (id: string, expense: Partial<FixedExpense>) => {
-    if (!user) return;
     const { error } = await supabase.from('fixed_expenses').update(expense).eq('id', id);
     if (error) console.error('Error updating fixed expense:', error);
   };
 
   const deleteFixedExpense = async (id: string) => {
-    if (!user) return;
     const { error } = await supabase.from('fixed_expenses').delete().eq('id', id);
     if (error) console.error('Error deleting fixed expense:', error);
   };
 
   // Variable expense actions
   const addVariableExpense = async (expense: Omit<VariableExpense, 'id'>) => {
-    if (!user) return;
-    const { error } = await supabase.from('variable_expenses').insert([{ ...expense, user_id: user.id }]);
+    const userId = user?.id || 'default-user';
+    const { error } = await supabase.from('variable_expenses').insert([{ ...expense, user_id: userId }]);
     if (error) console.error('Error adding variable expense:', error);
   };
 
   const updateVariableExpense = async (id: string, expense: Partial<VariableExpense>) => {
-    if (!user) return;
     const { error } = await supabase.from('variable_expenses').update(expense).eq('id', id);
     if (error) console.error('Error updating variable expense:', error);
   };
 
   const deleteVariableExpense = async (id: string) => {
-    if (!user) return;
     const { error } = await supabase.from('variable_expenses').delete().eq('id', id);
     if (error) console.error('Error deleting variable expense:', error);
   };
@@ -999,19 +1002,17 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   // Income actions
   const addIncomeEntry = async (incomeEntry: Omit<Income, 'id'>) => {
-    if (!user) return;
-    const { error } = await supabase.from('income').insert([{ ...incomeEntry, user_id: user.id }]);
+    const userId = user?.id || 'default-user';
+    const { error } = await supabase.from('income').insert([{ ...incomeEntry, user_id: userId }]);
     if (error) console.error('Error adding income:', error);
   };
 
   const updateIncome = async (id: string, incomeEntry: Partial<Income>) => {
-    if (!user) return;
     const { error } = await supabase.from('income').update(incomeEntry).eq('id', id);
     if (error) console.error('Error updating income:', error);
   };
 
   const deleteIncome = async (id: string) => {
-    if (!user) return;
     const { error } = await supabase.from('income').delete().eq('id', id);
     if (error) console.error('Error deleting income:', error);
   };
