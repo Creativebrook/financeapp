@@ -794,74 +794,121 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       return;
     }
     
-    const userId = user?.id || 'default-user';
     setDataLoading(true);
+    let supabaseSuccess = true;
     try {
-      console.log('FinanceProvider: Iniciando povoamento das tabelas para o utilizador:', userId);
+      // If we have a real user, try to push to Supabase
+      if (user) {
+        const userId = user.id;
+        console.log('FinanceProvider: Iniciando povoamento das tabelas para o utilizador:', userId);
 
-      // 1. Accounts
-      const accountsToInsert = initialAccounts.map(({ id, ...rest }) => ({
-        ...rest,
-        user_id: userId,
-        data_atualizacao: new Date().toISOString()
-      }));
-      const { error: accError } = await supabase.from('accounts').insert(accountsToInsert);
-      if (accError) throw new Error(`Erro ao inserir contas: ${accError.message}`);
+        // 1. Accounts
+        const accountsToInsert = initialAccounts.map(({ id, ...rest }) => ({
+          ...rest,
+          user_id: userId,
+          data_atualizacao: new Date().toISOString()
+        }));
+        const { error: accError } = await supabase.from('accounts').insert(accountsToInsert);
+        if (accError) {
+          console.error('FinanceProvider: Erro ao inserir contas no Supabase:', accError);
+          // If it's an RLS error, we'll continue but warn the user
+          if (accError.message.includes('row-level security policy')) {
+            console.warn('FinanceProvider: RLS policy violation. Data will be local only.');
+            supabaseSuccess = false;
+          } else {
+            throw new Error(`Erro ao inserir contas: ${accError.message}`);
+          }
+        }
 
-      // 2. Investments
-      const investmentsToInsert = initialInvestments.map(({ id, ...rest }) => ({
-        ...rest,
-        user_id: userId,
-        valor_atual: rest.quantidade * rest.preco_atual,
-        data_atualizacao: new Date().toISOString()
-      }));
-      const { error: invError } = await supabase.from('investments').insert(investmentsToInsert);
-      if (invError) throw new Error(`Erro ao inserir investimentos: ${invError.message}`);
+        // 2. Investments
+        const investmentsToInsert = initialInvestments.map(({ id, ...rest }) => ({
+          ...rest,
+          user_id: userId,
+          valor_atual: rest.quantidade * rest.preco_atual,
+          data_atualizacao: new Date().toISOString()
+        }));
+        const { error: invError } = await supabase.from('investments').insert(investmentsToInsert);
+        if (invError) {
+          if (invError.message.includes('row-level security policy')) {
+            supabaseSuccess = false;
+          } else {
+            throw new Error(`Erro ao inserir investimentos: ${invError.message}`);
+          }
+        }
 
-      // 3. Debts
-      const debtsToInsert = initialDebts.map(({ id, ...rest }) => ({
-        ...rest,
-        user_id: userId
-      }));
-      const { error: debtError } = await supabase.from('debts').insert(debtsToInsert);
-      if (debtError) throw new Error(`Erro ao inserir dívidas: ${debtError.message}`);
+        // 3. Debts
+        const debtsToInsert = initialDebts.map(({ id, ...rest }) => ({
+          ...rest,
+          user_id: userId
+        }));
+        const { error: debtError } = await supabase.from('debts').insert(debtsToInsert);
+        if (debtError) {
+          if (debtError.message.includes('row-level security policy')) {
+            supabaseSuccess = false;
+          } else {
+            throw new Error(`Erro ao inserir dívidas: ${debtError.message}`);
+          }
+        }
 
-      // 4. Fixed Expenses
-      const fixedToInsert = initialFixedExpenses.map(({ id, ...rest }) => ({
-        ...rest,
-        user_id: userId
-      }));
-      const { error: fixedError } = await supabase.from('fixed_expenses').insert(fixedToInsert);
-      if (fixedError) throw new Error(`Erro ao inserir despesas fixas: ${fixedError.message}`);
+        // 4. Fixed Expenses
+        const fixedToInsert = initialFixedExpenses.map(({ id, ...rest }) => ({
+          ...rest,
+          user_id: userId
+        }));
+        const { error: fixedError } = await supabase.from('fixed_expenses').insert(fixedToInsert);
+        if (fixedError) {
+          if (fixedError.message.includes('row-level security policy')) {
+            supabaseSuccess = false;
+          } else {
+            throw new Error(`Erro ao inserir despesas fixas: ${fixedError.message}`);
+          }
+        }
 
-      // 5. Variable Expenses
-      const variableToInsert = initialVariableExpenses.map(({ id, ...rest }) => ({
-        ...rest,
-        user_id: userId
-      }));
-      const { error: varError } = await supabase.from('variable_expenses').insert(variableToInsert);
-      if (varError) throw new Error(`Erro ao inserir despesas variáveis: ${varError.message}`);
+        // 5. Variable Expenses
+        const variableToInsert = initialVariableExpenses.map(({ id, ...rest }) => ({
+          ...rest,
+          user_id: userId
+        }));
+        const { error: varError } = await supabase.from('variable_expenses').insert(variableToInsert);
+        if (varError) {
+          if (varError.message.includes('row-level security policy')) {
+            supabaseSuccess = false;
+          } else {
+            throw new Error(`Erro ao inserir despesas variáveis: ${varError.message}`);
+          }
+        }
 
-      // 6. Income
-      const incomeToInsert = initialIncome.map(({ id, ...rest }) => ({
-        ...rest,
-        user_id: userId
-      }));
-      const { error: incError } = await supabase.from('income').insert(incomeToInsert);
-      if (incError) throw new Error(`Erro ao inserir rendimentos: ${incError.message}`);
+        // 6. Income
+        const incomeToInsert = initialIncome.map(({ id, ...rest }) => ({
+          ...rest,
+          user_id: userId
+        }));
+        const { error: incError } = await supabase.from('income').insert(incomeToInsert);
+        if (incError) {
+          if (incError.message.includes('row-level security policy')) {
+            supabaseSuccess = false;
+          } else {
+            throw new Error(`Erro ao inserir rendimentos: ${incError.message}`);
+          }
+        }
 
-      console.log('FinanceProvider: Dados povoados com sucesso!');
+        if (supabaseSuccess) {
+          console.log('FinanceProvider: Dados povoados no Supabase com sucesso!');
+          await fetchData();
+        } else {
+          console.warn('FinanceProvider: Supabase seed partially failed due to RLS. Data is local only.');
+        }
+      } else {
+        console.log('FinanceProvider: Simple Auth mode - seeding local data only');
+      }
       
-      // Manually update state to ensure UI reflects data immediately, 
-      // even if Supabase fetch takes time or has RLS issues
+      // ALWAYS update local state to ensure UI reflects data immediately
       setAccounts(initialAccounts as Account[]);
       setInvestments(initialInvestments as Investment[]);
       setDebts(initialDebts as Debt[]);
       setFixedExpenses(initialFixedExpenses as FixedExpense[]);
       setVariableExpenses(initialVariableExpenses as VariableExpense[]);
       setIncome(initialIncome as Income[]);
-
-      await fetchData();
     } catch (error: any) {
       console.error('FinanceProvider: Erro ao povoar dados:', error);
       alert(`Erro ao povoar dados: ${error.message || 'Erro desconhecido'}`);
@@ -873,71 +920,123 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   // Account actions
   const addAccount = async (account: Omit<Account, 'id' | 'data_atualizacao'>) => {
     const userId = user?.id || 'default-user';
-    const { error } = await supabase.from('accounts').insert([{
+    const newId = Math.random().toString(36).substr(2, 9);
+    const newAccount: Account = {
       ...account,
+      id: newId,
       user_id: userId,
       data_atualizacao: new Date().toISOString()
-    }]);
-    if (error) console.error('Error adding account:', error);
+    };
+
+    // Optimistic update
+    setAccounts(prev => [...prev, newAccount]);
+
+    if (user) {
+      const { error } = await supabase.from('accounts').insert([{
+        ...account,
+        user_id: userId,
+        data_atualizacao: new Date().toISOString()
+      }]);
+      if (error) console.error('Error adding account to Supabase:', error);
+    }
   };
 
   const updateAccount = async (id: string, account: Partial<Account>) => {
-    const { error } = await supabase.from('accounts').update({
-      ...account,
-      data_atualizacao: new Date().toISOString()
-    }).eq('id', id);
-    if (error) console.error('Error updating account:', error);
+    // Optimistic update
+    setAccounts(prev => prev.map(a => a.id === id ? { ...a, ...account, data_atualizacao: new Date().toISOString() } : a));
+
+    if (user) {
+      const { error } = await supabase.from('accounts').update({
+        ...account,
+        data_atualizacao: new Date().toISOString()
+      }).eq('id', id);
+      if (error) console.error('Error updating account in Supabase:', error);
+    }
   };
 
   const deleteAccount = async (id: string) => {
-    const { error } = await supabase.from('accounts').delete().eq('id', id);
-    if (error) console.error('Error deleting account:', error);
+    // Optimistic update
+    setAccounts(prev => prev.filter(a => a.id !== id));
+
+    if (user) {
+      const { error } = await supabase.from('accounts').delete().eq('id', id);
+      if (error) console.error('Error deleting account in Supabase:', error);
+    }
   };
 
   // Investment actions
   const addInvestment = async (investment: Omit<Investment, 'id' | 'data_atualizacao' | 'valor_atual'>, accountId?: string) => {
     const userId = user?.id || 'default-user';
     const valor_atual = investment.quantidade * investment.preco_atual;
-    const { error } = await supabase.from('investments').insert([{
+    const newId = Math.random().toString(36).substr(2, 9);
+    const newInvestment: Investment = {
       ...investment,
+      id: newId,
       user_id: userId,
       valor_atual,
       data_atualizacao: new Date().toISOString()
-    }]);
-    
-    if (error) {
-      console.error('Error adding investment:', error);
-      return;
-    }
+    };
+
+    // Optimistic update
+    setInvestments(prev => [...prev, newInvestment]);
 
     // Deduct from account if specified
     if (accountId) {
       const account = accounts.find(a => a.id === accountId);
       if (account) {
         const amount = investment.quantidade * investment.preco_medio;
-        await updateAccount(accountId, { saldo: account.saldo - amount });
+        updateAccount(accountId, { saldo: account.saldo - amount });
       }
+    }
+
+    if (user) {
+      const { error } = await supabase.from('investments').insert([{
+        ...investment,
+        user_id: userId,
+        valor_atual,
+        data_atualizacao: new Date().toISOString()
+      }]);
+      if (error) console.error('Error adding investment to Supabase:', error);
     }
   };
 
   const updateInvestment = async (id: string, investment: Partial<Investment>) => {
     // Calculate new valor_atual if needed
-    let updatedData = { ...investment, data_atualizacao: new Date().toISOString() };
     const currentInv = investments.find(i => i.id === id);
+    let valor_atual = currentInv?.valor_atual || 0;
     
     if (currentInv && (investment.quantidade !== undefined || investment.preco_atual !== undefined)) {
       const qty = investment.quantidade ?? currentInv.quantidade;
       const price = investment.preco_atual ?? currentInv.preco_atual;
-      (updatedData as any).valor_atual = qty * price;
+      valor_atual = qty * price;
     }
 
-    const { error } = await supabase.from('investments').update(updatedData).eq('id', id);
-    if (error) console.error('Error updating investment:', error);
+    // Optimistic update
+    setInvestments(prev => prev.map(i => i.id === id ? { 
+      ...i, 
+      ...investment, 
+      valor_atual,
+      data_atualizacao: new Date().toISOString() 
+    } : i));
+
+    if (user) {
+      const { error } = await supabase.from('investments').update({
+        ...investment,
+        valor_atual,
+        data_atualizacao: new Date().toISOString()
+      }).eq('id', id);
+      if (error) console.error('Error updating investment in Supabase:', error);
+    }
   };
 
   const deleteInvestment = async (id: string) => {
-    const { error } = await supabase.from('investments').delete().eq('id', id);
-    if (error) console.error('Error deleting investment:', error);
+    // Optimistic update
+    setInvestments(prev => prev.filter(i => i.id !== id));
+
+    if (user) {
+      const { error } = await supabase.from('investments').delete().eq('id', id);
+      if (error) console.error('Error deleting investment in Supabase:', error);
+    }
   };
 
   // Custom Wallet actions (Local for now, or could be added to DB later)
@@ -994,69 +1093,122 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   // Debt actions
   const addDebt = async (debt: Omit<Debt, 'id'>) => {
     const userId = user?.id || 'default-user';
-    const { error } = await supabase.from('debts').insert([{ ...debt, user_id: userId }]);
-    if (error) console.error('Error adding debt:', error);
+    const newId = Math.random().toString(36).substr(2, 9);
+    const newDebt: Debt = { ...debt, id: newId, user_id: userId };
+
+    // Optimistic update
+    setDebts(prev => [...prev, newDebt]);
+
+    if (user) {
+      const { error } = await supabase.from('debts').insert([{ ...debt, user_id: userId }]);
+      if (error) console.error('Error adding debt to Supabase:', error);
+    }
   };
 
   const updateDebt = async (id: string, debt: Partial<Debt>) => {
-    const { error } = await supabase.from('debts').update(debt).eq('id', id);
-    if (error) console.error('Error updating debt:', error);
+    // Optimistic update
+    setDebts(prev => prev.map(d => d.id === id ? { ...d, ...debt } : d));
+
+    if (user) {
+      const { error } = await supabase.from('debts').update(debt).eq('id', id);
+      if (error) console.error('Error updating debt in Supabase:', error);
+    }
   };
 
   const deleteDebt = async (id: string) => {
-    const { error } = await supabase.from('debts').delete().eq('id', id);
-    if (error) console.error('Error deleting debt:', error);
+    // Optimistic update
+    setDebts(prev => prev.filter(d => d.id !== id));
+
+    if (user) {
+      const { error } = await supabase.from('debts').delete().eq('id', id);
+      if (error) console.error('Error deleting debt in Supabase:', error);
+    }
   };
 
   // Fixed expense actions
   const addFixedExpense = async (expense: Omit<FixedExpense, 'id'>) => {
     const userId = user?.id || 'default-user';
-    const { error } = await supabase.from('fixed_expenses').insert([{ ...expense, user_id: userId }]);
-    if (error) console.error('Error adding fixed expense:', error);
+    const newId = Math.random().toString(36).substr(2, 9);
+    const newExpense: FixedExpense = { ...expense, id: newId, user_id: userId };
+
+    // Optimistic update
+    setFixedExpenses(prev => [...prev, newExpense]);
+
+    if (user) {
+      const { error } = await supabase.from('fixed_expenses').insert([{ ...expense, user_id: userId }]);
+      if (error) console.error('Error adding fixed expense to Supabase:', error);
+    }
   };
 
   const updateFixedExpense = async (id: string, expense: Partial<FixedExpense>) => {
-    const { error } = await supabase.from('fixed_expenses').update(expense).eq('id', id);
-    if (error) console.error('Error updating fixed expense:', error);
+    // Optimistic update
+    setFixedExpenses(prev => prev.map(e => e.id === id ? { ...e, ...expense } : e));
+
+    if (user) {
+      const { error } = await supabase.from('fixed_expenses').update(expense).eq('id', id);
+      if (error) console.error('Error updating fixed expense in Supabase:', error);
+    }
   };
 
   const deleteFixedExpense = async (id: string) => {
-    const { error } = await supabase.from('fixed_expenses').delete().eq('id', id);
-    if (error) console.error('Error deleting fixed expense:', error);
+    // Optimistic update
+    setFixedExpenses(prev => prev.filter(e => e.id !== id));
+
+    if (user) {
+      const { error } = await supabase.from('fixed_expenses').delete().eq('id', id);
+      if (error) console.error('Error deleting fixed expense in Supabase:', error);
+    }
   };
 
   // Variable expense actions
   const addVariableExpense = async (expense: Omit<VariableExpense, 'id'>) => {
     const userId = user?.id || 'default-user';
-    const { error } = await supabase.from('variable_expenses').insert([{ ...expense, user_id: userId }]);
-    if (error) console.error('Error adding variable expense:', error);
+    const newId = Math.random().toString(36).substr(2, 9);
+    const newExpense: VariableExpense = { ...expense, id: newId, user_id: userId };
+
+    // Optimistic update
+    setVariableExpenses(prev => [...prev, newExpense]);
+
+    if (user) {
+      const { error } = await supabase.from('variable_expenses').insert([{ ...expense, user_id: userId }]);
+      if (error) console.error('Error adding variable expense to Supabase:', error);
+    }
   };
 
   const updateVariableExpense = async (id: string, expense: Partial<VariableExpense>) => {
-    const { error } = await supabase.from('variable_expenses').update(expense).eq('id', id);
-    if (error) console.error('Error updating variable expense:', error);
+    // Optimistic update
+    setVariableExpenses(prev => prev.map(e => e.id === id ? { ...e, ...expense } : e));
+
+    if (user) {
+      const { error } = await supabase.from('variable_expenses').update(expense).eq('id', id);
+      if (error) console.error('Error updating variable expense in Supabase:', error);
+    }
   };
 
   const deleteVariableExpense = async (id: string) => {
-    const { error } = await supabase.from('variable_expenses').delete().eq('id', id);
-    if (error) console.error('Error deleting variable expense:', error);
+    // Optimistic update
+    setVariableExpenses(prev => prev.filter(e => e.id !== id));
+
+    if (user) {
+      const { error } = await supabase.from('variable_expenses').delete().eq('id', id);
+      if (error) console.error('Error deleting variable expense in Supabase:', error);
+    }
   };
 
   const transferFunds = async (fromAccountId: string, toAccountId: string, amount: number) => {
-    if (!user) return;
     const fromAccount = accounts.find(a => a.id === fromAccountId);
     const toAccount = accounts.find(a => a.id === toAccountId);
     
     if (!fromAccount || !toAccount) return;
 
-    // Update balances
-    await updateAccount(fromAccountId, { saldo: fromAccount.saldo - amount });
-    await updateAccount(toAccountId, { saldo: toAccount.saldo + amount });
+    // Update balances (these are already optimistic)
+    updateAccount(fromAccountId, { saldo: fromAccount.saldo - amount });
+    updateAccount(toAccountId, { saldo: toAccount.saldo + amount });
 
     const today = new Date().toISOString().split('T')[0];
     
-    // Create variable expense for the source account
-    await addVariableExpense({
+    // Create variable expense for the source account (optimistic)
+    addVariableExpense({
       nome: `Transferência para ${toAccount.nome}`,
       valor: amount,
       data: today,
@@ -1064,8 +1216,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       categoria: 'Transferência'
     });
 
-    // Create income entry for the destination account
-    await addIncomeEntry({
+    // Create income entry for the destination account (optimistic)
+    addIncomeEntry({
       nome: 'Transferência',
       valor: amount,
       frequencia: 'unico',
@@ -1078,18 +1230,36 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   // Income actions
   const addIncomeEntry = async (incomeEntry: Omit<Income, 'id'>) => {
     const userId = user?.id || 'default-user';
-    const { error } = await supabase.from('income').insert([{ ...incomeEntry, user_id: userId }]);
-    if (error) console.error('Error adding income:', error);
+    const newId = Math.random().toString(36).substr(2, 9);
+    const newIncome: Income = { ...incomeEntry, id: newId, user_id: userId };
+
+    // Optimistic update
+    setIncome(prev => [...prev, newIncome]);
+
+    if (user) {
+      const { error } = await supabase.from('income').insert([{ ...incomeEntry, user_id: userId }]);
+      if (error) console.error('Error adding income to Supabase:', error);
+    }
   };
 
   const updateIncome = async (id: string, incomeEntry: Partial<Income>) => {
-    const { error } = await supabase.from('income').update(incomeEntry).eq('id', id);
-    if (error) console.error('Error updating income:', error);
+    // Optimistic update
+    setIncome(prev => prev.map(i => i.id === id ? { ...i, ...incomeEntry } : i));
+
+    if (user) {
+      const { error } = await supabase.from('income').update(incomeEntry).eq('id', id);
+      if (error) console.error('Error updating income in Supabase:', error);
+    }
   };
 
   const deleteIncome = async (id: string) => {
-    const { error } = await supabase.from('income').delete().eq('id', id);
-    if (error) console.error('Error deleting income:', error);
+    // Optimistic update
+    setIncome(prev => prev.filter(i => i.id !== id));
+
+    if (user) {
+      const { error } = await supabase.from('income').delete().eq('id', id);
+      if (error) console.error('Error deleting income in Supabase:', error);
+    }
   };
 
   // Computed values

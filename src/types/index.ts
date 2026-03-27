@@ -1,6 +1,7 @@
 // Account Types
 export interface Account {
   id: string;
+  user_id?: string;
   nome: string;
   tipo: string;
   saldo: number;
@@ -14,6 +15,7 @@ export type Plataforma = 'XTB' | 'Trading212' | 'Revolut Stocks' | 'Revolut Crip
 
 export interface Investment {
   id: string;
+  user_id?: string;
   plataforma: Plataforma;
   carteira?: string; // For Trading212 pies
   ticker: string;
@@ -34,6 +36,7 @@ export interface Investment {
 // Debt Types
 export interface Debt {
   id: string;
+  user_id?: string;
   nome: string;
   valor_total: number;
   valor_inicial: number;
@@ -50,6 +53,7 @@ export type Frequencia = 'mensal' | 'quinzenal' | 'semanal' | 'trimestral' | 'se
 
 export interface FixedExpense {
   id: string;
+  user_id?: string;
   nome: string;
   valor: number;
   frequencia: Frequencia;
@@ -65,6 +69,7 @@ export type CategoriaDespesa = 'Supermercado' | 'Combustível' | 'Restaurantes' 
 
 export interface VariableExpense {
   id: string;
+  user_id?: string;
   nome: string;
   valor: number;
   data: string;
@@ -75,6 +80,7 @@ export interface VariableExpense {
 // Income Types
 export interface Income {
   id: string;
+  user_id?: string;
   nome: string;
   valor: number;
   frequencia: Frequencia;
