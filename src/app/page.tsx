@@ -1415,9 +1415,5 @@ function DashboardContent() {
 }
 
 export default function Home() {
-  return (
-    <FinanceProvider>
-      <DashboardContent />
-    </FinanceProvider>
-  );
+  return <DashboardContent />;
 }

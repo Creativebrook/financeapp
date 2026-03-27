@@ -1,7 +1,9 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { Account, Investment, Debt, FixedExpense, VariableExpense, Income, DashboardSummary, PlatformSummary, Plataforma } from '@/types';
+import { supabase } from '@/lib/supabase';
+import { User } from '@supabase/supabase-js';
 
 // Initial data
 const initialAccounts: Account[] = [
@@ -527,85 +529,192 @@ interface FinanceContextType {
   
   selectedMonth: string;
   setSelectedMonth: (month: string) => void;
+  user: User | null;
+  loading: boolean;
+  signInWithGoogle: () => Promise<void>;
+  signOut: () => Promise<void>;
 }
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
 
 export function FinanceProvider({ children }: { children: ReactNode }) {
-  const initialData = getInitialData();
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
   
-  const [accounts, setAccounts] = useState<Account[]>(() => initialData.accounts);
-  const [investments, setInvestments] = useState<Investment[]>(() => initialData.investments);
-  const [debts, setDebts] = useState<Debt[]>(() => initialData.debts);
-  const [fixedExpenses, setFixedExpenses] = useState<FixedExpense[]>(() => initialData.fixedExpenses);
-  const [variableExpenses, setVariableExpenses] = useState<VariableExpense[]>(() => initialData.variableExpenses);
-  const [income, setIncome] = useState<Income[]>(() => initialData.income);
-  const [customWallets, setCustomWallets] = useState<string[]>(() => initialData.customWallets || []);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [investments, setInvestments] = useState<Investment[]>([]);
+  const [debts, setDebts] = useState<Debt[]>([]);
+  const [fixedExpenses, setFixedExpenses] = useState<FixedExpense[]>([]);
+  const [variableExpenses, setVariableExpenses] = useState<VariableExpense[]>([]);
+  const [income, setIncome] = useState<Income[]>([]);
+  const [customWallets, setCustomWallets] = useState<string[]>([]);
   const [selectedMonth, setSelectedMonth] = useState('2026-03');
 
-  // Save to localStorage on change
+  // Auth listener
   useEffect(() => {
-    const data = { accounts, investments, debts, fixedExpenses, variableExpenses, income, customWallets };
-    localStorage.setItem('financeflow_data', JSON.stringify(data));
-  }, [accounts, investments, debts, fixedExpenses, variableExpenses, income, customWallets]);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Fetch data from Supabase
+  const fetchData = useCallback(async () => {
+    if (!user) {
+      // If no user, we could load mock data or just clear
+      setAccounts([]);
+      setInvestments([]);
+      setDebts([]);
+      setFixedExpenses([]);
+      setVariableExpenses([]);
+      setIncome([]);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const [
+        { data: accs },
+        { data: invs },
+        { data: dbt },
+        { data: fxd },
+        { data: vrb },
+        { data: inc }
+      ] = await Promise.all([
+        supabase.from('accounts').select('*').order('nome'),
+        supabase.from('investments').select('*').order('nome'),
+        supabase.from('debts').select('*').order('nome'),
+        supabase.from('fixed_expenses').select('*').order('nome'),
+        supabase.from('variable_expenses').select('*').order('data', { ascending: false }),
+        supabase.from('income').select('*').order('data', { ascending: false })
+      ]);
+
+      if (accs) setAccounts(accs);
+      if (invs) setInvestments(invs);
+      if (dbt) setDebts(dbt);
+      if (fxd) setFixedExpenses(fxd);
+      if (vrb) setVariableExpenses(vrb);
+      if (inc) setIncome(inc);
+    } catch (error) {
+      console.error('Error fetching data from Supabase:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // Real-time subscriptions
+  useEffect(() => {
+    if (!user) return;
+
+    const channels = [
+      supabase.channel('accounts-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'accounts' }, fetchData).subscribe(),
+      supabase.channel('investments-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'investments' }, fetchData).subscribe(),
+      supabase.channel('debts-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'debts' }, fetchData).subscribe(),
+      supabase.channel('fixed-expenses-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'fixed_expenses' }, fetchData).subscribe(),
+      supabase.channel('variable-expenses-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'variable_expenses' }, fetchData).subscribe(),
+      supabase.channel('income-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'income' }, fetchData).subscribe(),
+    ];
+
+    return () => {
+      channels.forEach(channel => channel.unsubscribe());
+    };
+  }, [user, fetchData]);
+
+  const signInWithGoogle = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin
+      }
+    });
+  };
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+  };
 
   // Account actions
-  const addAccount = (account: Omit<Account, 'id' | 'data_atualizacao'>) => {
-    const newAccount: Account = {
+  const addAccount = async (account: Omit<Account, 'id' | 'data_atualizacao'>) => {
+    if (!user) return;
+    const { error } = await supabase.from('accounts').insert([{
       ...account,
-      id: Date.now().toString(),
-      data_atualizacao: new Date().toISOString().split('T')[0],
-    };
-    setAccounts(prev => [...prev, newAccount]);
+      user_id: user.id,
+      data_atualizacao: new Date().toISOString()
+    }]);
+    if (error) console.error('Error adding account:', error);
   };
 
-  const updateAccount = (id: string, account: Partial<Account>) => {
-    setAccounts(prev => prev.map(a => 
-      a.id === id ? { ...a, ...account, data_atualizacao: new Date().toISOString().split('T')[0] } : a
-    ));
+  const updateAccount = async (id: string, account: Partial<Account>) => {
+    if (!user) return;
+    const { error } = await supabase.from('accounts').update({
+      ...account,
+      data_atualizacao: new Date().toISOString()
+    }).eq('id', id);
+    if (error) console.error('Error updating account:', error);
   };
 
-  const deleteAccount = (id: string) => {
-    setAccounts(prev => prev.filter(a => a.id !== id));
+  const deleteAccount = async (id: string) => {
+    if (!user) return;
+    const { error } = await supabase.from('accounts').delete().eq('id', id);
+    if (error) console.error('Error deleting account:', error);
   };
 
   // Investment actions
-  const addInvestment = (investment: Omit<Investment, 'id' | 'data_atualizacao' | 'valor_atual'>, accountId?: string) => {
-    const newInvestment: Investment = {
+  const addInvestment = async (investment: Omit<Investment, 'id' | 'data_atualizacao' | 'valor_atual'>, accountId?: string) => {
+    if (!user) return;
+    const valor_atual = investment.quantidade * investment.preco_atual;
+    const { error } = await supabase.from('investments').insert([{
       ...investment,
-      id: Date.now().toString(),
-      valor_atual: investment.quantidade * investment.preco_atual,
-      data_atualizacao: new Date().toISOString().split('T')[0],
-    };
+      user_id: user.id,
+      valor_atual,
+      data_atualizacao: new Date().toISOString()
+    }]);
     
-    setInvestments(prev => [...prev, newInvestment]);
+    if (error) {
+      console.error('Error adding investment:', error);
+      return;
+    }
 
     // Deduct from account if specified
     if (accountId) {
-      const amount = investment.quantidade * investment.preco_medio;
-      setAccounts(prev => prev.map(a => 
-        a.id === accountId ? { ...a, saldo: a.saldo - amount, data_atualizacao: new Date().toISOString().split('T')[0] } : a
-      ));
+      const account = accounts.find(a => a.id === accountId);
+      if (account) {
+        const amount = investment.quantidade * investment.preco_medio;
+        await updateAccount(accountId, { saldo: account.saldo - amount });
+      }
     }
   };
 
-  const updateInvestment = (id: string, investment: Partial<Investment>) => {
-    setInvestments(prev => prev.map(i => {
-      if (i.id !== id) return i;
-      const updated = { ...i, ...investment };
-      if (investment.quantidade !== undefined || investment.preco_atual !== undefined) {
-        updated.valor_atual = updated.quantidade * updated.preco_atual;
-      }
-      updated.data_atualizacao = new Date().toISOString().split('T')[0];
-      return updated;
-    }));
+  const updateInvestment = async (id: string, investment: Partial<Investment>) => {
+    if (!user) return;
+    
+    // Calculate new valor_atual if needed
+    let updatedData = { ...investment, data_atualizacao: new Date().toISOString() };
+    const currentInv = investments.find(i => i.id === id);
+    
+    if (currentInv && (investment.quantidade !== undefined || investment.preco_atual !== undefined)) {
+      const qty = investment.quantidade ?? currentInv.quantidade;
+      const price = investment.preco_atual ?? currentInv.preco_atual;
+      (updatedData as any).valor_atual = qty * price;
+    }
+
+    const { error } = await supabase.from('investments').update(updatedData).eq('id', id);
+    if (error) console.error('Error updating investment:', error);
   };
 
-  const deleteInvestment = (id: string) => {
-    setInvestments(prev => prev.filter(i => i.id !== id));
+  const deleteInvestment = async (id: string) => {
+    if (!user) return;
+    const { error } = await supabase.from('investments').delete().eq('id', id);
+    if (error) console.error('Error deleting investment:', error);
   };
 
-  // Custom Wallet actions
+  // Custom Wallet actions (Local for now, or could be added to DB later)
   const addCustomWallet = (name: string) => {
     if (!name.trim()) return;
     setCustomWallets(prev => [...new Set([...prev, name.trim()])]);
@@ -619,9 +728,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const fetchCurrentPrice = async (ticker: string): Promise<number | null> => {
     try {
       const response = await fetch(`/api/price?ticker=${encodeURIComponent(ticker)}`);
-      if (!response.ok) {
-        return null;
-      }
+      if (!response.ok) return null;
       const data = await response.json();
       return data.price ?? null;
     } catch (error) {
@@ -631,9 +738,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   };
 
   const refreshPrices = async (): Promise<{ failedTickers: string[] }> => {
-    const updatedInvestments = [...investments];
-    const uniqueTickers = [...new Set(investments.filter(i => i.isAutoPrice).map(i => i.ticker))];
+    if (!user) return { failedTickers: [] };
     
+    const uniqueTickers = [...new Set(investments.filter(i => i.isAutoPrice).map(i => i.ticker))];
     const priceMap: Record<string, number> = {};
     const failedTickers: string[] = [];
     
@@ -646,79 +753,90 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       }
     }
     
-    for (const inv of updatedInvestments) {
+    // Update all investments in Supabase
+    for (const inv of investments) {
       if (inv.isAutoPrice && priceMap[inv.ticker]) {
-        inv.preco_atual = priceMap[inv.ticker];
-        inv.valor_atual = inv.quantidade * inv.preco_atual;
-        inv.data_atualizacao = new Date().toISOString().split('T')[0];
+        await updateInvestment(inv.id, {
+          preco_atual: priceMap[inv.ticker]
+        });
       }
     }
     
-    setInvestments(updatedInvestments);
     return { failedTickers };
   };
 
   // Debt actions
-  const addDebt = (debt: Omit<Debt, 'id'>) => {
-    const newDebt: Debt = { ...debt, id: Date.now().toString() };
-    setDebts(prev => [...prev, newDebt]);
+  const addDebt = async (debt: Omit<Debt, 'id'>) => {
+    if (!user) return;
+    const { error } = await supabase.from('debts').insert([{ ...debt, user_id: user.id }]);
+    if (error) console.error('Error adding debt:', error);
   };
 
-  const updateDebt = (id: string, debt: Partial<Debt>) => {
-    setDebts(prev => prev.map(d => d.id === id ? { ...d, ...debt } : d));
+  const updateDebt = async (id: string, debt: Partial<Debt>) => {
+    if (!user) return;
+    const { error } = await supabase.from('debts').update(debt).eq('id', id);
+    if (error) console.error('Error updating debt:', error);
   };
 
-  const deleteDebt = (id: string) => {
-    setDebts(prev => prev.filter(d => d.id !== id));
+  const deleteDebt = async (id: string) => {
+    if (!user) return;
+    const { error } = await supabase.from('debts').delete().eq('id', id);
+    if (error) console.error('Error deleting debt:', error);
   };
 
   // Fixed expense actions
-  const addFixedExpense = (expense: Omit<FixedExpense, 'id'>) => {
-    const newExpense: FixedExpense = { ...expense, id: Date.now().toString() };
-    setFixedExpenses(prev => [...prev, newExpense]);
+  const addFixedExpense = async (expense: Omit<FixedExpense, 'id'>) => {
+    if (!user) return;
+    const { error } = await supabase.from('fixed_expenses').insert([{ ...expense, user_id: user.id }]);
+    if (error) console.error('Error adding fixed expense:', error);
   };
 
-  const updateFixedExpense = (id: string, expense: Partial<FixedExpense>) => {
-    setFixedExpenses(prev => prev.map(e => e.id === id ? { ...e, ...expense } : e));
+  const updateFixedExpense = async (id: string, expense: Partial<FixedExpense>) => {
+    if (!user) return;
+    const { error } = await supabase.from('fixed_expenses').update(expense).eq('id', id);
+    if (error) console.error('Error updating fixed expense:', error);
   };
 
-  const deleteFixedExpense = (id: string) => {
-    setFixedExpenses(prev => prev.filter(e => e.id !== id));
+  const deleteFixedExpense = async (id: string) => {
+    if (!user) return;
+    const { error } = await supabase.from('fixed_expenses').delete().eq('id', id);
+    if (error) console.error('Error deleting fixed expense:', error);
   };
 
   // Variable expense actions
-  const addVariableExpense = (expense: Omit<VariableExpense, 'id'>) => {
-    const newExpense: VariableExpense = { ...expense, id: Date.now().toString() };
-    setVariableExpenses(prev => [...prev, newExpense]);
+  const addVariableExpense = async (expense: Omit<VariableExpense, 'id'>) => {
+    if (!user) return;
+    const { error } = await supabase.from('variable_expenses').insert([{ ...expense, user_id: user.id }]);
+    if (error) console.error('Error adding variable expense:', error);
   };
 
-  const updateVariableExpense = (id: string, expense: Partial<VariableExpense>) => {
-    setVariableExpenses(prev => prev.map(e => e.id === id ? { ...e, ...expense } : e));
+  const updateVariableExpense = async (id: string, expense: Partial<VariableExpense>) => {
+    if (!user) return;
+    const { error } = await supabase.from('variable_expenses').update(expense).eq('id', id);
+    if (error) console.error('Error updating variable expense:', error);
   };
 
-  const deleteVariableExpense = (id: string) => {
-    setVariableExpenses(prev => prev.filter(e => e.id !== id));
+  const deleteVariableExpense = async (id: string) => {
+    if (!user) return;
+    const { error } = await supabase.from('variable_expenses').delete().eq('id', id);
+    if (error) console.error('Error deleting variable expense:', error);
   };
 
-  const transferFunds = (fromAccountId: string, toAccountId: string, amount: number) => {
+  const transferFunds = async (fromAccountId: string, toAccountId: string, amount: number) => {
+    if (!user) return;
     const fromAccount = accounts.find(a => a.id === fromAccountId);
     const toAccount = accounts.find(a => a.id === toAccountId);
     
     if (!fromAccount || !toAccount) return;
 
-    setAccounts(prev => prev.map(a => {
-      if (a.id === fromAccountId) {
-        return { ...a, saldo: a.saldo - amount, data_atualizacao: new Date().toISOString().split('T')[0] };
-      }
-      if (a.id === toAccountId) {
-        return { ...a, saldo: a.saldo + amount, data_atualizacao: new Date().toISOString().split('T')[0] };
-      }
-      return a;
-    }));
+    // Update balances
+    await updateAccount(fromAccountId, { saldo: fromAccount.saldo - amount });
+    await updateAccount(toAccountId, { saldo: toAccount.saldo + amount });
 
-    // Create variable expense for the source account
     const today = new Date().toISOString().split('T')[0];
-    addVariableExpense({
+    
+    // Create variable expense for the source account
+    await addVariableExpense({
       nome: `Transferência para ${toAccount.nome}`,
       valor: amount,
       data: today,
@@ -727,7 +845,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     });
 
     // Create income entry for the destination account
-    addIncomeEntry({
+    await addIncomeEntry({
       nome: 'Transferência',
       valor: amount,
       frequencia: 'unico',
@@ -738,17 +856,22 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   };
 
   // Income actions
-  const addIncomeEntry = (incomeEntry: Omit<Income, 'id'>) => {
-    const newIncome: Income = { ...incomeEntry, id: Date.now().toString() };
-    setIncome(prev => [...prev, newIncome]);
+  const addIncomeEntry = async (incomeEntry: Omit<Income, 'id'>) => {
+    if (!user) return;
+    const { error } = await supabase.from('income').insert([{ ...incomeEntry, user_id: user.id }]);
+    if (error) console.error('Error adding income:', error);
   };
 
-  const updateIncome = (id: string, incomeEntry: Partial<Income>) => {
-    setIncome(prev => prev.map(i => i.id === id ? { ...i, ...incomeEntry } : i));
+  const updateIncome = async (id: string, incomeEntry: Partial<Income>) => {
+    if (!user) return;
+    const { error } = await supabase.from('income').update(incomeEntry).eq('id', id);
+    if (error) console.error('Error updating income:', error);
   };
 
-  const deleteIncome = (id: string) => {
-    setIncome(prev => prev.filter(i => i.id !== id));
+  const deleteIncome = async (id: string) => {
+    if (!user) return;
+    const { error } = await supabase.from('income').delete().eq('id', id);
+    if (error) console.error('Error deleting income:', error);
   };
 
   // Computed values
@@ -930,6 +1053,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       deleteCustomWallet,
       selectedMonth,
       setSelectedMonth,
+      user,
+      loading,
+      signInWithGoogle,
+      signOut,
     }}>
       {children}
     </FinanceContext.Provider>

@@ -771,9 +771,5 @@ function VariableExpensesContent() {
 }
 
 export default function VariableExpensesPage() {
-  return (
-    <FinanceProvider>
-      <VariableExpensesContent />
-    </FinanceProvider>
-  );
+  return <VariableExpensesContent />;
 }

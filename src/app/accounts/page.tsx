@@ -836,9 +836,5 @@ function AccountsContent() {
 }
 
 export default function AccountsPage() {
-  return (
-    <FinanceProvider>
-      <AccountsContent />
-    </FinanceProvider>
-  );
+  return <AccountsContent />;
 }

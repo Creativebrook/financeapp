@@ -853,9 +853,5 @@ function IncomeContent() {
 }
 
 export default function IncomePage() {
-  return (
-    <FinanceProvider>
-      <IncomeContent />
-    </FinanceProvider>
-  );
+  return <IncomeContent />;
 }

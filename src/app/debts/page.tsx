@@ -976,9 +976,5 @@ function DebtsContent() {
 }
 
 export default function DebtsPage() {
-  return (
-    <FinanceProvider>
-      <DebtsContent />
-    </FinanceProvider>
-  );
+  return <DebtsContent />;
 }

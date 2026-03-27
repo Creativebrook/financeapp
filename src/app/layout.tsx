@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import { SidebarProvider } from "@/context/SidebarContext";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -27,6 +26,8 @@ export const viewport: Viewport = {
   userScalable: false,
 };
 
+import ClientProviders from "@/components/ClientProviders";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -35,9 +36,9 @@ export default function RootLayout({
   return (
     <html lang="pt">
       <body className={`${inter.variable} ${jetbrainsMono.variable}`}>
-        <SidebarProvider>
+        <ClientProviders>
           {children}
-        </SidebarProvider>
+        </ClientProviders>
       </body>
     </html>
   );

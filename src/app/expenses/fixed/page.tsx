@@ -859,9 +859,5 @@ function FixedExpensesContent() {
 }
 
 export default function FixedExpensesPage() {
-  return (
-    <FinanceProvider>
-      <FixedExpensesContent />
-    </FinanceProvider>
-  );
+  return <FixedExpensesContent />;
 }

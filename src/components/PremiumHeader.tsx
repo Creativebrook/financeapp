@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { TrendingUp, Bell, Menu, X, Calendar, ChevronDown } from 'lucide-react';
+import Image from 'next/image';
 import { useSidebar } from '@/context/SidebarContext';
 import { useFinance } from '@/context/FinanceContext';
 
@@ -13,7 +14,7 @@ interface PremiumHeaderProps {
 
 export default function PremiumHeader({ pageName, style }: PremiumHeaderProps) {
   const { isMobileOpen, setIsMobileOpen } = useSidebar();
-  const { selectedMonth, setSelectedMonth, variableExpenses } = useFinance();
+  const { selectedMonth, setSelectedMonth, variableExpenses, user, signOut } = useFinance();
   const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState(false);
   const [isMobileMonthDropdownOpen, setIsMobileMonthDropdownOpen] = useState(false);
 
@@ -109,6 +110,35 @@ export default function PremiumHeader({ pageName, style }: PremiumHeaderProps) {
           >
             <Bell size={16} />
           </button>
+
+          {user && (
+            <div className="flex items-center gap-4 ml-2 pl-4 border-l border-white/[0.05]">
+              <div className="flex flex-col items-end hidden lg:flex">
+                <span className="text-[11px] font-bold text-white tracking-tight leading-none">{user.user_metadata.full_name || user.email}</span>
+                <button 
+                  onClick={signOut}
+                  className="text-[9px] text-slate-500 hover:text-danger-400 transition-colors uppercase tracking-widest mt-1 font-bold"
+                >
+                  Sair
+                </button>
+              </div>
+              <div className="w-9 h-9 rounded-full border border-white/[0.1] overflow-hidden bg-white/[0.03] relative">
+                {user.user_metadata.avatar_url ? (
+                  <Image 
+                    src={user.user_metadata.avatar_url} 
+                    alt="Profile" 
+                    fill
+                    className="object-cover" 
+                    referrerPolicy="no-referrer" 
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs font-bold">
+                    {user.email?.charAt(0).toUpperCase()}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </header>
       
@@ -179,6 +209,31 @@ export default function PremiumHeader({ pageName, style }: PremiumHeaderProps) {
           >
             <Bell size={14} />
           </button>
+
+          {user && (
+            <button 
+              className="mobile-header-btn ml-1"
+              onClick={signOut}
+              title="Sair"
+            >
+              <div className="w-6 h-6 rounded-full border border-white/[0.1] overflow-hidden bg-white/[0.03] relative">
+                {user.user_metadata.avatar_url ? (
+                  <Image 
+                    src={user.user_metadata.avatar_url} 
+                    alt="Profile" 
+                    fill
+                    className="object-cover" 
+                    referrerPolicy="no-referrer" 
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-slate-400 text-[8px] font-bold">
+                    {user.email?.charAt(0).toUpperCase()}
+                  </div>
+                )}
+              </div>
+            </button>
+          )}
+
           <button 
             className="mobile-header-btn" 
             onClick={() => setIsMobileOpen(!isMobileOpen)}

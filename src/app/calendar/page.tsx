@@ -315,9 +315,5 @@ function CalendarContent() {
 }
 
 export default function CalendarPage() {
-  return (
-    <FinanceProvider>
-      <CalendarContent />
-    </FinanceProvider>
-  );
+  return <CalendarContent />;
 }

@@ -10,6 +10,16 @@ const nextConfig: NextConfig = {
   devIndicators: {
     position: 'bottom-right',
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+        port: '',
+        pathname: '/**',
+      },
+    ],
+  },
   webpack: (config, { dev, isServer }) => {
     if (dev && !isServer) {
       // Remove HotModuleReplacementPlugin to disable HMR
