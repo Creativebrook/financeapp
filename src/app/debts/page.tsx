@@ -35,12 +35,13 @@ function DebtsContent() {
   });
 
   const expectedIncomeNoCarry = monthIncomeEntries
-    .filter(i => !i.nome.toLowerCase().includes('valor transportado'))
-    .reduce((sum, i) => sum + i.valor, 0);
+    .filter(i => i && i.nome && !i.nome.toLowerCase().includes('valor transportado'))
+    .reduce((sum, i) => sum + (i?.valor || 0), 0);
 
   const receivedIncomeNoCarry = monthIncomeEntries
-    .filter(i => !i.nome.toLowerCase().includes('valor transportado'))
+    .filter(i => i && i.nome && !i.nome.toLowerCase().includes('valor transportado'))
     .filter(i => {
+      if (!i) return false;
       if (selectedMonth < currentMonthStr) return true;
       if (selectedMonth > currentMonthStr) return false;
       
@@ -52,11 +53,11 @@ function DebtsContent() {
       }
       return false;
     })
-    .reduce((sum, i) => sum + i.valor, 0);
+    .reduce((sum, i) => sum + (i?.valor || 0), 0);
 
   const paidDebtsSoFar = variableExpenses
     .filter(v => v && v.categoria === 'Dívida' && v.data && v.data.startsWith(selectedMonth))
-    .reduce((sum, v) => sum + v.valor, 0);
+    .reduce((sum, v) => sum + (v?.valor || 0), 0);
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;

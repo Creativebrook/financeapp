@@ -359,8 +359,8 @@ function DashboardContent() {
     const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
     const monthName = monthNames[month - 1];
 
-    const initialTotalSaldo = accounts.reduce((sum, acc) => sum + acc.saldo, 0);
-    const totalInvestments = investments.reduce((sum, inv) => sum + inv.valor_atual, 0);
+    const initialTotalSaldo = accounts.reduce((sum, acc) => sum + (acc?.saldo || 0), 0);
+    const totalInvestments = investments.reduce((sum, inv) => sum + (inv?.valor_atual || 0), 0);
     const baseWealth = initialTotalSaldo + totalInvestments;
 
     let cumulativeIncome = 0;
@@ -371,15 +371,16 @@ function DashboardContent() {
       
       const dayIncome = income
         .filter(inc => {
+          if (!inc) return false;
           if (inc.frequencia === 'mensal') return inc.data === day && (!inc.data_inicio || inc.data_inicio <= dateStr);
           if (inc.frequencia === 'unico') return inc.data_especifica === dateStr;
           return false;
         })
-        .reduce((sum, inc) => sum + inc.valor, 0);
+        .reduce((sum, inc) => sum + (inc?.valor || 0), 0);
 
       const dayExpenses = variableExpenses
-        .filter(exp => exp.data === dateStr && exp.categoria !== 'Investimento' && exp.categoria !== 'Transferência')
-        .reduce((sum, exp) => sum + exp.valor, 0);
+        .filter(exp => exp && exp.data === dateStr && exp.categoria !== 'Investimento' && exp.categoria !== 'Transferência')
+        .reduce((sum, exp) => sum + (exp?.valor || 0), 0);
 
       cumulativeIncome += dayIncome;
       cumulativeExpenses += dayExpenses;
@@ -524,13 +525,16 @@ function DashboardContent() {
       .map((debt, index) => {
         // Get real transactions for this credit card (if any in variableExpenses)
         const cardTransactions = variableExpenses
-          .filter(exp => exp.conta === debt.nome)
-          .sort((a, b) => new Date(b.data as string).getTime() - new Date(a.data as string).getTime())
+          .filter(exp => exp && exp.conta === debt.nome)
+          .sort((a, b) => {
+            if (!a?.data || !b?.data) return 0;
+            return new Date(b.data as string).getTime() - new Date(a.data as string).getTime();
+          })
           .slice(0, 4)
           .map(tx => ({
             name: tx.nome,
-            date: new Date(tx.data as string).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' }),
-            amount: '-' + tx.valor.toLocaleString('pt-PT', { minimumFractionDigits: 2 }),
+            date: tx.data ? new Date(tx.data as string).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' }) : '',
+            amount: '-' + (tx.valor || 0).toLocaleString('pt-PT', { minimumFractionDigits: 2 }),
             icon: tx.categoria === 'Supermercado' ? 'ShoppingCart' : 
                   tx.categoria === 'Combustivel' ? 'Fuel' : 
                   tx.categoria === 'Shopping' ? 'ShoppingBag' : 'Banknote',

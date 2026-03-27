@@ -1000,21 +1000,22 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       return sum + realTimeBalance;
     }, 0);
 
-    const totalInvestments = investments.reduce((sum, i) => sum + i.valor_atual, 0);
-    const totalDividends = investments.reduce((sum, i) => sum + (i.dividendos_ganhos || 0), 0);
-    const totalDebts = debts.reduce((sum, d) => sum + d.valor_total, 0);
+    const totalInvestments = investments.reduce((sum, i) => sum + (i?.valor_atual || 0), 0);
+    const totalDividends = investments.reduce((sum, i) => sum + (i?.dividendos_ganhos || 0), 0);
+    const totalDebts = debts.reduce((sum, d) => sum + (d?.valor_total || 0), 0);
     
     const monthlyIncome = income.reduce((sum, i) => {
+      if (!i) return sum;
       if (i.frequencia === 'mensal') {
         if (i.data_inicio && i.data_inicio > `${selectedMonth}-31`) return sum;
         if (i.data > currentDay) return sum;
-        return sum + i.valor;
+        return sum + (i.valor || 0);
       }
       if (i.frequencia === 'unico' && i.data_especifica && i.data_especifica.startsWith(selectedMonth)) {
-        if (i.nome.toLowerCase().includes('transportado')) return sum;
+        if (i.nome?.toLowerCase().includes('transportado')) return sum;
         const day = parseInt(i.data_especifica.split('-')[2]);
         if (day > currentDay) return sum;
-        return sum + i.valor;
+        return sum + (i.valor || 0);
       }
       return sum;
     }, 0);
@@ -1024,29 +1025,32 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     const totalExpenses = variableExpenses
       .filter(exp => exp && exp.data && exp.data.startsWith(selectedMonth))
       .filter(exp => {
+        if (!exp.data) return false;
         const day = parseInt(exp.data.split('-')[2]);
         return day <= currentDay;
       })
       .filter(exp => exp.categoria !== 'Investimento' && exp.categoria !== 'Transferência')
-      .reduce((sum, e) => sum + e.valor, 0);
+      .reduce((sum, e) => sum + (e?.valor || 0), 0);
     
     const totalBase = accounts.reduce((sum, account) => {
+      if (!account) return sum;
       const accIncome = income
-        .filter(i => i.conta === account.nome)
+        .filter(i => i && i.conta === account.nome)
         .filter(i => {
+          if (!i) return false;
           if (i.frequencia === 'mensal') {
             if (i.data_inicio && i.data_inicio > `${selectedMonth}-31`) return false;
             return i.data <= currentDay;
           }
           if (i.frequencia === 'unico' && i.data_especifica && i.data_especifica.startsWith(selectedMonth)) {
-            if (i.nome.toLowerCase().includes('transportado')) return false;
+            if (i.nome?.toLowerCase().includes('transportado')) return false;
             const day = parseInt(i.data_especifica.split('-')[2]);
             return day <= currentDay;
           }
           return false;
         })
-        .reduce((sum, i) => sum + i.valor, 0);
-      return sum + account.saldo + accIncome;
+        .reduce((sum, i) => sum + (i?.valor || 0), 0);
+      return sum + (account.saldo || 0) + accIncome;
     }, 0);
 
     return {
@@ -1057,8 +1061,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       totalDebts,
       monthlyCashflow: monthlyIncome - totalExpenses,
       monthlyIncome,
-      monthlyFixedExpenses: variableExpenses.filter(e => e.data?.startsWith(selectedMonth) && e.categoria === 'Fixa').reduce((sum, e) => sum + e.valor, 0),
-      averageVariableExpenses: variableExpenses.filter(e => e.data?.startsWith(selectedMonth) && e.categoria !== 'Fixa' && e.categoria !== 'Dívida').reduce((sum, e) => sum + e.valor, 0),
+      monthlyFixedExpenses: variableExpenses.filter(e => e && e.data?.startsWith(selectedMonth) && e.categoria === 'Fixa').reduce((sum, e) => sum + (e?.valor || 0), 0),
+      averageVariableExpenses: variableExpenses.filter(e => e && e.data?.startsWith(selectedMonth) && e.categoria !== 'Fixa' && e.categoria !== 'Dívida').reduce((sum, e) => sum + (e?.valor || 0), 0),
       totalDividends,
     };
   };
@@ -1067,10 +1071,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     const platforms: Plataforma[] = ['XTB', 'Trading212', 'Revolut Stocks', 'Revolut Cripto', 'Robo Advisor'];
     
     return platforms.map(plataforma => {
-      const platformInvestments = investments.filter(i => i.plataforma === plataforma);
-      const totalValue = platformInvestments.reduce((sum, i) => sum + i.valor_atual, 0);
-      const totalInvested = platformInvestments.reduce((sum, i) => sum + (i.quantidade * i.preco_medio), 0);
-      const totalDividends = platformInvestments.reduce((sum, i) => sum + (i.dividendos_ganhos || 0), 0);
+      const platformInvestments = investments.filter(i => i && i.plataforma === plataforma);
+      const totalValue = platformInvestments.reduce((sum, i) => sum + (i?.valor_atual || 0), 0);
+      const totalInvested = platformInvestments.reduce((sum, i) => sum + ((i?.quantidade || 0) * (i?.preco_medio || 0)), 0);
+      const totalDividends = platformInvestments.reduce((sum, i) => sum + (i?.dividendos_ganhos || 0), 0);
       const profitability = totalValue - totalInvested;
       const profitabilityPercent = totalInvested > 0 ? (profitability / totalInvested) * 100 : 0;
       

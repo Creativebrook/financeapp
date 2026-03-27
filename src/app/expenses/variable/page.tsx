@@ -48,15 +48,15 @@ function VariableExpensesContent() {
 
   const filteredExpenses = filterCategory === 'all' 
     ? sortedExpenses 
-    : sortedExpenses.filter(e => e.categoria === filterCategory);
+    : sortedExpenses.filter(e => e && e.categoria === filterCategory);
 
-  const totalFilteredExpenses = filteredExpenses.reduce((sum, e) => sum + e.valor, 0);
-  const totalAllExpenses = monthFilteredExpenses.reduce((sum, e) => sum + e.valor, 0);
+  const totalFilteredExpenses = filteredExpenses.reduce((sum, e) => sum + (e?.valor || 0), 0);
+  const totalAllExpenses = monthFilteredExpenses.reduce((sum, e) => sum + (e?.valor || 0), 0);
 
   // Montepio specific calculations
   const montepioExpenses = monthFilteredExpenses
-    .filter(e => e.conta === 'Montepio')
-    .reduce((sum, e) => sum + e.valor, 0);
+    .filter(e => e && e.conta === 'Montepio')
+    .reduce((sum, e) => sum + (e?.valor || 0), 0);
 
   // Use the same logic as Income page for received so far
   const today = new Date();
@@ -70,7 +70,7 @@ function VariableExpensesContent() {
   }
 
   const montepioIncomeReceived = income
-    .filter(inc => inc.conta === 'Montepio' && !inc.nome.toLowerCase().includes('valor transportado')) // Exclude carry over as per user's 1610 example
+    .filter(inc => inc && inc.conta === 'Montepio' && inc.nome && !inc.nome.toLowerCase().includes('valor transportado')) // Exclude carry over as per user's 1610 example
     .filter(i => {
       if (!i) return false;
       if (i.frequencia === 'unico' && i.data_especifica) {
@@ -85,12 +85,12 @@ function VariableExpensesContent() {
       }
       return false;
     })
-    .reduce((sum, i) => sum + i.valor, 0);
+    .reduce((sum, i) => sum + (i?.valor || 0), 0);
 
   const montepioPercentage = montepioIncomeReceived > 0 ? (montepioExpenses / montepioIncomeReceived) * 100 : 0;
 
   // Total available calculations
-  const totalAvailable = accounts.reduce((sum, acc) => sum + acc.saldo, 0);
+  const totalAvailable = accounts.reduce((sum, acc) => sum + (acc?.saldo || 0), 0);
   const totalPercentage = totalAvailable > 0 ? (totalAllExpenses / totalAvailable) * 100 : 0;
 
   // Pagination logic

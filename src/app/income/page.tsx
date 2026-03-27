@@ -68,8 +68,8 @@ function IncomeContent() {
     }
   };
 
-  const totalMonthly = income.filter(i => i).reduce((sum, i) => sum + calculateMonthlyEquivalent(i), 0);
-  const totalAnnual = income.filter(i => i).reduce((sum, i) => sum + calculateAnnualEquivalent(i), 0);
+  const totalMonthly = income.filter(i => i).reduce((sum, i) => sum + (i ? calculateMonthlyEquivalent(i) : 0), 0);
+  const totalAnnual = income.filter(i => i).reduce((sum, i) => sum + (i ? calculateAnnualEquivalent(i) : 0), 0);
 
   // Annual projection data (mock for now based on monthly income)
   const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];

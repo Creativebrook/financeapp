@@ -172,33 +172,34 @@ function InvestmentsContent() {
   
   allPlatforms.sort((a, b) => b.profitabilityPercent - a.profitabilityPercent);
   
-  let filteredInvestments = investments.filter(i => i.plataforma === activePlatform);
+  let filteredInvestments = investments.filter(i => i && i.plataforma === activePlatform);
   
   // Get unique wallets for Trading212
-  const wallets = [...new Set(investments.filter(i => i.plataforma === 'Trading212' && i.carteira).map(i => i.carteira as string))];
+  const wallets = [...new Set(investments.filter(i => i && i.plataforma === 'Trading212' && i.carteira).map(i => i.carteira as string))];
   const defaultWallets = ['Growth Predict', 'NextGen Leaders', 'Top Active Gainers', 'Best Dividend Yield', 'Diversified ETF Core', 'S&P500 Safe Stocks', 'Tech Europe 2030', 'Moonshot Profile'];
   const allWallets: string[] = [...new Set([...defaultWallets, ...wallets, ...customWallets])].sort();
   
   // Filter by wallet if Trading212 is selected and wallet is set
   if (activePlatform === 'Trading212' && activeWallet) {
-    filteredInvestments = filteredInvestments.filter(i => i.carteira === activeWallet);
+    filteredInvestments = filteredInvestments.filter(i => i && i.carteira === activeWallet);
   }
   
   // Sort by profitability percentage descending
   filteredInvestments.sort((a, b) => {
+    if (!a || !b) return 0;
     const profitA = calculateProfitabilityPercent(a.valor_atual, a.preco_medio, a.quantidade);
     const profitB = calculateProfitabilityPercent(b.valor_atual, b.preco_medio, b.quantidade);
     return profitB - profitA;
   });
   
-  const platformTotal = filteredInvestments.reduce((sum, i) => sum + i.valor_atual, 0);
-  const platformInvested = filteredInvestments.reduce((sum, i) => sum + (i.quantidade * i.preco_medio), 0);
-  const platformDividends = filteredInvestments.reduce((sum, i) => sum + (i.dividendos_ganhos || 0), 0);
+  const platformTotal = filteredInvestments.reduce((sum, i) => sum + (i?.valor_atual || 0), 0);
+  const platformInvested = filteredInvestments.reduce((sum, i) => sum + ((i?.quantidade || 0) * (i?.preco_medio || 0)), 0);
+  const platformDividends = filteredInvestments.reduce((sum, i) => sum + (i?.dividendos_ganhos || 0), 0);
   const platformProfitability = platformTotal - platformInvested;
   const platformProfitabilityPercent = platformInvested > 0 ? (platformProfitability / platformInvested) * 100 : 0;
   
   // Calculate total portfolio and percentage for active platform
-  const totalPortfolioValue = platformSummaries.reduce((sum, ps) => sum + ps.totalValue, 0);
+  const totalPortfolioValue = platformSummaries.reduce((sum, ps) => sum + (ps?.totalValue || 0), 0);
   const platformPortfolioPercent = totalPortfolioValue > 0 ? (platformTotal / totalPortfolioValue) * 100 : 0;
 
   // Use deterministic functions directly (no memoization needed - functions are pure)
