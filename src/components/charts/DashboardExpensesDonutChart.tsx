@@ -11,12 +11,13 @@ import { CHART_COLORS } from '@/lib/theme';
 import { formatCurrency, getCategoryColor } from '@/lib/utils';
 
 // Custom tooltip for DESPESAS pie chart
-const ExpensesPieTooltip = ({ active, payload }: any) => {
+const ExpensesPieTooltip = ({ active, payload, total }: any) => {
   if (active && payload && payload.length) {
-    const data = payload[0];
+    const data = payload[0].payload;
     const name = data.name;
     const value = data.value;
     const color = getCategoryColor(name);
+    const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0';
     
     return (
       <div style={{
@@ -31,8 +32,13 @@ const ExpensesPieTooltip = ({ active, payload }: any) => {
           <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
           <span style={{ color: CHART_COLORS.text, fontSize: '12px', fontWeight: 500 }}>{name}</span>
         </div>
-        <div style={{ color: CHART_COLORS.text, fontSize: '13px', fontWeight: 600, paddingLeft: '20px' }}>
-          {formatCurrency(Number(value) || 0)}
+        <div style={{ display: 'flex', flexDirection: 'column', paddingLeft: '20px' }}>
+          <span style={{ color: CHART_COLORS.text, fontSize: '13px', fontWeight: 600 }}>
+            {formatCurrency(Number(value) || 0)}
+          </span>
+          <span style={{ color: CHART_COLORS.textMuted, fontSize: '11px', fontWeight: 400, marginTop: '2px' }}>
+            {percentage}% do total
+          </span>
         </div>
       </div>
     );
@@ -53,6 +59,9 @@ export default function DashboardExpensesDonutChart({
   hoveredIndex, 
   setHoveredIndex,
 }: DashboardExpensesDonutChartProps) {
+  const hoveredData = hoveredIndex !== null ? data[hoveredIndex] : null;
+  const hoveredPercentage = hoveredData && total > 0 ? ((hoveredData.value / total) * 100).toFixed(1) : null;
+
   return (
     <ResponsiveContainer width="100%" height={280}>
       <PieChart>
@@ -85,7 +94,7 @@ export default function DashboardExpensesDonutChart({
             />
           ))}
         </Pie>
-        {/* Central label with total expenses */}
+        {/* Central label with total expenses or hovered percentage */}
         <text
           x="50%"
           y="50%"
@@ -93,10 +102,19 @@ export default function DashboardExpensesDonutChart({
           dominantBaseline="central"
           fill={CHART_COLORS.text}
         >
-          <tspan x="50%" dy="-10" style={{ fontSize: '12px', fontWeight: 400, fill: CHART_COLORS.textMuted }}>Total</tspan>
-          <tspan x="50%" dy="24" style={{ fontSize: '18px', fontWeight: 600 }}>{formatCurrency(total)}</tspan>
+          {hoveredIndex !== null ? (
+            <>
+              <tspan x="50%" dy="-10" style={{ fontSize: '12px', fontWeight: 400, fill: CHART_COLORS.textMuted }}>{hoveredData.name}</tspan>
+              <tspan x="50%" dy="24" style={{ fontSize: '20px', fontWeight: 700, fill: getCategoryColor(hoveredData.name) }}>{hoveredPercentage}%</tspan>
+            </>
+          ) : (
+            <>
+              <tspan x="50%" dy="-10" style={{ fontSize: '12px', fontWeight: 400, fill: CHART_COLORS.textMuted }}>Total</tspan>
+              <tspan x="50%" dy="24" style={{ fontSize: '18px', fontWeight: 600 }}>{formatCurrency(total)}</tspan>
+            </>
+          )}
         </text>
-        <Tooltip content={<ExpensesPieTooltip />} />
+        <Tooltip content={<ExpensesPieTooltip total={total} />} />
       </PieChart>
     </ResponsiveContainer>
   );

@@ -18,6 +18,10 @@ interface IncomeVsExpensesBarChartProps {
 }
 
 export default function IncomeVsExpensesBarChart({ data, isMobile }: IncomeVsExpensesBarChartProps) {
+  const averageIncome = data.length > 0 
+    ? data.reduce((sum, item) => sum + (item.income || 0), 0) / data.length 
+    : 0;
+
   return (
     <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
       <BarChart data={data} barGap={4}>
@@ -33,7 +37,7 @@ export default function IncomeVsExpensesBarChart({ data, isMobile }: IncomeVsExp
         </defs>
         <CartesianGrid strokeDasharray="1 1" stroke={CHART_COLORS.grid} vertical={false} />
         <XAxis dataKey="month" stroke={CHART_COLORS.textMuted} fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => v.split(' ')[0]} />
-        <YAxis stroke={CHART_COLORS.textMuted} fontSize={11} tickFormatter={(v) => `${(v/1000).toFixed(0)}k`} tickLine={false} axisLine={false} width={55} />
+        <YAxis stroke={CHART_COLORS.textMuted} fontSize={11} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : `${v}€`} tickLine={false} axisLine={false} width={55} />
         <Tooltip 
           cursor={false}
           content={({ active, payload, label }) => {
@@ -90,47 +94,48 @@ export default function IncomeVsExpensesBarChart({ data, isMobile }: IncomeVsExp
           maxBarSize={32}
           activeBar={{ fill: '#ef4444', fillOpacity: 0.9 }}
         />
-        <ReferenceLine
-          y={3750}
-          stroke="var(--chart-trend-secondary)"
-          strokeDasharray="10 8"
-          label={(props) => {
-            const { viewBox } = props;
-            const media = 3750;
-            const label = `${media.toLocaleString("pt-PT")} €`;
-            const textWidth = label.length * 5.5;
-            const paddingX = 4;
-            const paddingY = 3;
-            const x = viewBox.x + viewBox.width - 6;
-            const y = viewBox.y;
-            const boxHeight = 10 + paddingY * 2;
+        {averageIncome > 0 && (
+          <ReferenceLine
+            y={averageIncome}
+            stroke="var(--chart-trend-secondary)"
+            strokeDasharray="10 8"
+            label={(props) => {
+              const { viewBox } = props;
+              const label = `${Math.round(averageIncome).toLocaleString("pt-PT")} €`;
+              const textWidth = label.length * 5.5;
+              const paddingX = 4;
+              const paddingY = 3;
+              const x = viewBox.x + viewBox.width - 6;
+              const y = viewBox.y;
+              const boxHeight = 10 + paddingY * 2;
 
-            return (
-              <g>
-                <rect
-                  x={x - textWidth - paddingX * 2}
-                  y={y - boxHeight / 2}
-                  width={textWidth + paddingX * 2}
-                  height={boxHeight}
-                  rx={4}
-                  fill="rgba(0,0,0,0.7)"
-                  stroke="var(--border-strong)"
-                />
-                <text
-                  x={x - paddingX}
-                  y={y}
-                  textAnchor="end"
-                  fill="var(--warning-400)"
-                  fontSize={10}
-                  fontWeight={500}
-                  dominantBaseline="middle"
-                >
-                  {label}
-                </text>
-              </g>
-            );
-          }}
-        />
+              return (
+                <g>
+                  <rect
+                    x={x - textWidth - paddingX * 2}
+                    y={y - boxHeight / 2}
+                    width={textWidth + paddingX * 2}
+                    height={boxHeight}
+                    rx={4}
+                    fill="rgba(0,0,0,0.7)"
+                    stroke="var(--border-strong)"
+                  />
+                  <text
+                    x={x - paddingX}
+                    y={y}
+                    textAnchor="end"
+                    fill="var(--warning-400)"
+                    fontSize={10}
+                    fontWeight={500}
+                    dominantBaseline="middle"
+                  >
+                    {label}
+                  </text>
+                </g>
+              );
+            }}
+          />
+        )}
       </BarChart>
     </ResponsiveContainer>
   );

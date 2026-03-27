@@ -80,47 +80,10 @@ const CHART_COLORS = {
   textMuted: 'var(--text-muted)',
 };
 
-const wealthEvolutionData = [
-  { month: 'Abr 2025', wealth: 42000, wealthPct: 0, sp500: 4100, sp500Pct: 0 },
-  { month: 'Mai 2025', wealth: 44500, wealthPct: 5.95, sp500: 4200, sp500Pct: 2.44 },
-  { month: 'Jun 2025', wealth: 43200, wealthPct: 2.86, sp500: 4450, sp500Pct: 8.54 },
-  { month: 'Jul 2025', wealth: 45800, wealthPct: 9.05, sp500: 4520, sp500Pct: 10.24 },
-  { month: 'Ago 2025', wealth: 47200, wealthPct: 12.38, sp500: 4380, sp500Pct: 6.83 },
-  { month: 'Set 2025', wealth: 46500, wealthPct: 10.71, sp500: 4280, sp500Pct: 4.39 },
-  { month: 'Out 2025', wealth: 48900, wealthPct: 16.43, sp500: 4650, sp500Pct: 13.41 },
-  { month: 'Nov 2025', wealth: 50200, wealthPct: 19.52, sp500: 4780, sp500Pct: 16.59 },
-  { month: 'Dez 2025', wealth: 52800, wealthPct: 25.71, sp500: 4950, sp500Pct: 20.73 },
-  { month: 'Jan 2026', wealth: 51500, wealthPct: 22.62, sp500: 5100, sp500Pct: 24.39 },
-  { month: 'Fev 2026', wealth: 54100, wealthPct: 28.81, sp500: 5250, sp500Pct: 28.05 },
-  { month: 'Mar 2026', wealth: 56800, wealthPct: 35.24, sp500: 5400, sp500Pct: 31.71 },
-];
-
 // Deterministic data generation using seeded values (no Math.random)
 // Using Math.sin with index creates deterministic "pseudo-random" values
 const deterministicSin = (x: number) => Math.abs(Math.sin(x * 9999) * 10000) % 1;
 const deterministicCos = (x: number) => Math.abs(Math.cos(x * 9999) * 10000) % 1;
-
-const incomeVsExpensesData = [
-  { month: 'Abr', income: 4000, expenses: 3200, average: (4000 + 3200) / 2 },
-  { month: 'Mai', income: 4000, expenses: 3400, average: (4000 + 3400) / 2 },
-  { month: 'Jun', income: 4200, expenses: 3100, average: (4200 + 3100) / 2 },
-  { month: 'Jul', income: 4000, expenses: 3500, average: (4000 + 3500) / 2 },
-  { month: 'Ago', income: 4000, expenses: 3300, average: (4000 + 3300) / 2 },
-  { month: 'Set', income: 4000, expenses: 3600, average: (4000 + 3600) / 2 },
-  { month: 'Out', income: 4200, expenses: 3400, average: (4200 + 3400) / 2 },
-  { month: 'Nov', income: 4000, expenses: 3800, average: (4000 + 3800) / 2 },
-  { month: 'Dez', income: 4500, expenses: 4200, average: (4500 + 4200) / 2 },
-  { month: 'Jan', income: 4000, expenses: 3300, average: (4000 + 3300) / 2 },
-  { month: 'Fev', income: 4000, expenses: 3500, average: (4000 + 3500) / 2 },
-  { month: 'Mar', income: 4000, expenses: 3400, average: (4000 + 3400) / 2 },
-];
-
-// Cashflow chart data with Portuguese naming
-const cashflowChartData = incomeVsExpensesData.map(item => ({
-  month: item.month,
-  receitas: item.income,
-  despesas: item.expenses,
-}));
 
 const tooltipStyle = {
   background: 'rgba(15, 17, 24, 0.95)',
@@ -359,12 +322,6 @@ const formatTooltipValue = (value: number | undefined, name: string) => {
 };
 
 function DashboardContent() {
-  const [timeRange, setTimeRange] = useState('this_year');
-  const [cashflowTimeRange, setCashflowTimeRange] = useState('this_month');
-  const [expensesTimeRange, setExpensesTimeRange] = useState('all_time');
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [isCashflowDropdownOpen, setIsCashflowDropdownOpen] = useState(false);
-  const [isExpensesDropdownOpen, setIsExpensesDropdownOpen] = useState(false);
   const [expensesHoveredIndex, setExpensesHoveredIndex] = useState<number | null>(null);
   const [investmentsHoveredIndex, setInvestmentsHoveredIndex] = useState<number | null>(null);
   const { isCollapsed } = useSidebar();
@@ -391,70 +348,90 @@ function DashboardContent() {
   const [activeCardIndex, setActiveCardIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
 
-  // Deterministic daily wealth data using useMemo
+  // Real daily wealth data based on selectedMonth
   const wealthEvolutionDailyData = useMemo(() => {
+    const [year, month] = selectedMonth.split('-').map(Number);
+    const daysInMonth = new Date(year, month, 0).getDate();
     const data = [];
-    const baseWealthStart = 56800;
-    const baseSp500Start = 5400;
     
-    for (let i = 29; i >= 0; i--) {
-      const day = 16 - i; // Fixed base date (Mar 16, 2026)
-      const month = 'Mar';
-      const year = 2026;
-      // Use deterministic math (no random)
-      const wealthValue = baseWealthStart + (29 - i) * 25 + deterministicSin(i) * 150;
-      const sp500Value = baseSp500Start + (29 - i) * 8 + deterministicCos(i) * 50;
-      const wealthPct = ((wealthValue - baseWealthStart) / baseWealthStart) * 100;
-      const sp500Pct = ((sp500Value - baseSp500Start) / baseSp500Start) * 100;
-      data.push({ 
-        day: `${day} ${month} ${year}`,
-        wealth: Math.round(wealthValue),
+    const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    const monthName = monthNames[month - 1];
+
+    const initialTotalSaldo = accounts.reduce((sum, acc) => sum + acc.saldo, 0);
+    const totalInvestments = investments.reduce((sum, inv) => sum + inv.valor_atual, 0);
+    const baseWealth = initialTotalSaldo + totalInvestments;
+
+    let cumulativeIncome = 0;
+    let cumulativeExpenses = 0;
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+      
+      const dayIncome = income
+        .filter(inc => {
+          if (inc.frequencia === 'mensal') return inc.data === day && (!inc.data_inicio || inc.data_inicio <= dateStr);
+          if (inc.frequencia === 'unico') return inc.data_especifica === dateStr;
+          return false;
+        })
+        .reduce((sum, inc) => sum + inc.valor, 0);
+
+      const dayExpenses = variableExpenses
+        .filter(exp => exp.data === dateStr && exp.categoria !== 'Investimento' && exp.categoria !== 'Transferência')
+        .reduce((sum, exp) => sum + exp.valor, 0);
+
+      cumulativeIncome += dayIncome;
+      cumulativeExpenses += dayExpenses;
+
+      const currentWealth = baseWealth + cumulativeIncome - cumulativeExpenses;
+      const wealthPct = ((currentWealth - baseWealth) / baseWealth) * 100;
+
+      // Mock S&P 500 for comparison
+      const sp500Value = 5400 + (day * 5) + deterministicCos(day) * 30;
+      const sp500Pct = ((sp500Value - 5400) / 5400) * 100;
+
+      data.push({
+        day: `${day} ${monthName}`,
+        wealth: Math.round(currentWealth),
         wealthPct: Math.round(wealthPct * 100) / 100,
         sp500: Math.round(sp500Value),
-        sp500Pct: Math.round(sp500Pct * 100) / 100
+        sp500Pct: Math.round(sp500Pct * 100) / 100,
       });
     }
     return data;
-  }, []);
+  }, [selectedMonth, accounts, investments, income, variableExpenses]);
 
-  // Deterministic daily cashflow data using useMemo
-  const cashflowDailyDataThisMonth = useMemo(() => {
+  // Real daily cashflow data based on selectedMonth
+  const cashflowDailyData = useMemo(() => {
+    const [year, month] = selectedMonth.split('-').map(Number);
+    const daysInMonth = new Date(year, month, 0).getDate();
     const data = [];
-    const daysInMonth = 16; // Fixed for deterministic data
     
-    for (let i = 0; i < daysInMonth; i++) {
-      const day = i + 1;
-      const month = 'Mar';
-      // Use deterministic math (no random)
-      const income = 4000 / daysInMonth * (0.9 + deterministicSin(i) * 0.2);
-      const expenses = (3200 + deterministicCos(i) * 300 + deterministicSin(i + 100) * 200) / daysInMonth * (0.8 + deterministicCos(i + 100) * 0.4);
-      data.push({
-        day: `${day} ${month}`,
-        receitas: Math.round(income),
-        despesas: Math.round(expenses),
-      });
-    }
-    return data;
-  }, []);
+    const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    const monthName = monthNames[month - 1];
 
-  const cashflowDailyDataLastMonth = useMemo(() => {
-    const data = [];
-    const daysInMonth = 28; // February
-    
-    for (let i = 0; i < daysInMonth; i++) {
-      const day = i + 1;
-      const month = 'Fev';
-      // Use deterministic math (no random)
-      const income = 4000 / daysInMonth * (0.9 + deterministicSin(i + 50) * 0.2);
-      const expenses = (3200 + deterministicCos(i + 50) * 300 + deterministicSin(i + 150) * 200) / daysInMonth * (0.8 + deterministicCos(i + 150) * 0.4);
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+      
+      const dayIncome = income
+        .filter(inc => {
+          if (inc.frequencia === 'mensal') return inc.data === day && (!inc.data_inicio || inc.data_inicio <= dateStr);
+          if (inc.frequencia === 'unico') return inc.data_especifica === dateStr;
+          return false;
+        })
+        .reduce((sum, inc) => sum + inc.valor, 0);
+
+      const dayExpenses = variableExpenses
+        .filter(exp => exp.data === dateStr && exp.categoria !== 'Investimento' && exp.categoria !== 'Transferência')
+        .reduce((sum, exp) => sum + exp.valor, 0);
+
       data.push({
-        day: `${day} ${month}`,
-        receitas: Math.round(income),
-        despesas: Math.round(expenses),
+        day: `${day} ${monthName}`,
+        receitas: dayIncome,
+        despesas: dayExpenses,
       });
     }
     return data;
-  }, []);
+  }, [selectedMonth, income, variableExpenses]);
 
   // Detect mobile screen
   useEffect(() => {
@@ -463,25 +440,6 @@ function DashboardContent() {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
-
-  // Filter data based on time range - using deterministic date
-  const filterDataByRange = (data: { month: string; wealth: number; wealthPct: number; sp500?: number; sp500Pct?: number }[], range: string) => {
-    const fixedDay = 16; // Fixed for deterministic SSR
-    
-    switch (range) {
-      case 'this_month':
-        return wealthEvolutionDailyData.slice(-fixedDay);
-      case 'last_month':
-        return wealthEvolutionDailyData.slice(-28 - fixedDay, -fixedDay);
-      case 'this_year':
-        return data;
-      case 'last_year':
-        return data.slice(0, 12);
-      case 'all':
-      default:
-        return data;
-    }
-  };
 
   // Calculate real-time balances for accounts (matching the logic in /accounts page)
   const accountBalances = useMemo(() => {
@@ -578,13 +536,12 @@ function DashboardContent() {
           }));
 
         const hardcodedNumbers: Record<string, string> = {
-          "Cartão Montepio": "4111 1111 1111 1111",
-          "Cartão Cetelem": "5500 1234 5678 9010",
+          "Cartão de Crédito Montepio": "4111 1111 1111 1111",
+          "Cartão de Crédito Cetelem": "5500 1234 5678 9010",
           "Cartão Oney": "6011 1111 1111 1117"
         };
 
-        const linkedAccount = accountBalances.find(acc => acc.nome === debt.conta);
-        const cardBalance = linkedAccount ? linkedAccount.realTimeBalance : -debt.valor_total;
+        const cardBalance = debt.valor_total;
 
         return {
           id: debt.id,
@@ -603,96 +560,27 @@ function DashboardContent() {
   const platformSummaries = getPlatformSummaries();
   const expensesByCategory = getExpensesByCategory();
 
-  // Filter data based on selected time range
-  const filteredWealthData = filterDataByRange(wealthEvolutionData, timeRange);
-  
-  // Filter cashflow data based on selected time range (daily data for this/last month)
-  const getFilteredCashflowData = () => {
-    switch (cashflowTimeRange) {
-      case 'this_month':
-        return cashflowDailyDataThisMonth;
-      case 'last_month':
-        return cashflowDailyDataLastMonth;
-      case 'this_year':
-      case 'last_year':
-      case 'all':
-      default:
-        return cashflowChartData;
-    }
-  };
-  const filteredCashflowData = getFilteredCashflowData();
-  
-  // Calculate cashflow based on the selected time range
-  const getCashflowForRange = () => {
-    if (cashflowTimeRange === 'this_month') {
-      return summary.monthlyCashflow;
-    }
-    const data = filteredCashflowData;
-    const totalReceitas = data.reduce((sum, item) => sum + item.receitas, 0);
-    const totalDespesas = data.reduce((sum, item) => sum + item.despesas, 0);
-    return totalReceitas - totalDespesas;
-  };
-  
-  const cashflowValue = getCashflowForRange();
-  
-  // Calculate percentage change based on time range
-  const getCashflowPercentage = () => {
-    if (cashflowTimeRange === 'this_month') {
-      if (summary.monthlyIncome === 0) return 0;
-      return Math.round((summary.monthlyCashflow / summary.monthlyIncome) * 100);
-    }
-    const data = filteredCashflowData;
-    const totalReceitas = data.reduce((sum, item) => sum + item.receitas, 0);
-    if (totalReceitas === 0) return 0;
-    return Math.round((cashflowValue / totalReceitas) * 100);
-  };
-  
-  const cashflowPercentage = getCashflowPercentage();
-  
-  const selectedRangeLabel = TIME_RANGES.find(r => r.value === timeRange)?.label || 'All time';
-  const selectedExpensesRangeLabel = TIME_RANGES.find(r => r.value === expensesTimeRange)?.label || 'All time';
+  // Filter data based on selected month
+  const filteredCashflowData = cashflowDailyData;
+  const mappedIncomeVsExpensesData = cashflowDailyData.map(item => ({
+    month: item.day,
+    income: item.receitas,
+    expenses: item.despesas,
+  }));
+  const cashflowValue = summary.monthlyCashflow;
+  const cashflowPercentage = summary.monthlyIncome > 0 ? Math.round((summary.monthlyCashflow / summary.monthlyIncome) * 100) : 0;
 
-  // Filter variable expenses by time range
+  // Filter variable expenses by selected month
   const getFilteredExpensesByCategory = () => {
     // Use the selected month from context
     const [selectedYear, selectedMonthIdx] = selectedMonth.split('-').map(Number);
     const currentYear = selectedYear;
     const currentMonth = selectedMonthIdx - 1;
     
-    // Determine which time range to use based on data availability
-    let effectiveTimeRange = expensesTimeRange;
-    
-    // If 'this_month' is selected, check if there's data - if not, fallback to 'last_month'
-    if (expensesTimeRange === 'this_month') {
-      const thisMonthData = variableExpenses.filter(expense => {
-        if (!expense || !expense.data) return false;
-        const expenseDate = new Date(expense.data);
-        return expenseDate.getFullYear() === currentYear && expenseDate.getMonth() === currentMonth;
-      });
-      if (thisMonthData.length === 0) {
-        effectiveTimeRange = 'last_month';
-      }
-    }
-    
     const filtered = variableExpenses.filter(expense => {
       if (!expense || !expense.data) return false;
       const expenseDate = new Date(expense.data);
-      
-      switch (effectiveTimeRange) {
-        case 'this_month':
-          return expenseDate.getFullYear() === currentYear && expenseDate.getMonth() === currentMonth;
-        case 'last_month':
-          const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
-          const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
-          return expenseDate.getFullYear() === lastMonthYear && expenseDate.getMonth() === lastMonth;
-        case 'this_year':
-          return expenseDate.getFullYear() === currentYear;
-        case 'last_year':
-          return expenseDate.getFullYear() === currentYear - 1;
-        case 'all_time':
-        default:
-          return true;
-      }
+      return expenseDate.getFullYear() === currentYear && expenseDate.getMonth() === currentMonth;
     });
     
     const categories: Record<string, number> = {};
@@ -844,87 +732,13 @@ function DashboardContent() {
                   border: '1px solid var(--card-border)'
                 }}
               >
-                {/* Header with Title and Dropdown */}
+                {/* Header with Title */}
                 <div className="flex justify-between items-start mb-6">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-full bg-white/[0.03] border border-white/[0.05] flex items-center justify-center">
                       <Wallet size={16} className="text-slate-600" />
                     </div>
                     <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">CASHFLOW</p>
-                  </div>
-                  {/* Time Range Dropdown */}
-                  <div style={{ position: 'relative' }}>
-                    <button
-                      onClick={() => setIsCashflowDropdownOpen(!isCashflowDropdownOpen)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        padding: '6px 12px',
-                        background: 'rgba(255, 255, 255, 0.04)',
-                        border: '1px solid rgba(255, 255, 255, 0.08)',
-                        borderRadius: '8px',
-                        color: CHART_COLORS.text,
-                        fontSize: '0.8125rem',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                      }}
-                    >
-                      {TIME_RANGES.find(r => r.value === cashflowTimeRange)?.label || 'This month'}
-                      <ChevronDown size={14} />
-                    </button>
-                    {isCashflowDropdownOpen && (
-                      <div
-                        style={{
-                          position: 'absolute',
-                          top: '100%',
-                          right: 0,
-                          marginTop: '4px',
-                          background: 'rgba(15, 17, 24, 0.95)',
-                          backdropFilter: 'blur(12px)',
-                          border: '1px solid rgba(255, 255, 255, 0.08)',
-                          borderRadius: '10px',
-                          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
-                          overflow: 'hidden',
-                          zIndex: 50,
-                          minWidth: '160px',
-                        }}
-                      >
-                        {TIME_RANGES.map((range) => (
-                          <button
-                            key={range.value}
-                            onClick={() => {
-                              setCashflowTimeRange(range.value);
-                              setIsCashflowDropdownOpen(false);
-                            }}
-                            style={{
-                              display: 'block',
-                              width: '100%',
-                              padding: '10px 14px',
-                              background: cashflowTimeRange === range.value ? 'rgba(91, 95, 199, 0.12)' : 'transparent',
-                              border: 'none',
-                              color: cashflowTimeRange === range.value ? '#8186d4' : CHART_COLORS.text,
-                              fontSize: '0.8125rem',
-                              textAlign: 'left',
-                              cursor: 'pointer',
-                              transition: 'all 0.15s ease',
-                            }}
-                            onMouseEnter={(e) => {
-                              if (cashflowTimeRange !== range.value) {
-                                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              if (cashflowTimeRange !== range.value) {
-                                e.currentTarget.style.background = 'transparent';
-                              }
-                            }}
-                          >
-                            {range.label}
-                          </button>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 </div>
 
@@ -953,7 +767,7 @@ function DashboardContent() {
 
                 {/* Gráfico Linear Customizado */}
                 <div className="flex-1 min-h-[200px]" style={{ minWidth: 0, minHeight: 0 }}>
-                  <CashflowAnalysisChart data={filteredCashflowData as any[]} timeRange={cashflowTimeRange} />
+                  <CashflowAnalysisChart data={filteredCashflowData as any[]} timeRange="this_month" />
                 </div>
               </section>
             </div>
@@ -1229,85 +1043,9 @@ function DashboardContent() {
                 </div>
                 <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">EVOLUÇÃO</p>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {/* Time Range Dropdown */}
-                <div style={{ position: 'relative' }}>
-                  <button
-                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      padding: '6px 12px',
-                      background: 'rgba(255, 255, 255, 0.04)',
-                      border: '1px solid rgba(255, 255, 255, 0.08)',
-                      borderRadius: '8px',
-                      color: CHART_COLORS.text,
-                      fontSize: '0.8125rem',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                    }}
-                  >
-                    {selectedRangeLabel}
-                    <ChevronDown size={14} />
-                  </button>
-                  {isDropdownOpen && (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: '100%',
-                        right: 0,
-                        marginTop: '4px',
-                        background: 'rgba(15, 17, 24, 0.95)',
-                        backdropFilter: 'blur(12px)',
-                        border: '1px solid rgba(255, 255, 255, 0.08)',
-                        borderRadius: '10px',
-                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
-                        overflow: 'hidden',
-                        zIndex: 50,
-                        minWidth: '160px',
-                      }}
-                    >
-                      {TIME_RANGES.map((range) => (
-                        <button
-                          key={range.value}
-                          onClick={() => {
-                            setTimeRange(range.value);
-                            setIsDropdownOpen(false);
-                          }}
-                          style={{
-                            display: 'block',
-                            width: '100%',
-                            padding: '10px 14px',
-                            background: timeRange === range.value ? 'rgba(91, 95, 199, 0.12)' : 'transparent',
-                            border: 'none',
-                            color: timeRange === range.value ? '#8186d4' : CHART_COLORS.text,
-                            fontSize: '0.8125rem',
-                            textAlign: 'left',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease',
-                          }}
-                          onMouseEnter={(e) => {
-                            if (timeRange !== range.value) {
-                              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
-                            }
-                          }}
-                          onMouseLeave={(e) => {
-                            if (timeRange !== range.value) {
-                              e.currentTarget.style.background = 'transparent';
-                            }
-                          }}
-                        >
-                          {range.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
             </div>
-            <div className="chart-container" style={{ minWidth: 0, minHeight: 0 }}>
-              <WealthEvolutionChart data={filteredWealthData as any[]} timeRange={timeRange} tooltipStyle={tooltipStyle} />
+            <div className="flex-1 min-h-[300px]" style={{ minWidth: 0, minHeight: 0 }}>
+              <WealthEvolutionChart data={wealthEvolutionDailyData as any[]} timeRange="this_month" tooltipStyle={tooltipStyle} />
             </div>
           </div>
         </div>
@@ -1336,7 +1074,7 @@ function DashboardContent() {
               </div>
             </div>
             <div className="chart-container" style={{ minWidth: 0, minHeight: 0 }}>
-              <IncomeVsExpensesBarChart data={incomeVsExpensesData} isMobile={isMobile} />
+              <IncomeVsExpensesBarChart data={mappedIncomeVsExpensesData} isMobile={isMobile} />
             </div>
           </div>
 
@@ -1348,79 +1086,6 @@ function DashboardContent() {
                   <ShoppingBag size={16} className="text-slate-600" />
                 </div>
                 <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">DESPESAS</p>
-              </div>
-              <div style={{ position: 'relative' }}>
-                <button
-                  onClick={() => setIsExpensesDropdownOpen(!isExpensesDropdownOpen)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '6px 12px',
-                    background: 'rgba(255, 255, 255, 0.04)',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    borderRadius: '8px',
-                    color: CHART_COLORS.text,
-                    fontSize: '0.75rem',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  {selectedExpensesRangeLabel}
-                  <ChevronDown size={14} />
-                </button>
-                {isExpensesDropdownOpen && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: '100%',
-                      right: 0,
-                      marginTop: '4px',
-                      background: 'rgba(15, 17, 24, 0.95)',
-                      backdropFilter: 'blur(12px)',
-                      border: '1px solid rgba(255, 255, 255, 0.08)',
-                      borderRadius: '10px',
-                      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
-                      overflow: 'hidden',
-                      zIndex: 50,
-                      minWidth: '160px',
-                    }}
-                  >
-                    {TIME_RANGES.map((range) => (
-                      <button
-                        key={range.value}
-                        onClick={() => {
-                          setExpensesTimeRange(range.value);
-                          setIsExpensesDropdownOpen(false);
-                        }}
-                        style={{
-                          display: 'block',
-                          width: '100%',
-                          padding: '10px 14px',
-                          background: expensesTimeRange === range.value ? 'rgba(91, 95, 199, 0.12)' : 'transparent',
-                          border: 'none',
-                          color: expensesTimeRange === range.value ? '#8186d4' : CHART_COLORS.text,
-                          fontSize: '0.8125rem',
-                          textAlign: 'left',
-                          cursor: 'pointer',
-                          transition: 'all 0.15s ease',
-                        }}
-                        onMouseEnter={(e) => {
-                          if (expensesTimeRange !== range.value) {
-                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (expensesTimeRange !== range.value) {
-                            e.currentTarget.style.background = 'transparent';
-                          }
-                        }}
-                      >
-                        {range.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
               </div>
             </div>
             {/* Flex layout: chart left, legend right on desktop; stacked on mobile */}

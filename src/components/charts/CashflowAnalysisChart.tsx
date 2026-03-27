@@ -35,7 +35,7 @@ export default function CashflowAnalysisChart({ data, timeRange }: CashflowAnaly
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} vertical={false} />
         <XAxis 
-          dataKey={timeRange === 'this_month' || timeRange === 'last_month' ? 'day' : 'month'} 
+          dataKey="day" 
           axisLine={false} 
           tickLine={false} 
           tick={{ fill: CHART_COLORS.textMuted, fontSize: 10 }}
