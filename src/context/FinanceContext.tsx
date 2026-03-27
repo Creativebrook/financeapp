@@ -533,6 +533,8 @@ interface FinanceContextType {
   loading: boolean;
   dataLoading: boolean;
   signInWithGoogle: () => Promise<void>;
+  signInWithEmail: (email: string, password: string) => Promise<{ error: any }>;
+  signUpWithEmail: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   seedDatabase: () => Promise<void>;
 }
@@ -544,14 +546,28 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [authLoading, setAuthLoading] = useState(true);
   const [dataLoading, setDataLoading] = useState(false);
   
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [investments, setInvestments] = useState<Investment[]>([]);
-  const [debts, setDebts] = useState<Debt[]>([]);
-  const [fixedExpenses, setFixedExpenses] = useState<FixedExpense[]>([]);
-  const [variableExpenses, setVariableExpenses] = useState<VariableExpense[]>([]);
-  const [income, setIncome] = useState<Income[]>([]);
-  const [customWallets, setCustomWallets] = useState<string[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>(() => getInitialData().accounts);
+  const [investments, setInvestments] = useState<Investment[]>(() => getInitialData().investments);
+  const [debts, setDebts] = useState<Debt[]>(() => getInitialData().debts);
+  const [fixedExpenses, setFixedExpenses] = useState<FixedExpense[]>(() => getInitialData().fixedExpenses);
+  const [variableExpenses, setVariableExpenses] = useState<VariableExpense[]>(() => getInitialData().variableExpenses);
+  const [income, setIncome] = useState<Income[]>(() => getInitialData().income);
+  const [customWallets, setCustomWallets] = useState<string[]>(() => getInitialData().customWallets);
   const [selectedMonth, setSelectedMonth] = useState('2026-03');
+
+  // Save to localStorage whenever data changes
+  useEffect(() => {
+    const data = {
+      accounts,
+      investments,
+      debts,
+      fixedExpenses,
+      variableExpenses,
+      income,
+      customWallets
+    };
+    localStorage.setItem('financeflow_data', JSON.stringify(data));
+  }, [accounts, investments, debts, fixedExpenses, variableExpenses, income, customWallets]);
 
   // Auth listener
   useEffect(() => {
@@ -626,7 +642,24 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    console.log('FinanceProvider: Starting fetchData. Mode:', user ? `User ${user.email}` : 'Simple Auth');
+    console.log('FinanceProvider: Starting fetchData. Mode:', user ? `User ${user.email}` : 'Simple Auth (default-user)');
+    
+    // If not logged in and not simple auth, clear data
+    if (!user && !isSimpleAuth) {
+      console.log('FinanceProvider: No user and no simple auth, clearing data');
+      setAccounts([]);
+      setInvestments([]);
+      setDebts([]);
+      setFixedExpenses([]);
+      setVariableExpenses([]);
+      setIncome([]);
+      return;
+    }
+
+    // If simple auth but we already have data in state, and we are not explicitly refreshing,
+    // we might want to skip fetching to avoid overwriting with empty Supabase results (RLS issues)
+    // However, for now let's try to fetch but be careful with the results.
+
     setDataLoading(true);
 
     // Safety timeout for data loading
@@ -660,29 +693,20 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       if (vrbError) console.error('FinanceProvider: Error fetching variable_expenses:', vrbError);
       if (incError) console.error('FinanceProvider: Error fetching income:', incError);
 
-      if (accs) {
-        console.log('FinanceProvider: Fetched accounts:', accs.length);
-        setAccounts(accs);
-      }
-      if (invs) {
-        console.log('FinanceProvider: Fetched investments:', invs.length);
-        setInvestments(invs);
-      }
-      if (dbt) {
-        console.log('FinanceProvider: Fetched debts:', dbt.length);
-        setDebts(dbt);
-      }
-      if (fxd) {
-        console.log('FinanceProvider: Fetched fixed expenses:', fxd.length);
-        setFixedExpenses(fxd);
-      }
-      if (vrb) {
-        console.log('FinanceProvider: Fetched variable expenses:', vrb.length);
-        setVariableExpenses(vrb);
-      }
-      if (inc) {
-        console.log('FinanceProvider: Fetched income:', inc.length);
-        setIncome(inc);
+      // Only update state if we got data OR if we are logged in (where Supabase is the source of truth)
+      // If in simple auth and Supabase returns nothing, we keep our local data
+      const hasData = (accs && accs.length > 0) || (invs && invs.length > 0) || (dbt && dbt.length > 0);
+      
+      if (user || hasData) {
+        if (accs) setAccounts(accs);
+        if (invs) setInvestments(invs);
+        if (dbt) setDebts(dbt);
+        if (fxd) setFixedExpenses(fxd);
+        if (vrb) setVariableExpenses(vrb);
+        if (inc) setIncome(inc);
+        console.log('FinanceProvider: State updated from Supabase');
+      } else {
+        console.log('FinanceProvider: Supabase returned no data, keeping local state');
       }
       
       console.log('FinanceProvider: fetchData complete');
@@ -726,6 +750,37 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     if (error) console.error('Error signing in with Google:', error);
   };
 
+  const signInWithEmail = async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    if (error) {
+      console.error('Error signing in with email:', error);
+      return { error };
+    }
+    setUser(data.user);
+    localStorage.setItem("finance_app_auth", "true");
+    return { error: null };
+  };
+
+  const signUpWithEmail = async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+    if (error) {
+      console.error('Error signing up with email:', error);
+      return { error };
+    }
+    setUser(data.user);
+    // Note: User might need to confirm email depending on Supabase settings
+    if (data.user) {
+      localStorage.setItem("finance_app_auth", "true");
+    }
+    return { error: null };
+  };
+
   const signOut = async () => {
     localStorage.removeItem("finance_app_auth");
     await supabase.auth.signOut();
@@ -734,12 +789,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   const seedDatabase = async () => {
     const isSimpleAuth = typeof window !== 'undefined' && localStorage.getItem("finance_app_auth") === "true";
-    if (!user && !isSimpleAuth) return;
+    if (!user && !isSimpleAuth) {
+      console.error('FinanceProvider: Cannot seed database - not authenticated');
+      return;
+    }
     
     const userId = user?.id || 'default-user';
     setDataLoading(true);
     try {
-      console.log('Iniciando povoamento das tabelas...');
+      console.log('FinanceProvider: Iniciando povoamento das tabelas para o utilizador:', userId);
 
       // 1. Accounts
       const accountsToInsert = initialAccounts.map(({ id, ...rest }) => ({
@@ -747,7 +805,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         user_id: userId,
         data_atualizacao: new Date().toISOString()
       }));
-      await supabase.from('accounts').insert(accountsToInsert);
+      const { error: accError } = await supabase.from('accounts').insert(accountsToInsert);
+      if (accError) throw new Error(`Erro ao inserir contas: ${accError.message}`);
 
       // 2. Investments
       const investmentsToInsert = initialInvestments.map(({ id, ...rest }) => ({
@@ -756,40 +815,56 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         valor_atual: rest.quantidade * rest.preco_atual,
         data_atualizacao: new Date().toISOString()
       }));
-      await supabase.from('investments').insert(investmentsToInsert);
+      const { error: invError } = await supabase.from('investments').insert(investmentsToInsert);
+      if (invError) throw new Error(`Erro ao inserir investimentos: ${invError.message}`);
 
       // 3. Debts
       const debtsToInsert = initialDebts.map(({ id, ...rest }) => ({
         ...rest,
         user_id: userId
       }));
-      await supabase.from('debts').insert(debtsToInsert);
+      const { error: debtError } = await supabase.from('debts').insert(debtsToInsert);
+      if (debtError) throw new Error(`Erro ao inserir dívidas: ${debtError.message}`);
 
       // 4. Fixed Expenses
       const fixedToInsert = initialFixedExpenses.map(({ id, ...rest }) => ({
         ...rest,
         user_id: userId
       }));
-      await supabase.from('fixed_expenses').insert(fixedToInsert);
+      const { error: fixedError } = await supabase.from('fixed_expenses').insert(fixedToInsert);
+      if (fixedError) throw new Error(`Erro ao inserir despesas fixas: ${fixedError.message}`);
 
       // 5. Variable Expenses
       const variableToInsert = initialVariableExpenses.map(({ id, ...rest }) => ({
         ...rest,
         user_id: userId
       }));
-      await supabase.from('variable_expenses').insert(variableToInsert);
+      const { error: varError } = await supabase.from('variable_expenses').insert(variableToInsert);
+      if (varError) throw new Error(`Erro ao inserir despesas variáveis: ${varError.message}`);
 
       // 6. Income
       const incomeToInsert = initialIncome.map(({ id, ...rest }) => ({
         ...rest,
         user_id: userId
       }));
-      await supabase.from('income').insert(incomeToInsert);
+      const { error: incError } = await supabase.from('income').insert(incomeToInsert);
+      if (incError) throw new Error(`Erro ao inserir rendimentos: ${incError.message}`);
 
-      console.log('Dados povoados com sucesso!');
+      console.log('FinanceProvider: Dados povoados com sucesso!');
+      
+      // Manually update state to ensure UI reflects data immediately, 
+      // even if Supabase fetch takes time or has RLS issues
+      setAccounts(initialAccounts as Account[]);
+      setInvestments(initialInvestments as Investment[]);
+      setDebts(initialDebts as Debt[]);
+      setFixedExpenses(initialFixedExpenses as FixedExpense[]);
+      setVariableExpenses(initialVariableExpenses as VariableExpense[]);
+      setIncome(initialIncome as Income[]);
+
       await fetchData();
-    } catch (error) {
-      console.error('Erro ao povoar dados:', error);
+    } catch (error: any) {
+      console.error('FinanceProvider: Erro ao povoar dados:', error);
+      alert(`Erro ao povoar dados: ${error.message || 'Erro desconhecido'}`);
     } finally {
       setDataLoading(false);
     }
@@ -1204,6 +1279,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       loading: authLoading,
       dataLoading,
       signInWithGoogle,
+      signInWithEmail,
+      signUpWithEmail,
       signOut,
       seedDatabase,
     }}>

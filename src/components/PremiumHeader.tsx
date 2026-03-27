@@ -18,6 +18,9 @@ export default function PremiumHeader({ pageName, style }: PremiumHeaderProps) {
   const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState(false);
   const [isMobileMonthDropdownOpen, setIsMobileMonthDropdownOpen] = useState(false);
 
+  const isSimpleAuth = typeof window !== 'undefined' && localStorage.getItem("finance_app_auth") === "true";
+  const isUserLoggedIn = !!user || isSimpleAuth;
+
   const availableMonths = useMemo(() => {
     const months = new Set<string>();
     variableExpenses.forEach(e => {
@@ -111,10 +114,12 @@ export default function PremiumHeader({ pageName, style }: PremiumHeaderProps) {
             <Bell size={16} />
           </button>
 
-          {user && (
+          {isUserLoggedIn && (
             <div className="flex items-center gap-4 ml-2 pl-4 border-l border-white/[0.05]">
               <div className="flex flex-col items-end hidden lg:flex">
-                <span className="text-[11px] font-bold text-white tracking-tight leading-none">{user.user_metadata.full_name || user.email}</span>
+                <span className="text-[11px] font-bold text-white tracking-tight leading-none">
+                  {user ? (user.user_metadata.full_name || user.email) : 'Acesso Local'}
+                </span>
                 <button 
                   onClick={signOut}
                   className="text-[9px] text-slate-500 hover:text-danger-400 transition-colors uppercase tracking-widest mt-1 font-bold"
@@ -123,7 +128,7 @@ export default function PremiumHeader({ pageName, style }: PremiumHeaderProps) {
                 </button>
               </div>
               <div className="w-9 h-9 rounded-full border border-white/[0.1] overflow-hidden bg-white/[0.03] relative">
-                {user.user_metadata.avatar_url ? (
+                {user?.user_metadata.avatar_url ? (
                   <Image 
                     src={user.user_metadata.avatar_url} 
                     alt="Profile" 
@@ -133,7 +138,7 @@ export default function PremiumHeader({ pageName, style }: PremiumHeaderProps) {
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs font-bold">
-                    {user.email?.charAt(0).toUpperCase()}
+                    {user ? user.email?.charAt(0).toUpperCase() : 'L'}
                   </div>
                 )}
               </div>
@@ -210,14 +215,14 @@ export default function PremiumHeader({ pageName, style }: PremiumHeaderProps) {
             <Bell size={14} />
           </button>
 
-          {user && (
+          {isUserLoggedIn && (
             <button 
               className="mobile-header-btn ml-1"
               onClick={signOut}
               title="Sair"
             >
               <div className="w-6 h-6 rounded-full border border-white/[0.1] overflow-hidden bg-white/[0.03] relative">
-                {user.user_metadata.avatar_url ? (
+                {user?.user_metadata.avatar_url ? (
                   <Image 
                     src={user.user_metadata.avatar_url} 
                     alt="Profile" 
@@ -227,7 +232,7 @@ export default function PremiumHeader({ pageName, style }: PremiumHeaderProps) {
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-slate-400 text-[8px] font-bold">
-                    {user.email?.charAt(0).toUpperCase()}
+                    {user ? user.email?.charAt(0).toUpperCase() : 'L'}
                   </div>
                 )}
               </div>
