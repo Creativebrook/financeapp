@@ -49,7 +49,7 @@ export default function WealthEvolutionChart({ data, timeRange, tooltipStyle }: 
           tickFormatter={(v) => `${v}%`} 
           tickLine={false} 
           axisLine={false}
-          domain={[-10, 'auto']}
+          domain={['auto', 'auto']}
         />
         <Tooltip 
           contentStyle={tooltipStyle}

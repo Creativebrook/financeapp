@@ -1044,7 +1044,7 @@ function DashboardContent() {
                 <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">EVOLUÇÃO</p>
               </div>
             </div>
-            <div className="flex-1 min-h-[300px]" style={{ minWidth: 0, minHeight: 0 }}>
+            <div className="chart-container" style={{ minWidth: 0 }}>
               <WealthEvolutionChart data={wealthEvolutionDailyData as any[]} timeRange="this_month" tooltipStyle={tooltipStyle} />
             </div>
           </div>
