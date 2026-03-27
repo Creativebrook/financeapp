@@ -555,32 +555,59 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   // Auth listener
   useEffect(() => {
+    let mounted = true;
+    console.log('FinanceProvider: Initializing auth listener');
+
     // Check active session immediately
     const checkSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        setUser(session?.user ?? null);
+        console.log('FinanceProvider: Checking session...');
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) throw error;
+        
+        if (mounted) {
+          console.log('FinanceProvider: Session check complete', session?.user?.email);
+          setUser(session?.user ?? null);
+          setAuthLoading(false);
+        }
       } catch (error) {
-        console.error('Error checking session:', error);
-      } finally {
-        setAuthLoading(false);
+        console.error('FinanceProvider: Error checking session:', error);
+        if (mounted) {
+          setAuthLoading(false);
+        }
       }
     };
 
     checkSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('Auth state changed:', event, session?.user?.email);
-      setUser(session?.user ?? null);
-      setAuthLoading(false);
+      console.log('FinanceProvider: Auth state changed:', event, session?.user?.email);
+      if (mounted) {
+        setUser(session?.user ?? null);
+        setAuthLoading(false);
+      }
     });
 
-    return () => subscription.unsubscribe();
+    // Safety timeout: ensure loading state is cleared after 8 seconds
+    // This prevents the app from being stuck on the loading screen if Supabase hangs
+    const timeout = setTimeout(() => {
+      if (mounted) {
+        console.warn('FinanceProvider: Auth initialization timed out, forcing loading to false');
+        setAuthLoading(false);
+      }
+    }, 8000);
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
 
   // Fetch data from Supabase
   const fetchData = useCallback(async () => {
     if (!user) {
+      console.log('FinanceProvider: No user, skipping fetchData');
       setAccounts([]);
       setInvestments([]);
       setDebts([]);
@@ -590,15 +617,24 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    console.log('FinanceProvider: Starting fetchData for user:', user.email);
     setDataLoading(true);
+
+    // Safety timeout for data loading
+    const dataTimeout = setTimeout(() => {
+      console.warn('FinanceProvider: fetchData timed out, forcing dataLoading to false');
+      setDataLoading(false);
+    }, 15000);
+
     try {
+      console.log('FinanceProvider: Fetching all tables from Supabase...');
       const [
-        { data: accs },
-        { data: invs },
-        { data: dbt },
-        { data: fxd },
-        { data: vrb },
-        { data: inc }
+        { data: accs, error: accsError },
+        { data: invs, error: invsError },
+        { data: dbt, error: dbtError },
+        { data: fxd, error: fxdError },
+        { data: vrb, error: vrbError },
+        { data: inc, error: incError }
       ] = await Promise.all([
         supabase.from('accounts').select('*').order('nome'),
         supabase.from('investments').select('*').order('nome'),
@@ -608,15 +644,43 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         supabase.from('income').select('*').order('data', { ascending: false })
       ]);
 
-      if (accs) setAccounts(accs);
-      if (invs) setInvestments(invs);
-      if (dbt) setDebts(dbt);
-      if (fxd) setFixedExpenses(fxd);
-      if (vrb) setVariableExpenses(vrb);
-      if (inc) setIncome(inc);
+      if (accsError) console.error('FinanceProvider: Error fetching accounts:', accsError);
+      if (invsError) console.error('FinanceProvider: Error fetching investments:', invsError);
+      if (dbtError) console.error('FinanceProvider: Error fetching debts:', dbtError);
+      if (fxdError) console.error('FinanceProvider: Error fetching fixed_expenses:', fxdError);
+      if (vrbError) console.error('FinanceProvider: Error fetching variable_expenses:', vrbError);
+      if (incError) console.error('FinanceProvider: Error fetching income:', incError);
+
+      if (accs) {
+        console.log('FinanceProvider: Fetched accounts:', accs.length);
+        setAccounts(accs);
+      }
+      if (invs) {
+        console.log('FinanceProvider: Fetched investments:', invs.length);
+        setInvestments(invs);
+      }
+      if (dbt) {
+        console.log('FinanceProvider: Fetched debts:', dbt.length);
+        setDebts(dbt);
+      }
+      if (fxd) {
+        console.log('FinanceProvider: Fetched fixed expenses:', fxd.length);
+        setFixedExpenses(fxd);
+      }
+      if (vrb) {
+        console.log('FinanceProvider: Fetched variable expenses:', vrb.length);
+        setVariableExpenses(vrb);
+      }
+      if (inc) {
+        console.log('FinanceProvider: Fetched income:', inc.length);
+        setIncome(inc);
+      }
+      
+      console.log('FinanceProvider: fetchData complete');
     } catch (error) {
-      console.error('Error fetching data from Supabase:', error);
+      console.error('FinanceProvider: Error fetching data from Supabase:', error);
     } finally {
+      clearTimeout(dataTimeout);
       setDataLoading(false);
     }
   }, [user]);
