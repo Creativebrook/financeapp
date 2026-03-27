@@ -338,7 +338,9 @@ function DashboardContent() {
     getExpensesByCategory,
     refreshPrices,
     transferFunds,
-    selectedMonth
+    selectedMonth,
+    seedDatabase,
+    dataLoading
   } = useFinance();
   
   const [refreshing, setRefreshing] = useState(false);
@@ -559,6 +561,46 @@ function DashboardContent() {
   const summary = getDashboardSummary();
   const platformSummaries = getPlatformSummaries();
   const expensesByCategory = getExpensesByCategory();
+
+  if (dataLoading) {
+    return (
+      <div className="app-container">
+        <Sidebar />
+        <main className={`main-content ${isCollapsed ? 'sidebar-collapsed' : ''}`}>
+          <PremiumHeader />
+          <div className="flex items-center justify-center h-[60vh]">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#6f6af8]"></div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (accounts.length === 0) {
+    return (
+      <div className="app-container">
+        <Sidebar />
+        <main className={`main-content ${isCollapsed ? 'sidebar-collapsed' : ''}`}>
+          <PremiumHeader />
+          <div className="flex flex-col items-center justify-center p-12 bg-[#1a1c24] rounded-2xl border border-white/5 text-center mt-20 mx-8">
+            <div className="w-20 h-20 bg-[#6f6af8]/10 rounded-full flex items-center justify-center mb-6">
+              <Wallet size={40} className="text-[#6f6af8]" />
+            </div>
+            <h2 className="text-3xl font-bold text-white mb-4">A sua base de dados está vazia</h2>
+            <p className="text-slate-400 mb-10 max-w-lg text-lg">
+              Parece que ainda não tem dados no Supabase. Deseja popular a sua conta com os dados de exemplo da aplicação (Montepio, Revolut, XTB, etc.)?
+            </p>
+            <button 
+              onClick={seedDatabase}
+              className="px-10 py-4 bg-[#6f6af8] hover:bg-[#5b56e0] text-white font-bold rounded-xl transition-all shadow-xl shadow-[#6f6af8]/20 text-lg"
+            >
+              Sim, Popular com Dados de Exemplo
+            </button>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   // Filter data based on selected month
   const filteredCashflowData = cashflowDailyData;

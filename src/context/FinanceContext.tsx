@@ -531,15 +531,18 @@ interface FinanceContextType {
   setSelectedMonth: (month: string) => void;
   user: User | null;
   loading: boolean;
+  dataLoading: boolean;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
+  seedDatabase: () => Promise<void>;
 }
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
 
 export function FinanceProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(false);
   
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [investments, setInvestments] = useState<Investment[]>([]);
@@ -552,9 +555,24 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   // Auth listener
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    // Check active session immediately
+    const checkSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        setUser(session?.user ?? null);
+      } catch (error) {
+        console.error('Error checking session:', error);
+      } finally {
+        setAuthLoading(false);
+      }
+    };
+
+    checkSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state changed:', event, session?.user?.email);
       setUser(session?.user ?? null);
-      setLoading(false);
+      setAuthLoading(false);
     });
 
     return () => subscription.unsubscribe();
@@ -563,7 +581,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   // Fetch data from Supabase
   const fetchData = useCallback(async () => {
     if (!user) {
-      // If no user, we could load mock data or just clear
       setAccounts([]);
       setInvestments([]);
       setDebts([]);
@@ -573,7 +590,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    setLoading(true);
+    setDataLoading(true);
     try {
       const [
         { data: accs },
@@ -600,7 +617,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Error fetching data from Supabase:', error);
     } finally {
-      setLoading(false);
+      setDataLoading(false);
     }
   }, [user]);
 
@@ -627,16 +644,77 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   }, [user, fetchData]);
 
   const signInWithGoogle = async () => {
-    await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.origin
+        redirectTo: `${window.location.origin}/`
       }
     });
+    if (error) console.error('Error signing in with Google:', error);
   };
 
   const signOut = async () => {
     await supabase.auth.signOut();
+  };
+
+  const seedDatabase = async () => {
+    if (!user) return;
+    setDataLoading(true);
+    try {
+      console.log('Iniciando povoamento das tabelas...');
+
+      // 1. Accounts
+      const accountsToInsert = initialAccounts.map(({ id, ...rest }) => ({
+        ...rest,
+        user_id: user.id,
+        data_atualizacao: new Date().toISOString()
+      }));
+      await supabase.from('accounts').insert(accountsToInsert);
+
+      // 2. Investments
+      const investmentsToInsert = initialInvestments.map(({ id, ...rest }) => ({
+        ...rest,
+        user_id: user.id,
+        valor_atual: rest.quantidade * rest.preco_atual,
+        data_atualizacao: new Date().toISOString()
+      }));
+      await supabase.from('investments').insert(investmentsToInsert);
+
+      // 3. Debts
+      const debtsToInsert = initialDebts.map(({ id, ...rest }) => ({
+        ...rest,
+        user_id: user.id
+      }));
+      await supabase.from('debts').insert(debtsToInsert);
+
+      // 4. Fixed Expenses
+      const fixedToInsert = initialFixedExpenses.map(({ id, ...rest }) => ({
+        ...rest,
+        user_id: user.id
+      }));
+      await supabase.from('fixed_expenses').insert(fixedToInsert);
+
+      // 5. Variable Expenses
+      const variableToInsert = initialVariableExpenses.map(({ id, ...rest }) => ({
+        ...rest,
+        user_id: user.id
+      }));
+      await supabase.from('variable_expenses').insert(variableToInsert);
+
+      // 6. Income
+      const incomeToInsert = initialIncome.map(({ id, ...rest }) => ({
+        ...rest,
+        user_id: user.id
+      }));
+      await supabase.from('income').insert(incomeToInsert);
+
+      console.log('Dados povoados com sucesso!');
+      await fetchData();
+    } catch (error) {
+      console.error('Erro ao povoar dados:', error);
+    } finally {
+      setDataLoading(false);
+    }
   };
 
   // Account actions
@@ -1054,9 +1132,11 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       selectedMonth,
       setSelectedMonth,
       user,
-      loading,
+      loading: authLoading,
+      dataLoading,
       signInWithGoogle,
       signOut,
+      seedDatabase,
     }}>
       {children}
     </FinanceContext.Provider>
