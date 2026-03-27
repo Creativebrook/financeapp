@@ -2,7 +2,7 @@
 
 import { useFinance } from "@/context/FinanceContext";
 import { Wallet } from "lucide-react";
-import { ReactNode } from "react";
+import { ReactNode, useState, useEffect } from "react";
 
 interface AuthGuardProps {
   children: ReactNode;
@@ -10,8 +10,20 @@ interface AuthGuardProps {
 
 export default function AuthGuard({ children }: AuthGuardProps) {
   const { user, loading, signInWithGoogle } = useFinance();
+  const [showLogin, setShowLogin] = useState(false);
 
-  if (loading) {
+  // Safety timeout for AuthGuard
+  useEffect(() => {
+    if (loading) {
+      const timer = setTimeout(() => {
+        console.warn('AuthGuard: Loading timed out, showing login screen as fallback');
+        setShowLogin(true);
+      }, 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [loading]);
+
+  if (loading && !showLogin) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#0f1118]">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#6f6af8]"></div>
@@ -19,7 +31,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
     );
   }
 
-  if (!user) {
+  if (!user || showLogin) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-[#0f1118] p-4">
         <div className="w-full max-w-md p-8 rounded-2xl bg-[#1a1c24] border border-white/5 shadow-2xl text-center">
