@@ -131,8 +131,8 @@ function IncomeContent() {
 
   const pendingIncome = expectedIncomeNoCarry - receivedIncomeNoCarry;
 
-  const carriedOverEntry = monthIncomeEntries.find(i => i.nome.toLowerCase().includes('valor transportado'));
-  const carriedOverValue = carriedOverEntry ? carriedOverEntry.valor : 0;
+  const carriedOverEntries = monthIncomeEntries.filter(i => i.nome.toLowerCase().includes('valor transportado'));
+  const carriedOverValue = carriedOverEntries.reduce((sum, i) => sum + i.valor, 0);
 
   const accumulatedValue = receivedIncomeNoCarry + carriedOverValue;
 

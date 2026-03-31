@@ -372,6 +372,9 @@ function DashboardContent() {
       const dayIncome = income
         .filter(inc => {
           if (!inc) return false;
+          // Exclude carry-over from charts
+          if (inc.nome.toLowerCase().includes('valor transportado')) return false;
+          
           if (inc.frequencia === 'mensal') return inc.data === day && (!inc.data_inicio || inc.data_inicio <= dateStr);
           if (inc.frequencia === 'unico') return inc.data_especifica === dateStr;
           return false;
@@ -417,6 +420,9 @@ function DashboardContent() {
       
       const dayIncome = income
         .filter(inc => {
+          // Exclude carry-over from charts
+          if (inc.nome.toLowerCase().includes('valor transportado')) return false;
+          
           if (inc.frequencia === 'mensal') return inc.data === day && (!inc.data_inicio || inc.data_inicio <= dateStr);
           if (inc.frequencia === 'unico') return inc.data_especifica === dateStr;
           return false;
@@ -446,19 +452,19 @@ function DashboardContent() {
 
   // Calculate real-time balances for accounts (matching the logic in /accounts page)
   const accountBalances = useMemo(() => {
-    const now = new Date('2026-03-26T00:00:00Z');
+    const now = new Date();
     const currentDay = now.getDate();
-    const selectedMonth = '2026-03';
+    const currentMonthStr = now.toISOString().slice(0, 7); // YYYY-MM
     
     return accounts.map(account => {
       const accIncomeSoFar = income
         .filter(inc => inc.conta === account.nome)
         .filter(i => {
           if (i.frequencia === 'mensal') {
-            if (i.data_inicio && i.data_inicio > `${selectedMonth}-31`) return false;
+            if (i.data_inicio && i.data_inicio > `${currentMonthStr}-31`) return false;
             return i.data <= currentDay;
           }
-          if (i.frequencia === 'unico' && i.data_especifica && i.data_especifica.startsWith(selectedMonth)) {
+          if (i.frequencia === 'unico' && i.data_especifica && i.data_especifica.startsWith(currentMonthStr)) {
             if (i.nome.toLowerCase().includes('transportado')) return false;
             const day = parseInt(i.data_especifica.split('-')[2]);
             return day <= currentDay;
@@ -468,21 +474,31 @@ function DashboardContent() {
         .reduce((sum, inc) => sum + inc.valor, 0);
 
       const accVariable = variableExpenses
-        .filter(exp => exp && exp.conta === account.nome && exp.data && exp.data.startsWith(selectedMonth))
+        .filter(exp => exp && exp.conta === account.nome && exp.data && exp.data.startsWith(currentMonthStr))
         .filter(exp => {
           const day = parseInt(exp.data.split('-')[2]);
           return day <= currentDay;
         })
         .reduce((sum, exp) => sum + exp.valor, 0);
+
+      // Fixed expenses so far this month for this account
+      const accFixed = fixedExpenses
+        .filter(e => e.conta === account.nome && e.data_pagamento <= currentDay)
+        .reduce((sum, e) => sum + e.valor, 0);
+
+      // Debts so far this month for this account
+      const accDebts = debts
+        .filter(d => d.conta === account.nome && d.data_pagamento <= currentDay)
+        .reduce((sum, d) => sum + d.prestacao_mensal, 0);
         
-      const realTimeBalance = account.saldo + accIncomeSoFar - accVariable;
+      const realTimeBalance = account.saldo + accIncomeSoFar - accVariable - accFixed - accDebts;
 
       return {
         ...account,
         realTimeBalance
       };
     });
-  }, [accounts, income, variableExpenses]);
+  }, [accounts, income, variableExpenses, fixedExpenses, debts]);
 
   // Dynamic cards data based on accounts and credit cards from debts
   const cardsData = useMemo(() => {
@@ -514,7 +530,7 @@ function DashboardContent() {
         id: account.id,
         name: account.nome,
         balance: account.realTimeBalance,
-        number: hardcodedNumbers[account.nome] || account.iban || "**** **** **** " + account.id.slice(-4),
+        number: "**** **** **** ****",
         cardAccent: getCardAccent(index),
         transactions: accountTransactions
       };
@@ -553,7 +569,7 @@ function DashboardContent() {
           id: debt.id,
           name: debt.nome,
           balance: cardBalance,
-          number: hardcodedNumbers[debt.nome] || "**** **** **** " + debt.id.slice(-4),
+          number: "**** **** **** ****",
           cardAccent: getCardAccent(accounts.length + index),
           transactions: cardTransactions
         };
@@ -625,6 +641,9 @@ function DashboardContent() {
     
     const filtered = variableExpenses.filter(expense => {
       if (!expense || !expense.data) return false;
+      // Exclude transfers from expenses chart
+      if (expense.categoria === 'Transferência') return false;
+      
       const expenseDate = new Date(expense.data);
       return expenseDate.getFullYear() === currentYear && expenseDate.getMonth() === currentMonth;
     });

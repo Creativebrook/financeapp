@@ -70,7 +70,7 @@ function AccountsContent() {
 
   // Calculate "Real-time" current balance based on day of month
   const calculateCurrentMonthProgress = () => {
-    const now = new Date('2026-03-26T00:00:00Z');
+    const now = new Date();
     const currentMonthStr = now.toISOString().substring(0, 7);
     
     let currentDay = now.getDate();
@@ -111,8 +111,18 @@ function AccountsContent() {
         })
         .reduce((sum, exp) => sum + exp.valor, 0);
 
+      // Fixed expenses so far this month for this account
+      const accFixed = fixedExpenses
+        .filter(e => e.conta === account.nome && e.data_pagamento <= currentDay)
+        .reduce((sum, e) => sum + e.valor, 0);
+
+      // Debts so far this month for this account
+      const accDebts = debts
+        .filter(d => d.conta === account.nome && d.data_pagamento <= currentDay)
+        .reduce((sum, d) => sum + d.prestacao_mensal, 0);
+
       // The real-time balance is based on the initial saldo + income - expenses
-      const realTimeBalance = account.saldo + accIncome - accVariableSpent;
+      const realTimeBalance = account.saldo + accIncome - accVariableSpent - accFixed - accDebts;
 
       return {
         ...account,
@@ -461,7 +471,7 @@ function AccountsContent() {
                       </div>
                       <div className="mt-auto pt-6 relative z-10">
                         <p className="text-sm text-white/90 font-mono tracking-[0.3em]">
-                          {card.iban ? `**** **** **** ${card.iban.slice(-4)}` : '**** **** **** ****'}
+                          **** **** **** ****
                         </p>
                       </div>
                     </div>

@@ -437,7 +437,6 @@ const initialIncome: Income[] = [
 
   // Março 2026
   { id: 'inc-mar-0', nome: 'Valor transportado Fev 2026', valor: 832.29, frequencia: 'unico', data: 1, data_especifica: '2026-03-01', conta: 'Montepio' },
-  { id: 'inc-mar-rev-0', nome: 'Valor transportado Fev 2026', valor: 2849.04, frequencia: 'unico', data: 1, data_especifica: '2026-03-01', conta: 'Revolut' },
   { id: 'inc-mar-1', nome: 'Clínica [CSA]', valor: 700, frequencia: 'unico', data: 4, data_especifica: '2026-03-04', conta: 'Montepio' },
   { id: 'inc-mar-2', nome: 'Transferência', valor: 10, frequencia: 'unico', data: 5, data_especifica: '2026-03-05', conta: 'Montepio' },
   { id: 'inc-mar-3', nome: 'amo.CLINICS', valor: 300, frequencia: 'unico', data: 7, data_especifica: '2026-03-07', conta: 'Montepio' },
