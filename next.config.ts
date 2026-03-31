@@ -1,12 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: 'standalone',
-  experimental: {
-    serverActions: {
-      allowedOrigins: ['.run.app', '.europe-west2.run.app'],
-    },
-  },
   devIndicators: {
     position: 'bottom-right',
   },

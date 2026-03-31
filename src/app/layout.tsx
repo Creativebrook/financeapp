@@ -33,6 +33,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  console.log('RootLayout: Rendering');
   return (
     <html lang="pt">
       <body className={`${inter.variable} ${jetbrainsMono.variable}`}>

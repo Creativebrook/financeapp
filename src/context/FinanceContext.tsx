@@ -5,6 +5,8 @@ import { Account, Investment, Debt, FixedExpense, VariableExpense, Income, Dashb
 import { supabase } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
 
+console.log('FinanceContext: Module loaded');
+
 // Initial data
 const initialAccounts: Account[] = [
   { id: '1', nome: 'Montepio', tipo: 'Conta à ordem', saldo: 832.29, data_atualizacao: '2026-03-25', notas: 'Conta principal' },
@@ -590,7 +592,11 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         
         if (mounted) {
           console.log('FinanceProvider: Session check complete', session?.user?.email);
-          if (session?.user && session.user.email?.toLowerCase() !== 'peterdzign@gmail.com') {
+          const userEmail = session?.user?.email?.toLowerCase();
+          const isAllowed = userEmail === 'peterdzign@gmail.com' || userEmail === 'peterdzign@hotmail.com';
+          
+          if (session?.user && !isAllowed) {
+            console.warn('FinanceProvider: Unauthorized email detected in session:', userEmail);
             await supabase.auth.signOut();
             setUser(null);
             localStorage.removeItem("finance_app_auth");
@@ -612,7 +618,11 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('FinanceProvider: Auth state changed:', event, session?.user?.email);
       if (mounted) {
-        if (session?.user && session.user.email?.toLowerCase() !== 'peterdzign@gmail.com') {
+        const userEmail = session?.user?.email?.toLowerCase();
+        const isAllowed = userEmail === 'peterdzign@gmail.com' || userEmail === 'peterdzign@hotmail.com';
+
+        if (session?.user && !isAllowed) {
+          console.warn('FinanceProvider: Unauthorized email detected on state change:', userEmail);
           await supabase.auth.signOut();
           setUser(null);
           localStorage.removeItem("finance_app_auth");
@@ -763,7 +773,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   };
 
   const signInWithEmail = async (email: string, password: string) => {
-    if (email.toLowerCase() !== 'peterdzign@gmail.com') {
+    const userEmail = email.toLowerCase();
+    const isAllowed = userEmail === 'peterdzign@gmail.com' || userEmail === 'peterdzign@hotmail.com';
+    
+    if (!isAllowed) {
       return { error: { message: "Acesso restrito apenas ao proprietário." } };
     }
     const { data, error } = await supabase.auth.signInWithPassword({

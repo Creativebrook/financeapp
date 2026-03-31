@@ -12,6 +12,7 @@ type AuthMode = 'simple' | 'email_login' | 'email_signup';
 
 export default function AuthGuard({ children }: AuthGuardProps) {
   const { signInWithGoogle, signInWithEmail, signUpWithEmail, user, loading } = useFinance();
+  console.log('AuthGuard: Rendering. User:', user?.email, 'Loading:', loading);
   const [password, setPassword] = useState("");
   const [email, setEmail] = useState("");
   const [emailPassword, setEmailPassword] = useState("");

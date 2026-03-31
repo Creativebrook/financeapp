@@ -6,6 +6,7 @@ import AuthGuard from "@/components/AuthGuard";
 import { ReactNode } from "react";
 
 export default function ClientProviders({ children }: { children: ReactNode }) {
+  console.log('ClientProviders: Rendering');
   return (
     <SidebarProvider>
       <FinanceProvider>
