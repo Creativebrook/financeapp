@@ -4,6 +4,7 @@ const nextConfig: NextConfig = {
   devIndicators: {
     position: 'bottom-right',
   },
+  turbopack: {},
   images: {
     remotePatterns: [
       {
