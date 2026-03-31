@@ -535,6 +535,7 @@ interface FinanceContextType {
   signInWithEmail: (email: string, password: string) => Promise<{ error: any }>;
   signUpWithEmail: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
+  updatePassword: (password: string) => Promise<{ error: any }>;
   seedDatabase: () => Promise<void>;
 }
 
@@ -589,7 +590,13 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         
         if (mounted) {
           console.log('FinanceProvider: Session check complete', session?.user?.email);
-          setUser(session?.user ?? null);
+          if (session?.user && session.user.email?.toLowerCase() !== 'peterdzign@gmail.com') {
+            await supabase.auth.signOut();
+            setUser(null);
+            localStorage.removeItem("finance_app_auth");
+          } else {
+            setUser(session?.user ?? null);
+          }
           setAuthLoading(false);
         }
       } catch (error) {
@@ -602,10 +609,16 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
     checkSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('FinanceProvider: Auth state changed:', event, session?.user?.email);
       if (mounted) {
-        setUser(session?.user ?? null);
+        if (session?.user && session.user.email?.toLowerCase() !== 'peterdzign@gmail.com') {
+          await supabase.auth.signOut();
+          setUser(null);
+          localStorage.removeItem("finance_app_auth");
+        } else {
+          setUser(session?.user ?? null);
+        }
         setAuthLoading(false);
       }
     });
@@ -750,6 +763,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   };
 
   const signInWithEmail = async (email: string, password: string) => {
+    if (email.toLowerCase() !== 'peterdzign@gmail.com') {
+      return { error: { message: "Acesso restrito apenas ao proprietário." } };
+    }
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -764,20 +780,14 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   };
 
   const signUpWithEmail = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
+    return { error: { message: "Novos registos estão desativados." } };
+  };
+
+  const updatePassword = async (password: string) => {
+    const { error } = await supabase.auth.updateUser({
+      password: password
     });
-    if (error) {
-      console.error('Error signing up with email:', error);
-      return { error };
-    }
-    setUser(data.user);
-    // Note: User might need to confirm email depending on Supabase settings
-    if (data.user) {
-      localStorage.setItem("finance_app_auth", "true");
-    }
-    return { error: null };
+    return { error };
   };
 
   const signOut = async () => {
@@ -1451,6 +1461,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       signInWithEmail,
       signUpWithEmail,
       signOut,
+      updatePassword,
       seedDatabase,
     }}>
       {children}

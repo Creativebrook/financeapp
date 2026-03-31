@@ -712,7 +712,7 @@ function DashboardContent() {
       amount: d.prestacao_mensal,
       date: getNextPaymentDate(d.data_pagamento),
     })),
-    ...income.filter(i => i && i.nome).map(i => ({
+    ...income.filter(i => i && i.nome && i.frequencia !== 'unico').map(i => ({
       type: 'income' as const,
       name: i.nome,
       amount: i.valor,
