@@ -126,6 +126,8 @@ export interface DashboardSummary {
   totalDebts: number;
   monthlyCashflow: number;
   monthlyIncome: number;
+  totalExpenses: number;
+  savingsRate: number;
   monthlyFixedExpenses: number;
   averageVariableExpenses: number;
   totalDividends: number;

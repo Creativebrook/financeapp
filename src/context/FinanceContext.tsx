@@ -1378,31 +1378,38 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   // Computed values
   const getDashboardSummary = (): DashboardSummary => {
-    // Calculate "Real-time" current balance based on day of month (matching /accounts page)
     const now = new Date();
     const currentMonthStr = now.toISOString().substring(0, 7);
     
     let currentDay = now.getDate();
     if (selectedMonth < currentMonthStr) {
-      // Past month: show full month
       const [y, m] = selectedMonth.split('-');
       currentDay = new Date(parseInt(y), parseInt(m), 0).getDate();
     } else if (selectedMonth > currentMonthStr) {
-      // Future month: show start of month
       currentDay = 0;
     }
     
-    const totalAccounts = accounts.reduce((sum, account) => {
-      // Income for this account in selected month (excluding carryover for balance calculation from saldo)
+    const accountBalances = accounts.map(account => {
+      // Find carry-over for this month
+      const carryOver = income.find(i => 
+        i.conta === account.nome && 
+        i.nome.toLowerCase().includes('transportado') && 
+        i.data_especifica?.startsWith(selectedMonth)
+      );
+
+      // Starting balance is the carry-over value if it exists
+      // If not, use account.saldo only if it's March 2026 (the base month for initial data)
+      const startingBalance = carryOver ? carryOver.valor : (selectedMonth === '2026-03' ? account.saldo : 0);
+
       const accIncome = income
         .filter(i => i.conta === account.nome)
         .filter(i => {
+          if (i.nome.toLowerCase().includes('transportado')) return false;
           if (i.frequencia === 'mensal') {
             if (i.data_inicio && i.data_inicio > `${selectedMonth}-31`) return false;
             return i.data <= currentDay;
           }
           if (i.frequencia === 'unico' && i.data_especifica && i.data_especifica.startsWith(selectedMonth)) {
-            if (i.nome.toLowerCase().includes('transportado')) return false;
             const day = parseInt(i.data_especifica.split('-')[2]);
             return day <= currentDay;
           }
@@ -1410,7 +1417,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         })
         .reduce((sum, i) => sum + i.valor, 0);
 
-      // Variable expenses for this account in selected month
       const accVariableSpent = variableExpenses
         .filter(e => e && e.conta === account.nome && e.data && e.data.startsWith(selectedMonth))
         .filter(e => {
@@ -1419,24 +1425,31 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         })
         .reduce((sum, e) => sum + e.valor, 0);
 
-      // The real-time balance is based on the initial saldo + income - expenses
-      const realTimeBalance = account.saldo + accIncome - accVariableSpent;
-      return sum + realTimeBalance;
-    }, 0);
+      const accFixed = fixedExpenses
+        .filter(e => e.conta === account.nome && e.data_pagamento <= currentDay)
+        .reduce((sum, e) => sum + e.valor, 0);
 
+      const accDebts = debts
+        .filter(d => d.conta === account.nome && d.data_pagamento <= currentDay)
+        .reduce((sum, d) => sum + d.prestacao_mensal, 0);
+
+      return startingBalance + accIncome - accVariableSpent - accFixed - accDebts;
+    });
+
+    const totalAccounts = accountBalances.reduce((sum, b) => sum + b, 0);
     const totalInvestments = investments.reduce((sum, i) => sum + (i?.valor_atual || 0), 0);
     const totalDividends = investments.reduce((sum, i) => sum + (i?.dividendos_ganhos || 0), 0);
     const totalDebts = debts.reduce((sum, d) => sum + (d?.valor_total || 0), 0);
     
     const monthlyIncome = income.reduce((sum, i) => {
       if (!i) return sum;
+      if (i.nome?.toLowerCase().includes('transportado')) return sum;
       if (i.frequencia === 'mensal') {
         if (i.data_inicio && i.data_inicio > `${selectedMonth}-31`) return sum;
         if (i.data > currentDay) return sum;
         return sum + (i.valor || 0);
       }
       if (i.frequencia === 'unico' && i.data_especifica && i.data_especifica.startsWith(selectedMonth)) {
-        if (i.nome?.toLowerCase().includes('transportado')) return sum;
         const day = parseInt(i.data_especifica.split('-')[2]);
         if (day > currentDay) return sum;
         return sum + (i.valor || 0);
@@ -1444,38 +1457,53 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       return sum;
     }, 0);
 
-    // For cashflow, we use the user's logic: Income - All Expenses (Fixed + Debt + Variable)
-    // To match the -59.32€, we need to sum everything in variableExpenses for the month
-    const totalExpenses = variableExpenses
+    const totalVariableExpenses = variableExpenses
       .filter(exp => exp && exp.data && exp.data.startsWith(selectedMonth))
       .filter(exp => {
-        if (!exp.data) return false;
         const day = parseInt(exp.data.split('-')[2]);
         return day <= currentDay;
       })
-      .filter(exp => exp.categoria !== 'Investimento' && exp.categoria !== 'Transferência')
-      .reduce((sum, e) => sum + (e?.valor || 0), 0);
+      .reduce((sum, exp) => sum + (exp?.valor || 0), 0);
+
+    const totalFixedExpenses = fixedExpenses
+      .filter(exp => exp.frequencia === 'mensal' && exp.data_pagamento <= currentDay)
+      .reduce((sum, exp) => sum + exp.valor, 0);
+
+    const totalDebtsExpenses = debts
+      .filter(d => d.data_pagamento <= currentDay)
+      .reduce((sum, d) => sum + d.prestacao_mensal, 0);
+
+    const totalExpenses = totalVariableExpenses + totalFixedExpenses + totalDebtsExpenses;
     
     const totalBase = accounts.reduce((sum, account) => {
-      if (!account) return sum;
+      const carryOver = income.find(i => 
+        i.conta === account.nome && 
+        i.nome.toLowerCase().includes('transportado') && 
+        i.data_especifica?.startsWith(selectedMonth)
+      );
+      const startingBalance = carryOver ? carryOver.valor : (selectedMonth === '2026-03' ? account.saldo : 0);
+      
       const accIncome = income
-        .filter(i => i && i.conta === account.nome)
+        .filter(i => i.conta === account.nome)
         .filter(i => {
-          if (!i) return false;
+          if (i.nome.toLowerCase().includes('transportado')) return false;
           if (i.frequencia === 'mensal') {
             if (i.data_inicio && i.data_inicio > `${selectedMonth}-31`) return false;
             return i.data <= currentDay;
           }
           if (i.frequencia === 'unico' && i.data_especifica && i.data_especifica.startsWith(selectedMonth)) {
-            if (i.nome?.toLowerCase().includes('transportado')) return false;
             const day = parseInt(i.data_especifica.split('-')[2]);
             return day <= currentDay;
           }
           return false;
         })
-        .reduce((sum, i) => sum + (i?.valor || 0), 0);
-      return sum + (account.saldo || 0) + accIncome;
+        .reduce((sum, i) => sum + i.valor, 0);
+        
+      return sum + startingBalance + accIncome;
     }, 0);
+    
+    const cashflow = monthlyIncome - totalExpenses;
+    const savingsRate = monthlyIncome > 0 ? (cashflow / monthlyIncome) * 100 : 0;
 
     return {
       totalWealth: totalAccounts + totalInvestments,
@@ -1483,11 +1511,13 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       totalBase,
       totalInvestments,
       totalDebts,
-      monthlyCashflow: monthlyIncome - totalExpenses,
+      monthlyCashflow: cashflow,
       monthlyIncome,
-      monthlyFixedExpenses: variableExpenses.filter(e => e && e.data?.startsWith(selectedMonth) && e.categoria === 'Fixa').reduce((sum, e) => sum + (e?.valor || 0), 0),
-      averageVariableExpenses: variableExpenses.filter(e => e && e.data?.startsWith(selectedMonth) && e.categoria !== 'Fixa' && e.categoria !== 'Dívida').reduce((sum, e) => sum + (e?.valor || 0), 0),
-      totalDividends,
+      totalExpenses,
+      savingsRate,
+      monthlyFixedExpenses: totalFixedExpenses,
+      averageVariableExpenses: totalVariableExpenses,
+      totalDividends
     };
   };
 

@@ -85,16 +85,27 @@ function AccountsContent() {
     
     // Calculate per-account balances
     const accountBalances = accounts.map(account => {
-      // Income for this account in selected month (excluding carryover for balance calculation from saldo)
+      // Find carry-over for this month
+      const carryOver = income.find(i => 
+        i.conta === account.nome && 
+        i.nome.toLowerCase().includes('transportado') && 
+        i.data_especifica?.startsWith(selectedMonth)
+      );
+
+      // Starting balance is the carry-over value if it exists
+      // If not, use account.saldo only if it's March 2026 (the base month for initial data)
+      const startingBalance = carryOver ? carryOver.valor : (selectedMonth === '2026-03' ? account.saldo : 0);
+
+      // Income for this account in selected month (excluding carry-over)
       const accIncome = income
         .filter(inc => inc.conta === account.nome)
         .filter(i => {
+          if (i.nome.toLowerCase().includes('transportado')) return false;
           if (i.frequencia === 'mensal') {
             if (i.data_inicio && i.data_inicio > `${selectedMonth}-31`) return false;
             return i.data <= currentDay;
           }
           if (i.frequencia === 'unico' && i.data_especifica && i.data_especifica.startsWith(selectedMonth)) {
-            if (i.nome.toLowerCase().includes('transportado')) return false;
             const day = parseInt(i.data_especifica.split('-')[2]);
             return day <= currentDay;
           }
@@ -121,15 +132,16 @@ function AccountsContent() {
         .filter(d => d.conta === account.nome && d.data_pagamento <= currentDay)
         .reduce((sum, d) => sum + d.prestacao_mensal, 0);
 
-      // The real-time balance is based on the initial saldo + income - expenses
-      const realTimeBalance = account.saldo + accIncome - accVariableSpent - accFixed - accDebts;
+      // The real-time balance is based on the starting balance + income - expenses
+      const realTimeBalance = startingBalance + accIncome - accVariableSpent - accFixed - accDebts;
 
       return {
         ...account,
-        accountBase: account.saldo + accIncome,
+        accountBase: startingBalance + accIncome,
         realTimeBalance
       };
     });
+
 
     const saldoInicialSoFar = accountBalances.reduce((sum, a) => sum + a.accountBase, 0);
     

@@ -6,6 +6,7 @@ import { TrendingUp, Bell, Menu, X, Calendar, ChevronDown } from 'lucide-react';
 import Image from 'next/image';
 import { useSidebar } from '@/context/SidebarContext';
 import { useFinance } from '@/context/FinanceContext';
+import TelegramAlertModal from './TelegramAlertModal';
 
 interface PremiumHeaderProps {
   pageName?: string;
@@ -17,6 +18,7 @@ export default function PremiumHeader({ pageName, style }: PremiumHeaderProps) {
   const { selectedMonth, setSelectedMonth, variableExpenses, user, signOut } = useFinance();
   const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState(false);
   const [isMobileMonthDropdownOpen, setIsMobileMonthDropdownOpen] = useState(false);
+  const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
 
   const isSimpleAuth = typeof window !== 'undefined' && localStorage.getItem("finance_app_auth") === "true";
   const isUserLoggedIn = !!user || isSimpleAuth;
@@ -107,13 +109,13 @@ export default function PremiumHeader({ pageName, style }: PremiumHeaderProps) {
             )}
           </div>
 
-          <Link 
-            href="/config"
+          <button 
+            onClick={() => setIsAlertModalOpen(true)}
             className="premium-header-btn"
-            title="Configurações"
+            title="Alertas Telegram"
           >
             <Bell size={16} />
-          </Link>
+          </button>
 
           {isUserLoggedIn && (
             <div className="flex items-center gap-4 ml-2 pl-4 border-l border-white/[0.05]">
@@ -209,13 +211,13 @@ export default function PremiumHeader({ pageName, style }: PremiumHeaderProps) {
               </>
             )}
           </div>
-          <Link 
-            href="/config"
+          <button 
+            onClick={() => setIsAlertModalOpen(true)}
             className="mobile-header-btn"
-            title="Configurações"
+            title="Alertas Telegram"
           >
             <Bell size={14} />
-          </Link>
+          </button>
 
           {isUserLoggedIn && (
             <button 
@@ -250,6 +252,11 @@ export default function PremiumHeader({ pageName, style }: PremiumHeaderProps) {
           </button>
         </div>
       </header>
+      
+      <TelegramAlertModal 
+        isOpen={isAlertModalOpen} 
+        onClose={() => setIsAlertModalOpen(false)} 
+      />
     </>
   );
 }
