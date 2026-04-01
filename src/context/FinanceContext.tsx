@@ -496,7 +496,19 @@ function getInitialData() {
       try {
         const parsed = JSON.parse(saved);
         return {
-          accounts: Array.isArray(parsed.accounts) ? parsed.accounts.filter((a: any) => a && a.id) : initialAccounts,
+          accounts: Array.isArray(parsed.accounts) 
+            ? parsed.accounts.map((a: any) => {
+                if (!a) return a;
+                // Force update for Montepio and Revolut if they have old March values
+                if (a.nome === 'Montepio' && (a.saldo === 832.29 || a.saldo === 822.29 || a.data_atualizacao?.startsWith('2026-03'))) {
+                  return { ...a, saldo: 1274.07, data_atualizacao: '2026-04-01' };
+                }
+                if (a.nome === 'Revolut' && (a.saldo === 2506 || a.saldo === 2554.04 || a.data_atualizacao?.startsWith('2026-03'))) {
+                  return { ...a, saldo: 2414.64, data_atualizacao: '2026-04-01' };
+                }
+                return a;
+              }).filter((a: any) => a && a.id) 
+            : initialAccounts,
           investments: Array.isArray(parsed.investments) ? parsed.investments.filter((i: any) => i && i.id) : initialInvestments,
           debts: Array.isArray(parsed.debts) ? parsed.debts.filter((d: any) => d && d.id) : initialDebts,
           fixedExpenses: Array.isArray(parsed.fixedExpenses) ? parsed.fixedExpenses.filter((e: any) => e && e.id) : initialFixedExpenses,
@@ -505,27 +517,38 @@ function getInitialData() {
             ? (() => {
                 const incomeList = [...parsed.income];
                 
-                // Ensure April carry-over entries exist
-                const hasMontepioApr = incomeList.some(i => i && i.nome && i.nome.includes('Valor transportado Mar 2026') && i.conta === 'Montepio');
-                const hasRevolutApr = incomeList.some(i => i && i.nome && i.nome.includes('Valor transportado Mar 2026') && i.conta === 'Revolut');
+                // Ensure April carry-over entries exist and have correct values
+                const hasMontepioApr = incomeList.some(i => i && i.nome && i.nome.includes('Valor transportado Mar 2026') && i.conta === 'Montepio' && i.data_especifica === '2026-04-01');
+                const hasRevolutApr = incomeList.some(i => i && i.nome && i.nome.includes('Valor transportado Mar 2026') && i.conta === 'Revolut' && i.data_especifica === '2026-04-01');
                 
                 if (!hasMontepioApr) {
-                  incomeList.push({ id: 'inc-apr-0', nome: 'Valor transportado Mar 2026', valor: 1274.07, frequencia: 'unico', data: 1, data_especifica: '2026-04-01', conta: 'Montepio' });
+                  // Remove any potential duplicate or incorrect April carry-over for Montepio
+                  const filteredList = incomeList.filter(i => !(i && i.nome && i.nome.includes('Valor transportado Mar 2026') && i.conta === 'Montepio'));
+                  filteredList.push({ id: 'inc-apr-0', nome: 'Valor transportado Mar 2026', valor: 1274.07, frequencia: 'unico', data: 1, data_especifica: '2026-04-01', conta: 'Montepio' });
+                  incomeList.length = 0;
+                  incomeList.push(...filteredList);
                 }
                 if (!hasRevolutApr) {
-                  incomeList.push({ id: 'inc-apr-0-rev', nome: 'Valor transportado Mar 2026', valor: 2414.64, frequencia: 'unico', data: 1, data_especifica: '2026-04-01', conta: 'Revolut' });
+                  // Remove any potential duplicate or incorrect April carry-over for Revolut
+                  const filteredList = incomeList.filter(i => !(i && i.nome && i.nome.includes('Valor transportado Mar 2026') && i.conta === 'Revolut'));
+                  filteredList.push({ id: 'inc-apr-0-rev', nome: 'Valor transportado Mar 2026', valor: 2414.64, frequencia: 'unico', data: 1, data_especifica: '2026-04-01', conta: 'Revolut' });
+                  incomeList.length = 0;
+                  incomeList.push(...filteredList);
                 }
 
                 return incomeList.map((i: any) => {
-                  // Aggressive patch for the incorrect February carry-over value
-                  // The user reports 3681€ but the real value is 832.29€
-                  if (i && i.nome && i.nome.includes('Valor transportado Fev 2026')) {
-                    return { ...i, valor: 832.29 };
-                  }
-                  // Aggressive patch for April carry-over values as requested by user
-                  if (i && i.nome && i.nome.includes('Valor transportado Mar 2026')) {
-                    if (i.conta === 'Montepio') return { ...i, valor: 1274.07 };
-                    if (i.conta === 'Revolut') return { ...i, valor: 2414.64 };
+                  if (!i) return i;
+                  
+                  // Aggressive patch for carry-over values based on month
+                  if (i.nome && i.nome.toLowerCase().includes('transportado')) {
+                    if (i.data_especifica?.startsWith('2026-04')) {
+                      if (i.conta === 'Montepio') return { ...i, valor: 1274.07, nome: 'Valor transportado Mar 2026' };
+                      if (i.conta === 'Revolut') return { ...i, valor: 2414.64, nome: 'Valor transportado Mar 2026' };
+                    }
+                    if (i.data_especifica?.startsWith('2026-03')) {
+                      if (i.conta === 'Montepio') return { ...i, valor: 832.29, nome: 'Valor transportado Fev 2026' };
+                      if (i.conta === 'Revolut') return { ...i, valor: 2554.04, nome: 'Valor transportado Fev 2026' };
+                    }
                   }
                   return i;
                 }).filter((i: any) => i && i.id);
