@@ -464,7 +464,15 @@ function getInitialData() {
           debts: Array.isArray(parsed.debts) ? parsed.debts.filter((d: any) => d && d.id) : initialDebts,
           fixedExpenses: Array.isArray(parsed.fixedExpenses) ? parsed.fixedExpenses.filter((e: any) => e && e.id) : initialFixedExpenses,
           variableExpenses: Array.isArray(parsed.variableExpenses) ? parsed.variableExpenses.filter((e: any) => e && e.id) : initialVariableExpenses,
-          income: Array.isArray(parsed.income) ? parsed.income.filter((i: any) => i && i.id) : initialIncome,
+          income: Array.isArray(parsed.income) 
+            ? parsed.income.map((i: any) => {
+                // Patch for the incorrect February carry-over value
+                if (i && i.nome === 'Valor transportado Fev 2026' && i.valor === 3681) {
+                  return { ...i, valor: 832.29 };
+                }
+                return i;
+              }).filter((i: any) => i && i.id) 
+            : initialIncome,
           customWallets: Array.isArray(parsed.customWallets) ? parsed.customWallets : [],
         };
       } catch (e) {
@@ -588,10 +596,13 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       try {
         console.log('FinanceProvider: Checking session...');
         const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) throw error;
+        if (error) {
+          console.error('FinanceProvider: Supabase getSession error:', error);
+          throw error;
+        }
         
         if (mounted) {
-          console.log('FinanceProvider: Session check complete', session?.user?.email);
+          console.log('FinanceProvider: Session check complete. User:', session?.user?.email || 'None');
           const userEmail = session?.user?.email?.toLowerCase();
           const isAllowed = userEmail === 'peterdzign@gmail.com' || userEmail === 'peterdzign@hotmail.com';
           
@@ -603,6 +614,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           } else {
             setUser(session?.user ?? null);
           }
+          console.log('FinanceProvider: Setting authLoading to false from checkSession');
           setAuthLoading(false);
         }
       } catch (error) {
@@ -616,7 +628,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     checkSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('FinanceProvider: Auth state changed:', event, session?.user?.email);
+      console.log('FinanceProvider: Auth state changed event:', event, 'User:', session?.user?.email || 'None');
       if (mounted) {
         const userEmail = session?.user?.email?.toLowerCase();
         const isAllowed = userEmail === 'peterdzign@gmail.com' || userEmail === 'peterdzign@hotmail.com';
@@ -629,20 +641,22 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         } else {
           setUser(session?.user ?? null);
         }
+        console.log('FinanceProvider: Setting authLoading to false from onAuthStateChange');
         setAuthLoading(false);
       }
     });
 
-    // Safety timeout: ensure loading state is cleared after 3 seconds
+    // Safety timeout: ensure loading state is cleared after 2 seconds
     // This prevents the app from being stuck on the loading screen if Supabase hangs
     const timeout = setTimeout(() => {
       if (mounted) {
         console.warn('FinanceProvider: Auth initialization timed out, forcing loading to false');
         setAuthLoading(false);
       }
-    }, 3000);
+    }, 2000);
 
     return () => {
+      console.log('FinanceProvider: Cleaning up auth listener');
       mounted = false;
       subscription.unsubscribe();
       clearTimeout(timeout);
@@ -725,7 +739,16 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         if (dbt) setDebts(dbt);
         if (fxd) setFixedExpenses(fxd);
         if (vrb) setVariableExpenses(vrb);
-        if (inc) setIncome(inc);
+        if (inc) {
+          // Patch for the incorrect February carry-over value in Supabase data
+          const patchedInc = inc.map((i: any) => {
+            if (i && i.nome === 'Valor transportado Fev 2026' && i.valor === 3681) {
+              return { ...i, valor: 832.29 };
+            }
+            return i;
+          });
+          setIncome(patchedInc);
+        }
         console.log('FinanceProvider: State updated from Supabase');
       } else {
         console.log('FinanceProvider: Supabase returned no data, keeping local state');

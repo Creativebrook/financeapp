@@ -23,26 +23,46 @@ export default function AuthGuard({ children }: AuthGuardProps) {
   const [showPasswordChange, setShowPasswordChange] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [passwordChangeSuccess, setPasswordChangeSuccess] = useState(false);
+  const [showForceContinue, setShowForceContinue] = useState(false);
   const { updatePassword } = useFinance();
+  
+  useEffect(() => {
+    console.log('AuthGuard: Mounted');
+    const timer = setTimeout(() => {
+      if (loading || isAuthorized === null) {
+        console.warn('AuthGuard: Stuck on loading for 5s, showing force continue button');
+        setShowForceContinue(true);
+      }
+    }, 5000);
+    return () => {
+      console.log('AuthGuard: Unmounted');
+      clearTimeout(timer);
+    };
+  }, [loading, isAuthorized]);
 
   useEffect(() => {
     const auth = localStorage.getItem("finance_app_auth");
-    console.log('AuthGuard: Auth check effect. User:', user?.email, 'Auth stored:', auth);
+    console.log('AuthGuard: Auth check effect. User:', user?.email, 'Loading:', loading, 'Auth stored:', auth);
     
-    // If user is logged in via Supabase, they are authorized
-    if (user) {
-      console.log('AuthGuard: User found, authorizing');
-      setIsAuthorized(true);
-      return;
-    }
-    
-    // Fallback to simple auth check
-    if (auth === "true") {
-      console.log('AuthGuard: Simple auth found, authorizing');
-      setIsAuthorized(true);
+    // If loading is finished, we can determine authorization
+    if (!loading) {
+      if (user) {
+        console.log('AuthGuard: User found, authorizing');
+        setIsAuthorized(true);
+      } else if (auth === "true") {
+        console.log('AuthGuard: Simple auth found, authorizing');
+        setIsAuthorized(true);
+      } else {
+        console.log('AuthGuard: No auth found, deauthorizing');
+        setIsAuthorized(false);
+      }
     } else {
-      console.log('AuthGuard: No auth found, deauthorizing');
-      setIsAuthorized(false);
+      // While loading, we can still check if we have a user or simple auth
+      // to potentially show content earlier, but it's safer to wait for loading=false
+      if (user || auth === "true") {
+        console.log('AuthGuard: User or simple auth found while loading, setting isAuthorized to true');
+        setIsAuthorized(true);
+      }
     }
   }, [user, loading]); // Added loading to dependencies to ensure it runs when loading state changes
 
@@ -121,6 +141,15 @@ export default function AuthGuard({ children }: AuthGuardProps) {
           <div className="text-[10px] text-slate-600 font-mono">
             Status: {loading ? 'Auth Loading' : 'Auth Ready'} | User: {user ? 'Found' : 'None'} | Auth: {isAuthorized === null ? 'Pending' : 'Done'}
           </div>
+
+          {showForceContinue && (
+            <button 
+              onClick={() => setIsAuthorized(true)}
+              className="mt-4 px-6 py-2 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-xs hover:bg-red-500/20 transition-all"
+            >
+              Forçar Entrada (Se estiver preso)
+            </button>
+          )}
         </div>
       </div>
     );
