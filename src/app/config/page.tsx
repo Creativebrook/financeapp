@@ -36,8 +36,8 @@ export default function ConfigPage() {
   });
 
   const categories = {
-    dividas: ['Habitação', 'Automóvel', 'Educação', 'Saúde', 'Cartão de Crédito', 'Lazer', 'Outros'],
-    despesas: ['Habitação (Renda/Condomínio)', 'Água', 'Eletricidade', 'Gás', 'Internet/TV', 'Seguros', 'Assinaturas', 'Ginásio', 'Alimentação', 'Transportes', 'Saúde', 'Lazer', 'Outros']
+    dividas: ['Cartão de Crédito', 'Empréstimo', 'Impostos', 'Serviços', 'Outro'],
+    despesas: ['Desporto', 'Educação', 'Família', 'Habitação', 'Impostos', 'Saúde', 'Seguros', 'Telemóveis', 'Subscrição', 'Tecnologia', 'Transportes', 'Outros']
   };
 
   const handleOpenAdd = () => {
@@ -79,6 +79,7 @@ export default function ConfigPage() {
           data_pagamento: formData.dia,
           conta: formData.conta,
           categoria: formData.categoria,
+          frequencia: formData.frequencia,
         });
       } else if (activeTab === 'despesas') {
         updateFixedExpense(editingItem.id, {
@@ -108,6 +109,7 @@ export default function ConfigPage() {
           data_pagamento: formData.dia,
           conta: formData.conta,
           categoria: formData.categoria,
+          frequencia: formData.frequencia,
         });
       } else if (activeTab === 'despesas') {
         addFixedExpense({
@@ -397,6 +399,40 @@ export default function ConfigPage() {
                   </div>
                 </div>
                 
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Frequência</label>
+                  <select 
+                    value={formData.frequencia}
+                    onChange={(e) => setFormData({...formData, frequencia: e.target.value as Frequencia})}
+                    className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-accent-primary/50 transition-all appearance-none cursor-pointer"
+                  >
+                    {activeTab === 'rendimentos' ? (
+                      <>
+                        <option value="semanal" className="bg-[#1a1b1e] text-white">Semanal</option>
+                        <option value="quinzenal" className="bg-[#1a1b1e] text-white">Quinzenal</option>
+                        <option value="mensal" className="bg-[#1a1b1e] text-white">Mensal</option>
+                        <option value="trimestral" className="bg-[#1a1b1e] text-white">Trimestral</option>
+                        <option value="anual" className="bg-[#1a1b1e] text-white">Anual</option>
+                        <option value="unico" className="bg-[#1a1b1e] text-white">Único</option>
+                      </>
+                    ) : activeTab === 'dividas' ? (
+                      <>
+                        <option value="mensal" className="bg-[#1a1b1e] text-white">Mensal</option>
+                        <option value="trimestral" className="bg-[#1a1b1e] text-white">Trimestral</option>
+                        <option value="semestral" className="bg-[#1a1b1e] text-white">Semestral</option>
+                        <option value="anual" className="bg-[#1a1b1e] text-white">Anual</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value="mensal" className="bg-[#1a1b1e] text-white">Mensal</option>
+                        <option value="trimestral" className="bg-[#1a1b1e] text-white">Trimestral</option>
+                        <option value="semestral" className="bg-[#1a1b1e] text-white">Semestral</option>
+                        <option value="anual" className="bg-[#1a1b1e] text-white">Anual</option>
+                      </>
+                    )}
+                  </select>
+                </div>
+
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Conta</label>
                   <select 

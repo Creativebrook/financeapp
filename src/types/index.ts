@@ -44,6 +44,7 @@ export interface Debt {
   data_pagamento: number;
   conta: string;
   categoria: string;
+  frequencia: Frequencia;
   taxa_juro?: number;
   data_fim?: string;
 }

@@ -110,7 +110,7 @@ function AccountsContent() {
 
         // Starting balance is the carry-over value if it exists
         // If not, use account.saldo only if it's March 2026 (the base month for initial data)
-        const startingBalance = carryOver ? carryOver.valor : (selectedMonth === '2026-03' ? account.saldo : 0);
+        const startingBalance = carryOver ? carryOver.valor : (selectedMonth === '2026-04' ? account.saldo : 0);
 
         // Income for this account in selected month (excluding carry-over)
         const accIncome = income

@@ -9,9 +9,9 @@ console.log('FinanceContext: Module loaded');
 
 // Initial data
 const initialAccounts: Account[] = [
-  { id: '1', nome: 'Montepio', tipo: 'Conta à ordem', saldo: 832.29, data_atualizacao: '2026-03-01', notas: 'Conta principal' },
-  { id: '2', nome: 'N26', tipo: 'Conta à ordem', saldo: 0.00, data_atualizacao: '2026-03-01', notas: 'Conta digital' },
-  { id: '3', nome: 'Revolut', tipo: 'Conta à ordem', saldo: 2554.04, data_atualizacao: '2026-03-01', notas: 'Conta internacional' },
+  { id: '1', nome: 'Montepio', tipo: 'Conta à ordem', saldo: 1274.07, data_atualizacao: '2026-04-01', notas: 'Conta principal' },
+  { id: '2', nome: 'N26', tipo: 'Conta à ordem', saldo: 0.00, data_atualizacao: '2026-04-01', notas: 'Conta digital' },
+  { id: '3', nome: 'Revolut', tipo: 'Conta à ordem', saldo: 2414.64, data_atualizacao: '2026-04-01', notas: 'Conta internacional' },
 ];
 
 const initialInvestments: Investment[] = [
@@ -168,12 +168,12 @@ const initialInvestments: Investment[] = [
 ];
 
 const initialDebts: Debt[] = [
-  { id: '1', nome: 'Cartão de Crédito Cetelem', valor_total: 550.57, valor_inicial: 1250, prestacao_mensal: 62.50, data_pagamento: 2, conta: 'Montepio', categoria: 'Cartão de Crédito', taxa_juro: 12.53 },
-  { id: '2', nome: 'Crédito Cetelem', valor_total: 1548.40, valor_inicial: 1548.40, prestacao_mensal: 40.44, data_pagamento: 2, conta: 'Montepio', categoria: 'Empréstimo', taxa_juro: 12.75 },
-  { id: '3', nome: 'Cartão de Crédito Montepio', valor_total: 714.31, valor_inicial: 1000, prestacao_mensal: 42.78, data_pagamento: 7, conta: 'Montepio', categoria: 'Cartão de Crédito', taxa_juro: 8.00 },
-  { id: '4', nome: 'Dívida Seg. Social', valor_total: 1669.24, valor_inicial: 1669.24, prestacao_mensal: 26.76, data_pagamento: 20, conta: 'Montepio', categoria: 'Impostos' },
-  { id: '5', nome: 'Crédito Automóvel', valor_total: 15029.38, valor_inicial: 16897.30, prestacao_mensal: 224.99, data_pagamento: 24, conta: 'Montepio', categoria: 'Empréstimo' },
-  { id: '6', nome: 'Dívida Finanças', valor_total: 1258.24, valor_inicial: 1258.24, prestacao_mensal: 59.58, data_pagamento: 2, conta: 'Montepio', categoria: 'Impostos' },
+  { id: '1', nome: 'Cartão de Crédito Cetelem', valor_total: 550.57, valor_inicial: 1250, prestacao_mensal: 62.50, data_pagamento: 2, conta: 'Montepio', categoria: 'Cartão de Crédito', frequencia: 'mensal', taxa_juro: 12.53 },
+  { id: '2', nome: 'Crédito Cetelem', valor_total: 1548.40, valor_inicial: 1548.40, prestacao_mensal: 40.44, data_pagamento: 2, conta: 'Montepio', categoria: 'Empréstimo', frequencia: 'mensal', taxa_juro: 12.75 },
+  { id: '3', nome: 'Cartão de Crédito Montepio', valor_total: 714.31, valor_inicial: 1000, prestacao_mensal: 42.78, data_pagamento: 7, conta: 'Montepio', categoria: 'Cartão de Crédito', frequencia: 'mensal', taxa_juro: 8.00 },
+  { id: '4', nome: 'Dívida Seg. Social', valor_total: 1669.24, valor_inicial: 1669.24, prestacao_mensal: 26.76, data_pagamento: 20, conta: 'Montepio', categoria: 'Impostos', frequencia: 'mensal' },
+  { id: '5', nome: 'Crédito Automóvel', valor_total: 15029.38, valor_inicial: 16897.30, prestacao_mensal: 224.99, data_pagamento: 24, conta: 'Montepio', categoria: 'Empréstimo', frequencia: 'mensal' },
+  { id: '6', nome: 'Dívida Finanças', valor_total: 1258.24, valor_inicial: 1258.24, prestacao_mensal: 59.58, data_pagamento: 2, conta: 'Montepio', categoria: 'Impostos', frequencia: 'mensal' },
 ];
 
 const initialFixedExpenses: FixedExpense[] = [
@@ -1514,8 +1514,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         );
 
         // Starting balance is the carry-over value if it exists
-        // If not, use account.saldo only if it's March 2026 (the base month for initial data)
-        const startingBalance = carryOver ? carryOver.valor : (selectedMonth === '2026-03' ? account.saldo : 0);
+        // If not, use account.saldo only if it's April 2026 (the base month for initial data)
+        const startingBalance = carryOver ? carryOver.valor : (selectedMonth === '2026-04' ? account.saldo : 0);
 
         const accIncome = income
           .filter(i => i && i.conta === account.nome)
@@ -1604,7 +1604,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           i.nome && i.nome.toLowerCase().includes('transportado') && 
           i.data_especifica?.startsWith(selectedMonth)
         );
-        const startingBalance = carryOver ? carryOver.valor : (selectedMonth === '2026-03' ? account.saldo : 0);
+        const startingBalance = carryOver ? carryOver.valor : (selectedMonth === '2026-04' ? account.saldo : 0);
         
         const accIncome = income
           .filter(i => i && i.conta === account.nome)

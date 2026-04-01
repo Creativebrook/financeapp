@@ -8,7 +8,7 @@ import PremiumHeader from '@/components/PremiumHeader';
 import { Plus, Edit2, Trash2, CreditCard, X, AlertCircle, Calendar, Banknote, CalendarCheck, ChevronLeft, ChevronRight, Eye, Trash, PieChart as PieChartIcon } from 'lucide-react';
 import { formatCurrency, getNextPaymentDate, formatDate } from '@/lib/utils';
 import { getCardAccent, getPieChartColor } from '@/lib/theme';
-import { Debt } from '@/types';
+import { Debt, Frequencia } from '@/types';
 import DebtDistributionChart from '@/components/charts/DebtDistributionChart';
 
 function DebtsContent() {
@@ -128,6 +128,7 @@ function DebtsContent() {
     data_pagamento: 1,
     conta: 'Montepio',
     categoria: 'Cartão de Crédito',
+    frequencia: 'mensal' as Frequencia,
     taxa_juro: 0,
     data_fim: '',
   });
@@ -168,6 +169,7 @@ function DebtsContent() {
         data_pagamento: debt.data_pagamento,
         conta: debt.conta,
         categoria: debt.categoria,
+        frequencia: debt.frequencia || 'mensal',
         taxa_juro: debt.taxa_juro || 0,
         data_fim: debt.data_fim || '',
       });
@@ -184,6 +186,7 @@ function DebtsContent() {
         data_pagamento: 1,
         conta: firstCreditCard ? firstCreditCard.nome : (accounts[0]?.nome || 'Montepio'),
         categoria: defaultCategory,
+        frequencia: 'mensal',
         taxa_juro: firstCreditCard ? (firstCreditCard.taxa_juro || 0) : 0,
         data_fim: '',
       });
@@ -220,6 +223,7 @@ function DebtsContent() {
       data_pagamento: 1, // Default for credit card added this way
       conta: accounts[0]?.nome || 'Montepio',
       categoria: 'Cartão de Crédito',
+      frequencia: 'mensal' as Frequencia,
       taxa_juro: creditCardFormData.taxa_juro || undefined,
     };
     
@@ -237,6 +241,7 @@ function DebtsContent() {
       data_pagamento: formData.data_pagamento,
       conta: formData.conta,
       categoria: formData.categoria,
+      frequencia: formData.frequencia,
       taxa_juro: formData.taxa_juro || undefined,
       data_fim: formData.data_fim || undefined,
     };
@@ -944,6 +949,20 @@ function DebtsContent() {
               </div>
 
               <div className="grid-2">
+                <div className="form-group">
+                  <label className="form-label">Frequência</label>
+                  <select
+                    className="form-select"
+                    value={formData.frequencia}
+                    onChange={(e) => setFormData({ ...formData, frequencia: e.target.value as Frequencia })}
+                  >
+                    <option value="mensal">Mensal</option>
+                    <option value="trimestral">Trimestral</option>
+                    <option value="semestral">Semestral</option>
+                    <option value="anual">Anual</option>
+                  </select>
+                </div>
+
                 <div className="form-group">
                   <label className="form-label">Taxa de Juro (%)</label>
                   <input
