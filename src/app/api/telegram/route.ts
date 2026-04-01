@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
   try {
-    const { message, chatId } = await req.json();
-    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    const { message, chatId, token } = await req.json();
+    const botToken = token || process.env.TELEGRAM_BOT_TOKEN;
 
     if (!botToken) {
       return NextResponse.json({ error: 'Telegram Bot Token not configured' }, { status: 500 });

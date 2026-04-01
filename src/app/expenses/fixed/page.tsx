@@ -74,19 +74,58 @@ function FixedExpensesContent() {
   };
 
   // Filter history by selected month and exclude future/incorrect items
-  const filteredHistory = variableExpenses
-    .filter(v => v && v.categoria === 'Fixa' && v.data && v.data.startsWith(selectedMonth))
-    .filter(v => {
-      if (!v) return false;
-      // Remove "Pensão Alimentos" on 2026-03-28 specifically as requested
-      if (v.nome === 'Pensão Alimentos' && v.data === '2026-03-28') return false;
-      // Also ensure we don't show future expenses in the history table
-      return v.data <= today.toISOString().split('T')[0];
-    })
-    .sort((a, b) => {
+  const filteredHistory = (() => {
+    const history = variableExpenses
+      .filter(v => v && v.categoria === 'Fixa' && v.data && v.data.startsWith(selectedMonth))
+      .filter(v => {
+        if (!v) return false;
+        // Remove "Pensão Alimentos" on 2026-03-28 specifically as requested
+        if (v.nome === 'Pensão Alimentos' && v.data === '2026-03-28') return false;
+        // Also ensure we don't show future expenses in the history table
+        return v.data <= today.toISOString().split('T')[0];
+      });
+
+    // Add "virtual" entries for fixed expenses that should have occurred in the selected month but aren't in history
+    const currentYear = parseInt(selectedMonth.split('-')[0]);
+    const currentMonth = parseInt(selectedMonth.split('-')[1]);
+    const todayDay = today.getDate();
+    const isCurrentMonth = selectedMonth === today.toISOString().substring(0, 7);
+    const isPastMonth = selectedMonth < today.toISOString().substring(0, 7);
+
+    const virtualEntries: any[] = [];
+    
+    fixedExpenses.forEach(fe => {
+      if (!fe) return;
+      
+      // Check if this expense should have occurred in the selected month
+      // For simplicity, we check if the day has passed (if it's current month) or if it's a past month
+      const shouldHaveOccurred = isPastMonth || (isCurrentMonth && fe.data_pagamento <= todayDay);
+      
+      if (shouldHaveOccurred) {
+        // Check if it's already in history
+        const alreadyInHistory = history.some(h => h.nome === fe.nome);
+        
+        if (!alreadyInHistory) {
+          // Create a virtual entry
+          const dayStr = fe.data_pagamento.toString().padStart(2, '0');
+          virtualEntries.push({
+            id: `virtual-${fe.id}-${selectedMonth}`,
+            nome: fe.nome,
+            valor: fe.valor,
+            data: `${selectedMonth}-${dayStr}`,
+            conta: fe.conta,
+            categoria: fe.categoria || 'Fixa', // Use the specific category
+            isVirtual: true // Flag to identify it's auto-generated
+          });
+        }
+      }
+    });
+
+    return [...history, ...virtualEntries].sort((a, b) => {
       if (!a || !b || !a.data || !b.data) return 0;
       return new Date(b.data).getTime() - new Date(a.data).getTime();
     });
+  })();
 
   // Pagination logic
   const totalPages = Math.ceil(filteredHistory.length / itemsPerPage);
@@ -161,8 +200,8 @@ function FixedExpensesContent() {
     }, {} as Record<string, number>)
   ).map(([name, value]) => ({
     name,
-    value,
-    percent: totalMonthly > 0 ? Math.round((value / totalMonthly) * 100) : 0
+    value: Number(value),
+    percent: totalMonthly > 0 ? Math.round((Number(value) / totalMonthly) * 100) : 0
   })).sort((a, b) => b.value - a.value);
 
   const handleOpenModal = (expense?: any, isHistory: boolean = false) => {

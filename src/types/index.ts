@@ -148,6 +148,8 @@ export interface PlatformSummary {
 // Telegram Settings
 export interface TelegramSettings {
   chatId: string;
+  token: string;
+  alertLeadTime: 'same_day' | 'day_before' | '2_days_before' | '1_week_before' | '15_days_before';
   enabledAlerts: {
     rendimentos: boolean;
     dividas: boolean;

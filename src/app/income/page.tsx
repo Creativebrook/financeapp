@@ -157,18 +157,7 @@ function IncomeContent() {
     i.frequencia === 'unico'
   );
   
-  // If we have multiple entries for some reason, pick the one that matches the previous month name
-  // This is a safety measure against duplicated or mislabeled entries
-  let finalCarriedOverValue = 0;
-  if (carriedOverEntries.length > 1) {
-    const prevMonthShort = prevMonthName.substring(0, 3).toLowerCase();
-    const bestMatch = carriedOverEntries.find(i => i.nome.toLowerCase().includes(prevMonthShort));
-    finalCarriedOverValue = bestMatch ? bestMatch.valor : carriedOverEntries[0].valor;
-  } else if (carriedOverEntries.length === 1) {
-    finalCarriedOverValue = carriedOverEntries[0].valor;
-  }
-
-  const carriedOverValue = finalCarriedOverValue;
+  const carriedOverValue = carriedOverEntries.reduce((sum, i) => sum + i.valor, 0);
 
   const accumulatedValue = receivedIncomeNoCarry + carriedOverValue;
 
@@ -245,10 +234,19 @@ function IncomeContent() {
   const totalExpensesPaid = selectedMonthFixedPaid + selectedMonthVariablePaid + selectedMonthDebtsPaid;
 
   // Income sources for pie chart (all selected month sources including carry over)
-  const incomeSourcesData = monthIncomeEntries.map(i => ({
-    name: i.nome,
-    value: expectedIncomeTotal > 0 ? (i.valor / expectedIncomeTotal) * 100 : 0
-  })).sort((a, b) => b.value - a.value);
+  const incomeSourcesData = (() => {
+    const grouped: Record<string, number> = {};
+    monthIncomeEntries.forEach(i => {
+      if (!i) return;
+      const name = i.nome;
+      grouped[name] = (grouped[name] || 0) + i.valor;
+    });
+    
+    return Object.entries(grouped).map(([name, valor]) => ({
+      name,
+      value: expectedIncomeTotal > 0 ? (valor / expectedIncomeTotal) * 100 : 0
+    })).sort((a, b) => b.value - a.value);
+  })();
 
   const handleOpenModal = (incomeItem?: Income) => {
     if (incomeItem) {

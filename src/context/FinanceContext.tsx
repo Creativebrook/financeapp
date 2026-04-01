@@ -515,26 +515,15 @@ function getInitialData() {
           variableExpenses: Array.isArray(parsed.variableExpenses) ? parsed.variableExpenses.filter((e: any) => e && e.id) : initialVariableExpenses,
           income: Array.isArray(parsed.income) 
             ? (() => {
-                const incomeList = [...parsed.income];
+                let incomeList = [...parsed.income];
                 
                 // Ensure April carry-over entries exist and have correct values
-                const hasMontepioApr = incomeList.some(i => i && i.nome && i.nome.includes('Valor transportado Mar 2026') && i.conta === 'Montepio' && i.data_especifica === '2026-04-01');
-                const hasRevolutApr = incomeList.some(i => i && i.nome && i.nome.includes('Valor transportado Mar 2026') && i.conta === 'Revolut' && i.data_especifica === '2026-04-01');
+                // First, remove any existing carry-over entries for April 2026 to avoid duplicates
+                incomeList = incomeList.filter(i => !(i && i.nome && i.nome.includes('Valor transportado Mar 2026') && i.data_especifica === '2026-04-01'));
                 
-                if (!hasMontepioApr) {
-                  // Remove any potential duplicate or incorrect April carry-over for Montepio
-                  const filteredList = incomeList.filter(i => !(i && i.nome && i.nome.includes('Valor transportado Mar 2026') && i.conta === 'Montepio'));
-                  filteredList.push({ id: 'inc-apr-0', nome: 'Valor transportado Mar 2026', valor: 1274.07, frequencia: 'unico', data: 1, data_especifica: '2026-04-01', conta: 'Montepio' });
-                  incomeList.length = 0;
-                  incomeList.push(...filteredList);
-                }
-                if (!hasRevolutApr) {
-                  // Remove any potential duplicate or incorrect April carry-over for Revolut
-                  const filteredList = incomeList.filter(i => !(i && i.nome && i.nome.includes('Valor transportado Mar 2026') && i.conta === 'Revolut'));
-                  filteredList.push({ id: 'inc-apr-0-rev', nome: 'Valor transportado Mar 2026', valor: 2414.64, frequencia: 'unico', data: 1, data_especifica: '2026-04-01', conta: 'Revolut' });
-                  incomeList.length = 0;
-                  incomeList.push(...filteredList);
-                }
+                // Add correct April carry-over entries
+                incomeList.push({ id: 'inc-apr-0', nome: 'Valor transportado Mar 2026', valor: 1274.07, frequencia: 'unico', data: 1, data_especifica: '2026-04-01', conta: 'Montepio' });
+                incomeList.push({ id: 'inc-apr-0-rev', nome: 'Valor transportado Mar 2026', valor: 2414.64, frequencia: 'unico', data: 1, data_especifica: '2026-04-01', conta: 'Revolut' });
 
                 return incomeList.map((i: any) => {
                   if (!i) return i;
@@ -658,6 +647,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [recurringMovements, setRecurringMovements] = useState<RecurringMovement[]>(initialRecurringMovements);
   const [telegramSettings, setTelegramSettings] = useState<TelegramSettings>({
     chatId: '',
+    token: '',
+    alertLeadTime: 'same_day',
     enabledAlerts: {
       rendimentos: true,
       dividas: true,
@@ -707,7 +698,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message,
-          chatId: telegramSettings.chatId
+          chatId: telegramSettings.chatId,
+          token: telegramSettings.token
         })
       });
     } catch (error) {

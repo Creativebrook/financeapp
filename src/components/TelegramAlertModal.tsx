@@ -13,6 +13,8 @@ interface TelegramAlertModalProps {
 export default function TelegramAlertModal({ isOpen, onClose }: TelegramAlertModalProps) {
   const { telegramSettings, updateTelegramSettings } = useFinance();
   const [telegramNumber, setTelegramNumber] = useState(telegramSettings.chatId);
+  const [telegramToken, setTelegramToken] = useState(telegramSettings.token || '');
+  const [alertTiming, setAlertTiming] = useState(telegramSettings.alertLeadTime || 'same_day');
   const [alerts, setAlerts] = useState(telegramSettings.enabledAlerts);
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
@@ -21,6 +23,8 @@ export default function TelegramAlertModal({ isOpen, onClose }: TelegramAlertMod
   useEffect(() => {
     if (isOpen) {
       setTelegramNumber(telegramSettings.chatId);
+      setTelegramToken(telegramSettings.token || '');
+      setAlertTiming(telegramSettings.alertLeadTime || 'same_day');
       setAlerts(telegramSettings.enabledAlerts);
       setError(null);
     }
@@ -31,6 +35,10 @@ export default function TelegramAlertModal({ isOpen, onClose }: TelegramAlertMod
       setError('Por favor, insira o seu Chat ID do Telegram.');
       return;
     }
+    if (!telegramToken) {
+      setError('Por favor, insira o seu Token do Bot do Telegram.');
+      return;
+    }
 
     setIsSaving(true);
     setError(null);
@@ -39,6 +47,8 @@ export default function TelegramAlertModal({ isOpen, onClose }: TelegramAlertMod
       // 1. Update settings in context
       updateTelegramSettings({
         chatId: telegramNumber,
+        token: telegramToken,
+        alertLeadTime: alertTiming as any,
         enabledAlerts: alerts
       });
 
@@ -48,7 +58,8 @@ export default function TelegramAlertModal({ isOpen, onClose }: TelegramAlertMod
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: '<b>✅ Configuração Concluída!</b>\n\nAs suas notificações do FinanceFlow foram ativadas com sucesso para este chat.',
-          chatId: telegramNumber
+          chatId: telegramNumber,
+          token: telegramToken
         })
       });
 
@@ -111,73 +122,96 @@ export default function TelegramAlertModal({ isOpen, onClose }: TelegramAlertMod
               <div className="space-y-4">
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Ativar Alertas Para:</label>
                 
-                <div className="space-y-3">
+                <div className="grid grid-cols-3 gap-2">
                   <button 
                     onClick={() => setAlerts(prev => ({ ...prev, rendimentos: !prev.rendimentos }))}
-                    className={`w-full p-4 rounded-xl border transition-all flex items-center justify-between ${
-                      alerts.rendimentos ? 'bg-accent-primary/5 border-accent-primary/20 text-white' : 'bg-white/[0.02] border-white/[0.05] text-slate-400'
+                    className={`p-3 rounded-xl border transition-all flex flex-col items-center gap-2 ${
+                      alerts.rendimentos ? 'bg-accent-primary/10 border-accent-primary/30 text-white' : 'bg-white/[0.02] border-white/[0.05] text-slate-500'
                     }`}
                   >
-                    <span className="text-sm font-medium">Rendimentos</span>
-                    <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${
+                    <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
                       alerts.rendimentos ? 'bg-accent-primary border-accent-primary text-white' : 'border-white/20'
                     }`}>
-                      {alerts.rendimentos && <CheckCircle2 size={12} />}
+                      {alerts.rendimentos && <CheckCircle2 size={10} />}
                     </div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider">Rendimentos</span>
                   </button>
 
                   <button 
                     onClick={() => setAlerts(prev => ({ ...prev, dividas: !prev.dividas }))}
-                    className={`w-full p-4 rounded-xl border transition-all flex items-center justify-between ${
-                      alerts.dividas ? 'bg-accent-primary/5 border-accent-primary/20 text-white' : 'bg-white/[0.02] border-white/[0.05] text-slate-400'
+                    className={`p-3 rounded-xl border transition-all flex flex-col items-center gap-2 ${
+                      alerts.dividas ? 'bg-accent-primary/10 border-accent-primary/30 text-white' : 'bg-white/[0.02] border-white/[0.05] text-slate-500'
                     }`}
                   >
-                    <span className="text-sm font-medium">Dívidas</span>
-                    <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${
+                    <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
                       alerts.dividas ? 'bg-accent-primary border-accent-primary text-white' : 'border-white/20'
                     }`}>
-                      {alerts.dividas && <CheckCircle2 size={12} />}
+                      {alerts.dividas && <CheckCircle2 size={10} />}
                     </div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider">Dívidas</span>
                   </button>
 
                   <button 
                     onClick={() => setAlerts(prev => ({ ...prev, despesasFixas: !prev.despesasFixas }))}
-                    className={`w-full p-4 rounded-xl border transition-all flex items-center justify-between ${
-                      alerts.despesasFixas ? 'bg-accent-primary/5 border-accent-primary/20 text-white' : 'bg-white/[0.02] border-white/[0.05] text-slate-400'
+                    className={`p-3 rounded-xl border transition-all flex flex-col items-center gap-2 ${
+                      alerts.despesasFixas ? 'bg-accent-primary/10 border-accent-primary/30 text-white' : 'bg-white/[0.02] border-white/[0.05] text-slate-500'
                     }`}
                   >
-                    <span className="text-sm font-medium">Despesas Fixas</span>
-                    <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${
+                    <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
                       alerts.despesasFixas ? 'bg-accent-primary border-accent-primary text-white' : 'border-white/20'
                     }`}>
-                      {alerts.despesasFixas && <CheckCircle2 size={12} />}
+                      {alerts.despesasFixas && <CheckCircle2 size={10} />}
                     </div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider">Despesas</span>
                   </button>
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Chat ID Telegram:</label>
-                <div className="relative">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500">
-                    <Send size={16} />
-                  </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Chat ID:</label>
                   <input 
                     type="text"
                     placeholder="Ex: 123456789"
                     value={telegramNumber}
                     onChange={(e) => setTelegramNumber(e.target.value)}
-                    className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl py-3 pl-12 pr-4 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-accent-primary/50 transition-colors"
+                    className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl py-2.5 px-4 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-accent-primary/50 transition-colors"
                   />
                 </div>
-                <div className="mt-2 flex items-start gap-2 px-1">
-                  <div className="w-4 h-4 rounded-full bg-accent-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <span className="text-[10px] font-bold text-accent-primary">i</span>
-                  </div>
-                  <p className="text-[10px] text-slate-500 leading-relaxed">
-                    Obtenha o seu Chat ID enviando uma mensagem para <a href="https://t.me/userinfobot" target="_blank" rel="noreferrer" className="text-accent-primary hover:underline font-medium">@userinfobot</a> no Telegram.
-                  </p>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Token do Bot:</label>
+                  <input 
+                    type="password"
+                    placeholder="Token do Bot"
+                    value={telegramToken}
+                    onChange={(e) => setTelegramToken(e.target.value)}
+                    className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl py-2.5 px-4 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-accent-primary/50 transition-colors"
+                  />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Tempo de Alerta:</label>
+                <select 
+                  value={alertTiming}
+                  onChange={(e) => setAlertTiming(e.target.value as any)}
+                  className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl py-2.5 px-4 text-sm text-white focus:outline-none focus:border-accent-primary/50 transition-colors appearance-none cursor-pointer"
+                >
+                  <option value="same_day" className="bg-[#1a1c23]">No próprio dia</option>
+                  <option value="day_before" className="bg-[#1a1c23]">No dia anterior</option>
+                  <option value="2_days_before" className="bg-[#1a1c23]">Dois dias antes</option>
+                  <option value="1_week_before" className="bg-[#1a1c23]">Uma semana antes</option>
+                  <option value="15_days_before" className="bg-[#1a1c23]">15 dias antes</option>
+                </select>
+              </div>
+
+              <div className="flex items-start gap-2 px-1">
+                <div className="w-4 h-4 rounded-full bg-accent-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-[10px] font-bold text-accent-primary">i</span>
+                </div>
+                <p className="text-[10px] text-slate-500 leading-relaxed">
+                  Obtenha o seu Chat ID enviando uma mensagem para <a href="https://t.me/userinfobot" target="_blank" rel="noreferrer" className="text-accent-primary hover:underline font-medium">@userinfobot</a>. Crie um Bot no <a href="https://t.me/botfather" target="_blank" rel="noreferrer" className="text-accent-primary hover:underline font-medium">@BotFather</a> para obter o Token.
+                </p>
               </div>
 
               {error && (
