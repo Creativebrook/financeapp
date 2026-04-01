@@ -352,94 +352,111 @@ function DashboardContent() {
 
   // Real daily wealth data based on selectedMonth
   const wealthEvolutionDailyData = useMemo(() => {
-    const [year, month] = selectedMonth.split('-').map(Number);
-    const daysInMonth = new Date(year, month, 0).getDate();
-    const data = [];
-    
-    const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-    const monthName = monthNames[month - 1];
-
-    const initialTotalSaldo = accounts.reduce((sum, acc) => sum + (acc?.saldo || 0), 0);
-    const totalInvestments = investments.reduce((sum, inv) => sum + (inv?.valor_atual || 0), 0);
-    const baseWealth = initialTotalSaldo + totalInvestments;
-
-    let cumulativeIncome = 0;
-    let cumulativeExpenses = 0;
-
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dateStr = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-      
-      const dayIncome = income
-        .filter(inc => {
-          if (!inc) return false;
-          // Exclude carry-over from charts
-          if (inc.nome.toLowerCase().includes('valor transportado')) return false;
-          
-          if (inc.frequencia === 'mensal') return inc.data === day && (!inc.data_inicio || inc.data_inicio <= dateStr);
-          if (inc.frequencia === 'unico') return inc.data_especifica === dateStr;
-          return false;
-        })
-        .reduce((sum, inc) => sum + (inc?.valor || 0), 0);
-
-      const dayExpenses = variableExpenses
-        .filter(exp => exp && exp.data === dateStr && exp.categoria !== 'Investimento' && exp.categoria !== 'Transferência')
-        .reduce((sum, exp) => sum + (exp?.valor || 0), 0);
-
-      cumulativeIncome += dayIncome;
-      cumulativeExpenses += dayExpenses;
-
-      const currentWealth = baseWealth + cumulativeIncome - cumulativeExpenses;
-      const wealthPct = ((currentWealth - baseWealth) / baseWealth) * 100;
-
-      // Mock S&P 500 for comparison
-      const sp500Value = 5400 + (day * 5) + deterministicCos(day) * 30;
-      const sp500Pct = ((sp500Value - 5400) / 5400) * 100;
-
-      data.push({
-        day: `${day} ${monthName}`,
-        wealth: Math.round(currentWealth),
-        wealthPct: Math.round(wealthPct * 100) / 100,
-        sp500: Math.round(sp500Value),
-        sp500Pct: Math.round(sp500Pct * 100) / 100,
-      });
+    if (!selectedMonth || !selectedMonth.includes('-')) {
+      return [];
     }
-    return data;
+    try {
+      const [year, month] = selectedMonth.split('-').map(Number);
+      const daysInMonth = new Date(year, month, 0).getDate();
+      const data = [];
+      
+      const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+      const monthName = monthNames[month - 1] || 'Mes';
+
+      const initialTotalSaldo = accounts.reduce((sum, acc) => sum + (acc?.saldo || 0), 0);
+      const totalInvestments = investments.reduce((sum, inv) => sum + (inv?.valor_atual || 0), 0);
+      const baseWealth = initialTotalSaldo + totalInvestments;
+
+      let cumulativeIncome = 0;
+      let cumulativeExpenses = 0;
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+        
+        const dayIncome = income
+          .filter(inc => {
+            if (!inc) return false;
+            // Exclude carry-over from charts
+            if (inc.nome && inc.nome.toLowerCase().includes('valor transportado')) return false;
+            
+            if (inc.frequencia === 'mensal') return inc.data === day && (!inc.data_inicio || inc.data_inicio <= dateStr);
+            if (inc.frequencia === 'unico') return inc.data_especifica === dateStr;
+            return false;
+          })
+          .reduce((sum, inc) => sum + (inc?.valor || 0), 0);
+
+        const dayExpenses = variableExpenses
+          .filter(exp => exp && exp.data === dateStr && exp.categoria !== 'Investimento' && exp.categoria !== 'Transferência')
+          .reduce((sum, exp) => sum + (exp?.valor || 0), 0);
+
+        cumulativeIncome += dayIncome;
+        cumulativeExpenses += dayExpenses;
+
+        const currentWealth = baseWealth + cumulativeIncome - cumulativeExpenses;
+        const wealthPct = baseWealth > 0 ? ((currentWealth - baseWealth) / baseWealth) * 100 : 0;
+
+        // Mock S&P 500 for comparison
+        const sp500Value = 5400 + (day * 5) + deterministicCos(day) * 30;
+        const sp500Pct = ((sp500Value - 5400) / 5400) * 100;
+
+        data.push({
+          day: `${day} ${monthName}`,
+          wealth: Math.round(currentWealth),
+          wealthPct: Math.round(wealthPct * 100) / 100,
+          sp500: Math.round(sp500Value),
+          sp500Pct: Math.round(sp500Pct * 100) / 100,
+        });
+      }
+      return data;
+    } catch (e) {
+      console.error('Error calculating wealth evolution data:', e);
+      return [];
+    }
   }, [selectedMonth, accounts, investments, income, variableExpenses]);
 
   // Real daily cashflow data based on selectedMonth
   const cashflowDailyData = useMemo(() => {
-    const [year, month] = selectedMonth.split('-').map(Number);
-    const daysInMonth = new Date(year, month, 0).getDate();
-    const data = [];
-    
-    const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-    const monthName = monthNames[month - 1];
-
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dateStr = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-      
-      const dayIncome = income
-        .filter(inc => {
-          // Exclude carry-over from charts
-          if (inc.nome.toLowerCase().includes('valor transportado')) return false;
-          
-          if (inc.frequencia === 'mensal') return inc.data === day && (!inc.data_inicio || inc.data_inicio <= dateStr);
-          if (inc.frequencia === 'unico') return inc.data_especifica === dateStr;
-          return false;
-        })
-        .reduce((sum, inc) => sum + inc.valor, 0);
-
-      const dayExpenses = variableExpenses
-        .filter(exp => exp.data === dateStr && exp.categoria !== 'Investimento' && exp.categoria !== 'Transferência')
-        .reduce((sum, exp) => sum + exp.valor, 0);
-
-      data.push({
-        day: `${day} ${monthName}`,
-        receitas: dayIncome,
-        despesas: dayExpenses,
-      });
+    if (!selectedMonth || !selectedMonth.includes('-')) {
+      return [];
     }
-    return data;
+    try {
+      const [year, month] = selectedMonth.split('-').map(Number);
+      const daysInMonth = new Date(year, month, 0).getDate();
+      const data = [];
+      
+      const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+      const monthName = monthNames[month - 1] || 'Mes';
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+        
+        const dayIncome = income
+          .filter(inc => {
+            if (!inc || !inc.nome) return false;
+            // Exclude carry-over from charts
+            if (inc.nome.toLowerCase().includes('valor transportado')) return false;
+            
+            if (inc.frequencia === 'mensal') return inc.data === day && (!inc.data_inicio || inc.data_inicio <= dateStr);
+            if (inc.frequencia === 'unico') return inc.data_especifica === dateStr;
+            return false;
+          })
+          .reduce((sum, inc) => sum + (inc?.valor || 0), 0);
+
+        const dayExpenses = variableExpenses
+          .filter(exp => exp && exp.data === dateStr && exp.categoria !== 'Investimento' && exp.categoria !== 'Transferência')
+          .reduce((sum, exp) => sum + (exp?.valor || 0), 0);
+
+        data.push({
+          day: `${day} ${monthName}`,
+          receitas: dayIncome,
+          despesas: dayExpenses,
+        });
+      }
+      return data;
+    } catch (e) {
+      console.error('Error calculating cashflow daily data:', e);
+      return [];
+    }
   }, [selectedMonth, income, variableExpenses]);
 
   // Detect mobile screen

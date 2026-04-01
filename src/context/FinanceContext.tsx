@@ -624,34 +624,46 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [authLoading, setAuthLoading] = useState(true);
   const [dataLoading, setDataLoading] = useState(false);
   
-  const [accounts, setAccounts] = useState<Account[]>(() => getInitialData().accounts);
-  const [investments, setInvestments] = useState<Investment[]>(() => getInitialData().investments);
-  const [debts, setDebts] = useState<Debt[]>(() => getInitialData().debts);
-  const [fixedExpenses, setFixedExpenses] = useState<FixedExpense[]>(() => getInitialData().fixedExpenses);
-  const [variableExpenses, setVariableExpenses] = useState<VariableExpense[]>(() => getInitialData().variableExpenses);
-  const [income, setIncome] = useState<Income[]>(() => getInitialData().income);
-  const [customWallets, setCustomWallets] = useState<string[]>(() => getInitialData().customWallets);
-  const [recurringMovements, setRecurringMovements] = useState<RecurringMovement[]>(() => getInitialData().recurringMovements);
-  const [telegramSettings, setTelegramSettings] = useState<TelegramSettings>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('telegram_settings');
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch (e) {
-          console.error('Error parsing telegram settings:', e);
-        }
+  // Initialize with empty arrays to avoid hydration mismatch
+  const [accounts, setAccounts] = useState<Account[]>(initialAccounts);
+  const [investments, setInvestments] = useState<Investment[]>(initialInvestments);
+  const [debts, setDebts] = useState<Debt[]>(initialDebts);
+  const [fixedExpenses, setFixedExpenses] = useState<FixedExpense[]>(initialFixedExpenses);
+  const [variableExpenses, setVariableExpenses] = useState<VariableExpense[]>(initialVariableExpenses);
+  const [income, setIncome] = useState<Income[]>(initialIncome);
+  const [customWallets, setCustomWallets] = useState<string[]>([]);
+  const [recurringMovements, setRecurringMovements] = useState<RecurringMovement[]>(initialRecurringMovements);
+  const [telegramSettings, setTelegramSettings] = useState<TelegramSettings>({
+    chatId: '',
+    enabledAlerts: {
+      rendimentos: true,
+      dividas: true,
+      despesasFixas: true
+    }
+  });
+
+  // Load from localStorage on mount
+  useEffect(() => {
+    console.log('FinanceProvider: Loading initial data from localStorage');
+    const initial = getInitialData();
+    setAccounts(initial.accounts);
+    setInvestments(initial.investments);
+    setDebts(initial.debts);
+    setFixedExpenses(initial.fixedExpenses);
+    setVariableExpenses(initial.variableExpenses);
+    setIncome(initial.income);
+    setCustomWallets(initial.customWallets);
+    setRecurringMovements(initial.recurringMovements);
+
+    const savedTelegram = localStorage.getItem('telegram_settings');
+    if (savedTelegram) {
+      try {
+        setTelegramSettings(JSON.parse(savedTelegram));
+      } catch (e) {
+        console.error('Error parsing telegram settings:', e);
       }
     }
-    return {
-      chatId: '',
-      enabledAlerts: {
-        rendimentos: true,
-        dividas: true,
-        despesasFixas: true
-      }
-    };
-  });
+  }, []);
 
   const updateTelegramSettings = (settings: Partial<TelegramSettings>) => {
     setTelegramSettings(prev => {
@@ -687,6 +699,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   // Save to localStorage whenever data changes
   useEffect(() => {
+    // Skip saving if we are in the initial mount phase where data might be empty
+    // but we check if we have at least some data or if it's explicitly cleared
     const data = {
       accounts,
       investments,
@@ -696,7 +710,11 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       income,
       customWallets
     };
-    localStorage.setItem('financeflow_data', JSON.stringify(data));
+    
+    // Only save if we are on the client
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('financeflow_data', JSON.stringify(data));
+    }
   }, [accounts, investments, debts, fixedExpenses, variableExpenses, income, customWallets]);
 
   // Auth listener
@@ -1457,180 +1475,213 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   // Computed values
   const getDashboardSummary = (): DashboardSummary => {
-    const now = new Date();
-    const currentMonthStr = now.toISOString().substring(0, 7);
-    
-    let currentDay = now.getDate();
-    if (selectedMonth < currentMonthStr) {
-      const [y, m] = selectedMonth.split('-');
-      currentDay = new Date(parseInt(y), parseInt(m), 0).getDate();
-    } else if (selectedMonth > currentMonthStr) {
-      currentDay = 0;
-    }
-    
-    const accountBalances = accounts.map(account => {
-      // Find carry-over for this month
-      const carryOver = income.find(i => 
-        i.conta === account.nome && 
-        i.nome.toLowerCase().includes('transportado') && 
-        i.data_especifica?.startsWith(selectedMonth)
-      );
+    try {
+      const now = new Date();
+      const currentMonthStr = now.toISOString().substring(0, 7);
+      
+      let currentDay = now.getDate();
+      if (selectedMonth < currentMonthStr) {
+        const [y, m] = selectedMonth.split('-');
+        currentDay = new Date(parseInt(y), parseInt(m), 0).getDate();
+      } else if (selectedMonth > currentMonthStr) {
+        currentDay = 0;
+      }
+      
+      const accountBalances = accounts.map(account => {
+        // Find carry-over for this month
+        const carryOver = income.find(i => 
+          i && i.conta === account.nome && 
+          i.nome && i.nome.toLowerCase().includes('transportado') && 
+          i.data_especifica?.startsWith(selectedMonth)
+        );
 
-      // Starting balance is the carry-over value if it exists
-      // If not, use account.saldo only if it's March 2026 (the base month for initial data)
-      const startingBalance = carryOver ? carryOver.valor : (selectedMonth === '2026-03' ? account.saldo : 0);
+        // Starting balance is the carry-over value if it exists
+        // If not, use account.saldo only if it's March 2026 (the base month for initial data)
+        const startingBalance = carryOver ? carryOver.valor : (selectedMonth === '2026-03' ? account.saldo : 0);
 
-      const accIncome = income
-        .filter(i => i.conta === account.nome)
-        .filter(i => {
-          if (i.nome.toLowerCase().includes('transportado')) return false;
-          if (i.frequencia === 'mensal') {
-            if (i.data_inicio && i.data_inicio > `${selectedMonth}-31`) return false;
-            return i.data <= currentDay;
-          }
-          if (i.frequencia === 'unico' && i.data_especifica && i.data_especifica.startsWith(selectedMonth)) {
-            const day = parseInt(i.data_especifica.split('-')[2]);
+        const accIncome = income
+          .filter(i => i && i.conta === account.nome)
+          .filter(i => {
+            if (!i || !i.nome) return false;
+            if (i.nome.toLowerCase().includes('transportado')) return false;
+            if (i.frequencia === 'mensal') {
+              if (i.data_inicio && i.data_inicio > `${selectedMonth}-31`) return false;
+              return i.data <= currentDay;
+            }
+            if (i.frequencia === 'unico' && i.data_especifica && i.data_especifica.startsWith(selectedMonth)) {
+              const day = parseInt(i.data_especifica.split('-')[2]);
+              return day <= currentDay;
+            }
+            return false;
+          })
+          .reduce((sum, i) => sum + (i?.valor || 0), 0);
+
+        const accVariableSpent = variableExpenses
+          .filter(e => e && e.conta === account.nome && e.data && e.data.startsWith(selectedMonth))
+          .filter(e => {
+            const day = parseInt(e.data.split('-')[2]);
             return day <= currentDay;
-          }
-          return false;
-        })
-        .reduce((sum, i) => sum + i.valor, 0);
+          })
+          .reduce((sum, e) => sum + (e?.valor || 0), 0);
 
-      const accVariableSpent = variableExpenses
-        .filter(e => e && e.conta === account.nome && e.data && e.data.startsWith(selectedMonth))
-        .filter(e => {
-          const day = parseInt(e.data.split('-')[2]);
+        const accFixed = fixedExpenses
+          .filter(e => e && e.conta === account.nome && e.data_pagamento <= currentDay)
+          .reduce((sum, e) => sum + (e?.valor || 0), 0);
+
+        const accDebts = debts
+          .filter(d => d && d.conta === account.nome && d.data_pagamento <= currentDay)
+          .reduce((sum, d) => sum + (d?.prestacao_mensal || 0), 0);
+
+        return startingBalance + accIncome - accVariableSpent - accFixed - accDebts;
+      });
+
+      const totalAccounts = accountBalances.reduce((sum, b) => sum + b, 0);
+      const totalInvestments = investments.reduce((sum, i) => sum + (i?.valor_atual || 0), 0);
+      const totalDividends = investments.reduce((sum, i) => sum + (i?.dividendos_ganhos || 0), 0);
+      const totalDebts = debts.reduce((sum, d) => sum + (d?.valor_total || 0), 0);
+      
+      const monthlyIncome = income.reduce((sum, i) => {
+        if (!i || !i.nome) return sum;
+        if (i.nome.toLowerCase().includes('transportado')) return sum;
+        if (i.frequencia === 'mensal') {
+          if (i.data_inicio && i.data_inicio > `${selectedMonth}-31`) return sum;
+          if (i.data > currentDay) return sum;
+          return sum + (i.valor || 0);
+        }
+        if (i.frequencia === 'unico' && i.data_especifica && i.data_especifica.startsWith(selectedMonth)) {
+          const day = parseInt(i.data_especifica.split('-')[2]);
+          if (day > currentDay) return sum;
+          return sum + (i.valor || 0);
+        }
+        return sum;
+      }, 0);
+
+      const totalVariableExpenses = variableExpenses
+        .filter(exp => exp && exp.data && exp.data.startsWith(selectedMonth))
+        .filter(exp => {
+          const day = parseInt(exp.data.split('-')[2]);
           return day <= currentDay;
         })
-        .reduce((sum, e) => sum + e.valor, 0);
+        .reduce((sum, exp) => sum + (exp?.valor || 0), 0);
 
-      const accFixed = fixedExpenses
-        .filter(e => e.conta === account.nome && e.data_pagamento <= currentDay)
-        .reduce((sum, e) => sum + e.valor, 0);
+      const totalFixedExpenses = fixedExpenses
+        .filter(exp => exp && exp.frequencia === 'mensal' && exp.data_pagamento <= currentDay)
+        .reduce((sum, exp) => sum + (exp?.valor || 0), 0);
 
-      const accDebts = debts
-        .filter(d => d.conta === account.nome && d.data_pagamento <= currentDay)
-        .reduce((sum, d) => sum + d.prestacao_mensal, 0);
+      const totalDebtsExpenses = debts
+        .filter(d => d && d.data_pagamento <= currentDay)
+        .reduce((sum, d) => sum + (d?.prestacao_mensal || 0), 0);
 
-      return startingBalance + accIncome - accVariableSpent - accFixed - accDebts;
-    });
-
-    const totalAccounts = accountBalances.reduce((sum, b) => sum + b, 0);
-    const totalInvestments = investments.reduce((sum, i) => sum + (i?.valor_atual || 0), 0);
-    const totalDividends = investments.reduce((sum, i) => sum + (i?.dividendos_ganhos || 0), 0);
-    const totalDebts = debts.reduce((sum, d) => sum + (d?.valor_total || 0), 0);
-    
-    const monthlyIncome = income.reduce((sum, i) => {
-      if (!i) return sum;
-      if (i.nome?.toLowerCase().includes('transportado')) return sum;
-      if (i.frequencia === 'mensal') {
-        if (i.data_inicio && i.data_inicio > `${selectedMonth}-31`) return sum;
-        if (i.data > currentDay) return sum;
-        return sum + (i.valor || 0);
-      }
-      if (i.frequencia === 'unico' && i.data_especifica && i.data_especifica.startsWith(selectedMonth)) {
-        const day = parseInt(i.data_especifica.split('-')[2]);
-        if (day > currentDay) return sum;
-        return sum + (i.valor || 0);
-      }
-      return sum;
-    }, 0);
-
-    const totalVariableExpenses = variableExpenses
-      .filter(exp => exp && exp.data && exp.data.startsWith(selectedMonth))
-      .filter(exp => {
-        const day = parseInt(exp.data.split('-')[2]);
-        return day <= currentDay;
-      })
-      .reduce((sum, exp) => sum + (exp?.valor || 0), 0);
-
-    const totalFixedExpenses = fixedExpenses
-      .filter(exp => exp.frequencia === 'mensal' && exp.data_pagamento <= currentDay)
-      .reduce((sum, exp) => sum + exp.valor, 0);
-
-    const totalDebtsExpenses = debts
-      .filter(d => d.data_pagamento <= currentDay)
-      .reduce((sum, d) => sum + d.prestacao_mensal, 0);
-
-    const totalExpenses = totalVariableExpenses + totalFixedExpenses + totalDebtsExpenses;
-    
-    const totalBase = accounts.reduce((sum, account) => {
-      const carryOver = income.find(i => 
-        i.conta === account.nome && 
-        i.nome.toLowerCase().includes('transportado') && 
-        i.data_especifica?.startsWith(selectedMonth)
-      );
-      const startingBalance = carryOver ? carryOver.valor : (selectedMonth === '2026-03' ? account.saldo : 0);
+      const totalExpenses = totalVariableExpenses + totalFixedExpenses + totalDebtsExpenses;
       
-      const accIncome = income
-        .filter(i => i.conta === account.nome)
-        .filter(i => {
-          if (i.nome.toLowerCase().includes('transportado')) return false;
-          if (i.frequencia === 'mensal') {
-            if (i.data_inicio && i.data_inicio > `${selectedMonth}-31`) return false;
-            return i.data <= currentDay;
-          }
-          if (i.frequencia === 'unico' && i.data_especifica && i.data_especifica.startsWith(selectedMonth)) {
-            const day = parseInt(i.data_especifica.split('-')[2]);
-            return day <= currentDay;
-          }
-          return false;
-        })
-        .reduce((sum, i) => sum + i.valor, 0);
+      const totalBase = accounts.reduce((sum, account) => {
+        const carryOver = income.find(i => 
+          i && i.conta === account.nome && 
+          i.nome && i.nome.toLowerCase().includes('transportado') && 
+          i.data_especifica?.startsWith(selectedMonth)
+        );
+        const startingBalance = carryOver ? carryOver.valor : (selectedMonth === '2026-03' ? account.saldo : 0);
         
-      return sum + startingBalance + accIncome;
-    }, 0);
-    
-    const cashflow = monthlyIncome - totalExpenses;
-    const savingsRate = monthlyIncome > 0 ? (cashflow / monthlyIncome) * 100 : 0;
+        const accIncome = income
+          .filter(i => i && i.conta === account.nome)
+          .filter(i => {
+            if (!i || !i.nome) return false;
+            if (i.nome.toLowerCase().includes('transportado')) return false;
+            if (i.frequencia === 'mensal') {
+              if (i.data_inicio && i.data_inicio > `${selectedMonth}-31`) return false;
+              return i.data <= currentDay;
+            }
+            if (i.frequencia === 'unico' && i.data_especifica && i.data_especifica.startsWith(selectedMonth)) {
+              const day = parseInt(i.data_especifica.split('-')[2]);
+              return day <= currentDay;
+            }
+            return false;
+          })
+          .reduce((sum, i) => sum + (i?.valor || 0), 0);
+          
+        return sum + startingBalance + accIncome;
+      }, 0);
+      
+      const cashflow = monthlyIncome - totalExpenses;
+      const savingsRate = monthlyIncome > 0 ? (cashflow / monthlyIncome) * 100 : 0;
 
-    return {
-      totalWealth: totalAccounts + totalInvestments,
-      totalAccounts,
-      totalBase,
-      totalInvestments,
-      totalDebts,
-      monthlyCashflow: cashflow,
-      monthlyIncome,
-      totalExpenses,
-      savingsRate,
-      monthlyFixedExpenses: totalFixedExpenses,
-      averageVariableExpenses: totalVariableExpenses,
-      totalDividends,
-      accountBalances
-    };
+      return {
+        totalWealth: totalAccounts + totalInvestments,
+        totalAccounts,
+        totalBase,
+        totalInvestments,
+        totalDebts,
+        monthlyCashflow: cashflow,
+        monthlyIncome,
+        totalExpenses,
+        savingsRate,
+        monthlyFixedExpenses: totalFixedExpenses,
+        averageVariableExpenses: totalVariableExpenses,
+        totalDividends,
+        accountBalances
+      };
+    } catch (e) {
+      console.error('Error in getDashboardSummary:', e);
+      return {
+        totalWealth: 0,
+        totalAccounts: 0,
+        totalBase: 0,
+        totalInvestments: 0,
+        totalDebts: 0,
+        monthlyCashflow: 0,
+        monthlyIncome: 0,
+        totalExpenses: 0,
+        savingsRate: 0,
+        monthlyFixedExpenses: 0,
+        averageVariableExpenses: 0,
+        totalDividends: 0,
+        accountBalances: accounts.map(() => 0)
+      };
+    }
   };
 
   const getPlatformSummaries = (): PlatformSummary[] => {
-    const platforms: Plataforma[] = ['XTB', 'Trading212', 'Revolut Stocks', 'Revolut Cripto', 'Robo Advisor'];
-    
-    return platforms.map(plataforma => {
-      const platformInvestments = investments.filter(i => i && i.plataforma === plataforma);
-      const totalValue = platformInvestments.reduce((sum, i) => sum + (i?.valor_atual || 0), 0);
-      const totalInvested = platformInvestments.reduce((sum, i) => sum + ((i?.quantidade || 0) * (i?.preco_medio || 0)), 0);
-      const totalDividends = platformInvestments.reduce((sum, i) => sum + (i?.dividendos_ganhos || 0), 0);
-      const profitability = totalValue - totalInvested;
-      const profitabilityPercent = totalInvested > 0 ? (profitability / totalInvested) * 100 : 0;
+    try {
+      const platforms: Plataforma[] = ['XTB', 'Trading212', 'Revolut Stocks', 'Revolut Cripto', 'Robo Advisor'];
       
-      return {
-        plataforma,
-        totalValue,
-        totalInvested,
-        profitability,
-        profitabilityPercent,
-        totalDividends,
-      };
-    }).filter(p => p.totalValue > 0);
+      return platforms.map(plataforma => {
+        const platformInvestments = investments.filter(i => i && i.plataforma === plataforma);
+        const totalValue = platformInvestments.reduce((sum, i) => sum + (i?.valor_atual || 0), 0);
+        const totalInvested = platformInvestments.reduce((sum, i) => sum + ((i?.quantidade || 0) * (i?.preco_medio || 0)), 0);
+        const totalDividends = platformInvestments.reduce((sum, i) => sum + (i?.dividendos_ganhos || 0), 0);
+        const profitability = totalValue - totalInvested;
+        const profitabilityPercent = totalInvested > 0 ? (profitability / totalInvested) * 100 : 0;
+        
+        return {
+          plataforma,
+          totalValue,
+          totalInvested,
+          profitability,
+          profitabilityPercent,
+          totalDividends,
+        };
+      }).filter(p => p.totalValue > 0);
+    } catch (e) {
+      console.error('Error in getPlatformSummaries:', e);
+      return [];
+    }
   };
 
   const getExpensesByCategory = (): Record<string, number> => {
-    const categories: Record<string, number> = {};
-    variableExpenses
-      .filter(e => e && e.data && e.data.startsWith(selectedMonth))
-      .forEach(e => {
-        categories[e.categoria] = (categories[e.categoria] || 0) + e.valor;
-      });
-    return categories;
+    try {
+      const categories: Record<string, number> = {};
+      variableExpenses
+        .filter(e => e && e.data && e.data.startsWith(selectedMonth))
+        .forEach(e => {
+          if (e && e.categoria) {
+            categories[e.categoria] = (categories[e.categoria] || 0) + (e.valor || 0);
+          }
+        });
+      return categories;
+    } catch (e) {
+      console.error('Error in getExpensesByCategory:', e);
+      return {};
+    }
   };
 
   return (
