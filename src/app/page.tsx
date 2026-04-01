@@ -450,55 +450,8 @@ function DashboardContent() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Calculate real-time balances for accounts (matching the logic in /accounts page)
-  const accountBalances = useMemo(() => {
-    const now = new Date();
-    const currentDay = now.getDate();
-    const currentMonthStr = now.toISOString().slice(0, 7); // YYYY-MM
-    
-    return accounts.map(account => {
-      const accIncomeSoFar = income
-        .filter(inc => inc.conta === account.nome)
-        .filter(i => {
-          if (i.frequencia === 'mensal') {
-            if (i.data_inicio && i.data_inicio > `${currentMonthStr}-31`) return false;
-            return i.data <= currentDay;
-          }
-          if (i.frequencia === 'unico' && i.data_especifica && i.data_especifica.startsWith(currentMonthStr)) {
-            if (i.nome.toLowerCase().includes('transportado')) return false;
-            const day = parseInt(i.data_especifica.split('-')[2]);
-            return day <= currentDay;
-          }
-          return false;
-        })
-        .reduce((sum, inc) => sum + inc.valor, 0);
-
-      const accVariable = variableExpenses
-        .filter(exp => exp && exp.conta === account.nome && exp.data && exp.data.startsWith(currentMonthStr))
-        .filter(exp => {
-          const day = parseInt(exp.data.split('-')[2]);
-          return day <= currentDay;
-        })
-        .reduce((sum, exp) => sum + exp.valor, 0);
-
-      // Fixed expenses so far this month for this account
-      const accFixed = fixedExpenses
-        .filter(e => e.conta === account.nome && e.data_pagamento <= currentDay)
-        .reduce((sum, e) => sum + e.valor, 0);
-
-      // Debts so far this month for this account
-      const accDebts = debts
-        .filter(d => d.conta === account.nome && d.data_pagamento <= currentDay)
-        .reduce((sum, d) => sum + d.prestacao_mensal, 0);
-        
-      const realTimeBalance = account.saldo + accIncomeSoFar - accVariable - accFixed - accDebts;
-
-      return {
-        ...account,
-        realTimeBalance
-      };
-    });
-  }, [accounts, income, variableExpenses, fixedExpenses, debts]);
+  const summary = useMemo(() => getDashboardSummary(), [selectedMonth, getDashboardSummary]);
+  const accountBalances = summary.accountBalances;
 
   // Dynamic cards data based on accounts and credit cards from debts
   const cardsData = useMemo(() => {
@@ -530,7 +483,7 @@ function DashboardContent() {
         id: account.id,
         name: account.nome,
         balance: account.realTimeBalance,
-        number: "**** **** **** ****",
+        number: hardcodedNumbers[account.nome] || "**** **** **** ****",
         cardAccent: getCardAccent(index),
         transactions: accountTransactions
       };
@@ -578,7 +531,6 @@ function DashboardContent() {
     return [...accountCards, ...creditCards];
   }, [accountBalances, debts, accounts.length, variableExpenses, income]);
 
-  const summary = getDashboardSummary();
   const platformSummaries = getPlatformSummaries();
   const expensesByCategory = getExpensesByCategory();
 

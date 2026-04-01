@@ -131,6 +131,7 @@ export interface DashboardSummary {
   monthlyFixedExpenses: number;
   averageVariableExpenses: number;
   totalDividends: number;
+  accountBalances: any[];
 }
 
 // Platform Summary
@@ -141,4 +142,14 @@ export interface PlatformSummary {
   profitability: number;
   profitabilityPercent: number;
   totalDividends?: number;
+}
+
+// Telegram Settings
+export interface TelegramSettings {
+  chatId: string;
+  enabledAlerts: {
+    rendimentos: boolean;
+    dividas: boolean;
+    despesasFixas: boolean;
+  };
 }

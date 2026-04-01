@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from 'react';
-import { X, Bell, Send, CheckCircle2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, Bell, Send, CheckCircle2, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useFinance } from '@/context/FinanceContext';
 
 interface TelegramAlertModalProps {
   isOpen: boolean;
@@ -10,21 +11,64 @@ interface TelegramAlertModalProps {
 }
 
 export default function TelegramAlertModal({ isOpen, onClose }: TelegramAlertModalProps) {
-  const [telegramNumber, setTelegramNumber] = useState('');
-  const [alerts, setAlerts] = useState({
-    rendimentos: true,
-    dividas: true,
-    despesasFixas: true
-  });
+  const { telegramSettings, updateTelegramSettings } = useFinance();
+  const [telegramNumber, setTelegramNumber] = useState(telegramSettings.chatId);
+  const [alerts, setAlerts] = useState(telegramSettings.enabledAlerts);
+  const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSave = () => {
-    // In a real app, this would save to a backend
-    setIsSaved(true);
-    setTimeout(() => {
-      setIsSaved(false);
-      onClose();
-    }, 2000);
+  useEffect(() => {
+    if (isOpen) {
+      setTelegramNumber(telegramSettings.chatId);
+      setAlerts(telegramSettings.enabledAlerts);
+      setError(null);
+    }
+  }, [isOpen, telegramSettings]);
+
+  const handleSave = async () => {
+    if (!telegramNumber) {
+      setError('Por favor, insira o seu Chat ID do Telegram.');
+      return;
+    }
+
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      // 1. Update settings in context
+      updateTelegramSettings({
+        chatId: telegramNumber,
+        enabledAlerts: alerts
+      });
+
+      // 2. Send a test message to verify
+      const response = await fetch('/api/telegram', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: '<b>✅ Configuração Concluída!</b>\n\nAs suas notificações do FinanceFlow foram ativadas com sucesso para este chat.',
+          chatId: telegramNumber
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao enviar mensagem de teste.');
+      }
+
+      setIsSaved(true);
+      setTimeout(() => {
+        setIsSaved(false);
+        onClose();
+      }, 2000);
+    } catch (err: any) {
+      console.error('Telegram Save Error:', err);
+      setError(err.message || 'Ocorreu um erro ao configurar o Telegram.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -113,31 +157,50 @@ export default function TelegramAlertModal({ isOpen, onClose }: TelegramAlertMod
               </div>
 
               <div className="space-y-3">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Número Telegram:</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Chat ID Telegram:</label>
                 <div className="relative">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500">
                     <Send size={16} />
                   </div>
                   <input 
                     type="text"
-                    placeholder="+351 9xx xxx xxx"
+                    placeholder="Ex: 123456789"
                     value={telegramNumber}
                     onChange={(e) => setTelegramNumber(e.target.value)}
                     className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl py-3 pl-12 pr-4 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-accent-primary/50 transition-colors"
                   />
                 </div>
+                <div className="mt-2 flex items-start gap-2 px-1">
+                  <div className="w-4 h-4 rounded-full bg-accent-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-[10px] font-bold text-accent-primary">i</span>
+                  </div>
+                  <p className="text-[10px] text-slate-500 leading-relaxed">
+                    Obtenha o seu Chat ID enviando uma mensagem para <a href="https://t.me/userinfobot" target="_blank" rel="noreferrer" className="text-accent-primary hover:underline font-medium">@userinfobot</a> no Telegram.
+                  </p>
+                </div>
               </div>
+
+              {error && (
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl">
+                  <p className="text-[11px] text-red-400 font-medium text-center">{error}</p>
+                </div>
+              )}
             </div>
 
             <div className="p-6 bg-white/[0.02] border-t border-white/[0.05]">
               <button 
                 onClick={handleSave}
-                disabled={isSaved}
+                disabled={isSaving || isSaved}
                 className={`w-full py-4 rounded-xl font-bold text-sm uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${
                   isSaved ? 'bg-success-500 text-white' : 'bg-accent-primary hover:bg-accent-secondary text-white shadow-lg shadow-accent-primary/20'
-                }`}
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
               >
-                {isSaved ? (
+                {isSaving ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    A Configurar...
+                  </>
+                ) : isSaved ? (
                   <>
                     <CheckCircle2 size={18} />
                     Configurações Salvas

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { Account, Investment, Debt, FixedExpense, VariableExpense, Income, DashboardSummary, PlatformSummary, Plataforma, RecurringMovement } from '@/types';
+import { Account, Investment, Debt, FixedExpense, VariableExpense, Income, DashboardSummary, PlatformSummary, Plataforma, RecurringMovement, TelegramSettings } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
 
@@ -502,17 +502,34 @@ function getInitialData() {
           fixedExpenses: Array.isArray(parsed.fixedExpenses) ? parsed.fixedExpenses.filter((e: any) => e && e.id) : initialFixedExpenses,
           variableExpenses: Array.isArray(parsed.variableExpenses) ? parsed.variableExpenses.filter((e: any) => e && e.id) : initialVariableExpenses,
           income: Array.isArray(parsed.income) 
-            ? parsed.income.map((i: any) => {
-                // Aggressive patch for the incorrect February carry-over value
-                // The user reports 3681€ but the real value is 832.29€
-                if (i && i.nome && i.nome.includes('Valor transportado Fev 2026')) {
-                  if (i.valor !== 832.29) {
-                    console.log('FinanceContext: Patching Valor transportado Fev 2026 from', i.valor, 'to 832.29');
-                  }
-                  return { ...i, valor: 832.29 };
+            ? (() => {
+                const incomeList = [...parsed.income];
+                
+                // Ensure April carry-over entries exist
+                const hasMontepioApr = incomeList.some(i => i && i.nome && i.nome.includes('Valor transportado Mar 2026') && i.conta === 'Montepio');
+                const hasRevolutApr = incomeList.some(i => i && i.nome && i.nome.includes('Valor transportado Mar 2026') && i.conta === 'Revolut');
+                
+                if (!hasMontepioApr) {
+                  incomeList.push({ id: 'inc-apr-0', nome: 'Valor transportado Mar 2026', valor: 1274.07, frequencia: 'unico', data: 1, data_especifica: '2026-04-01', conta: 'Montepio' });
                 }
-                return i;
-              }).filter((i: any) => i && i.id) 
+                if (!hasRevolutApr) {
+                  incomeList.push({ id: 'inc-apr-0-rev', nome: 'Valor transportado Mar 2026', valor: 2414.64, frequencia: 'unico', data: 1, data_especifica: '2026-04-01', conta: 'Revolut' });
+                }
+
+                return incomeList.map((i: any) => {
+                  // Aggressive patch for the incorrect February carry-over value
+                  // The user reports 3681€ but the real value is 832.29€
+                  if (i && i.nome && i.nome.includes('Valor transportado Fev 2026')) {
+                    return { ...i, valor: 832.29 };
+                  }
+                  // Aggressive patch for April carry-over values as requested by user
+                  if (i && i.nome && i.nome.includes('Valor transportado Mar 2026')) {
+                    if (i.conta === 'Montepio') return { ...i, valor: 1274.07 };
+                    if (i.conta === 'Revolut') return { ...i, valor: 2414.64 };
+                  }
+                  return i;
+                }).filter((i: any) => i && i.id);
+              })()
             : initialIncome,
           customWallets: Array.isArray(parsed.customWallets) ? parsed.customWallets : [],
           recurringMovements: Array.isArray(parsed.recurringMovements) ? parsed.recurringMovements : initialRecurringMovements,
@@ -580,6 +597,9 @@ interface FinanceContextType {
   getPlatformSummaries: () => PlatformSummary[];
   getExpensesByCategory: () => Record<string, number>;
   
+  telegramSettings: TelegramSettings;
+  updateTelegramSettings: (settings: Partial<TelegramSettings>) => void;
+  
   selectedMonth: string;
   setSelectedMonth: (month: string) => void;
   user: User | null;
@@ -612,6 +632,53 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [income, setIncome] = useState<Income[]>(() => getInitialData().income);
   const [customWallets, setCustomWallets] = useState<string[]>(() => getInitialData().customWallets);
   const [recurringMovements, setRecurringMovements] = useState<RecurringMovement[]>(() => getInitialData().recurringMovements);
+  const [telegramSettings, setTelegramSettings] = useState<TelegramSettings>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('telegram_settings');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          console.error('Error parsing telegram settings:', e);
+        }
+      }
+    }
+    return {
+      chatId: '',
+      enabledAlerts: {
+        rendimentos: true,
+        dividas: true,
+        despesasFixas: true
+      }
+    };
+  });
+
+  const updateTelegramSettings = (settings: Partial<TelegramSettings>) => {
+    setTelegramSettings(prev => {
+      const newValue = { ...prev, ...settings };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('telegram_settings', JSON.stringify(newValue));
+      }
+      return newValue;
+    });
+  };
+
+  const sendTelegramNotification = async (message: string) => {
+    if (!telegramSettings.chatId) return;
+    
+    try {
+      await fetch('/api/telegram', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message,
+          chatId: telegramSettings.chatId
+        })
+      });
+    } catch (error) {
+      console.error('Error sending Telegram notification:', error);
+    }
+  };
   
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
@@ -1217,6 +1284,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase.from('debts').insert([{ ...debt, user_id: userId }]);
       if (error) console.error('Error adding debt to Supabase:', error);
     }
+
+    if (telegramSettings.enabledAlerts.dividas) {
+      sendTelegramNotification(`<b>⚠️ Nova Dívida Adicionada</b>\n\n<b>Nome:</b> ${debt.nome}\n<b>Prestação:</b> ${debt.prestacao_mensal.toLocaleString('pt-PT', { style: 'currency', currency: 'EUR' })}\n<b>Conta:</b> ${debt.conta}`);
+    }
   };
 
   const updateDebt = async (id: string, debt: Partial<Debt>) => {
@@ -1251,6 +1322,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     if (user) {
       const { error } = await supabase.from('fixed_expenses').insert([{ ...expense, user_id: userId }]);
       if (error) console.error('Error adding fixed expense to Supabase:', error);
+    }
+
+    if (telegramSettings.enabledAlerts.despesasFixas) {
+      sendTelegramNotification(`<b>💸 Nova Despesa Fixa</b>\n\n<b>Nome:</b> ${expense.nome}\n<b>Valor:</b> ${expense.valor.toLocaleString('pt-PT', { style: 'currency', currency: 'EUR' })}\n<b>Conta:</b> ${expense.conta}`);
     }
   };
 
@@ -1353,6 +1428,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     if (user) {
       const { error } = await supabase.from('income').insert([{ ...incomeEntry, user_id: userId }]);
       if (error) console.error('Error adding income to Supabase:', error);
+    }
+
+    if (telegramSettings.enabledAlerts.rendimentos) {
+      sendTelegramNotification(`<b>💰 Novo Rendimento</b>\n\n<b>Nome:</b> ${incomeEntry.nome}\n<b>Valor:</b> ${incomeEntry.valor.toLocaleString('pt-PT', { style: 'currency', currency: 'EUR' })}\n<b>Conta:</b> ${incomeEntry.conta}`);
     }
   };
 
@@ -1517,7 +1596,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       savingsRate,
       monthlyFixedExpenses: totalFixedExpenses,
       averageVariableExpenses: totalVariableExpenses,
-      totalDividends
+      totalDividends,
+      accountBalances
     };
   };
 
@@ -1591,6 +1671,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       addRecurringMovement,
       updateRecurringMovement,
       deleteRecurringMovement,
+      telegramSettings,
+      updateTelegramSettings,
       selectedMonth,
       setSelectedMonth,
       user,

@@ -31,6 +31,8 @@ export default function PremiumHeader({ pageName, style }: PremiumHeaderProps) {
       }
     });
     // Ensure current month is there
+    const now = new Date();
+    months.add(now.toISOString().substring(0, 7));
     months.add('2026-03');
     return Array.from(months).sort().reverse();
   }, [variableExpenses]);
