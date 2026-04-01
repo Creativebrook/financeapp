@@ -16,7 +16,14 @@ const FixedExpensesCategoryBarChart = dynamic(() => import('@/components/charts/
 function FixedExpensesContent() {
   const { fixedExpenses, addFixedExpense, updateFixedExpense, deleteFixedExpense, variableExpenses, updateVariableExpense, deleteVariableExpense, accounts, income, selectedMonth } = useFinance();
   const { isCollapsed } = useSidebar();
-  const today = new Date('2026-03-25T00:00:00Z');
+  const [today, setToday] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setToday(new Date());
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
   
   const getMonthName = (monthYear: string) => {
     const [y, m] = monthYear.split('-');

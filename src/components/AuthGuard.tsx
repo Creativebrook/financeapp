@@ -27,19 +27,24 @@ export default function AuthGuard({ children }: AuthGuardProps) {
 
   useEffect(() => {
     const auth = localStorage.getItem("finance_app_auth");
+    console.log('AuthGuard: Auth check effect. User:', user?.email, 'Auth stored:', auth);
+    
     // If user is logged in via Supabase, they are authorized
     if (user) {
+      console.log('AuthGuard: User found, authorizing');
       setIsAuthorized(true);
       return;
     }
     
     // Fallback to simple auth check
     if (auth === "true") {
+      console.log('AuthGuard: Simple auth found, authorizing');
       setIsAuthorized(true);
     } else {
+      console.log('AuthGuard: No auth found, deauthorizing');
       setIsAuthorized(false);
     }
-  }, [user]);
+  }, [user, loading]); // Added loading to dependencies to ensure it runs when loading state changes
 
   const handleSimpleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,8 +106,22 @@ export default function AuthGuard({ children }: AuthGuardProps) {
 
   if (loading || isAuthorized === null) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#0f1118]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#6f6af8]"></div>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[#0f1118] p-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#6f6af8] mb-6"></div>
+        <p className="text-slate-400 text-sm animate-pulse mb-8">A carregar o seu perfil financeiro...</p>
+        
+        <div className="flex flex-col items-center gap-4">
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-6 py-2 bg-white/5 border border-white/10 rounded-lg text-slate-300 text-sm hover:bg-white/10 transition-all"
+          >
+            Recarregar Página
+          </button>
+          
+          <div className="text-[10px] text-slate-600 font-mono">
+            Status: {loading ? 'Auth Loading' : 'Auth Ready'} | User: {user ? 'Found' : 'None'} | Auth: {isAuthorized === null ? 'Pending' : 'Done'}
+          </div>
+        </div>
       </div>
     );
   }

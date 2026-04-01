@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FinanceProvider, useFinance } from '@/context/FinanceContext';
 import { useSidebar } from '@/context/SidebarContext';
 import Sidebar from '@/components/Sidebar';
@@ -11,9 +11,20 @@ import { formatCurrency, getNextPaymentDate } from '@/lib/utils';
 function CalendarContent() {
   const { fixedExpenses, debts, income } = useFinance();
   const { isCollapsed } = useSidebar();
-  const [currentDate, setCurrentDate] = useState(new Date(2026, 2, 1)); // March 2026
+  const [currentDate, setCurrentDate] = useState(new Date(2026, 2, 1)); // Default for SSR
   const [selectedDayEvents, setSelectedDayEvents] = useState<{ day: number, events: any[] } | null>(null);
-  const [selectedDay, setSelectedDay] = useState<number | null>(24); // Default to today (24th)
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setMounted(true);
+      const now = new Date();
+      setCurrentDate(new Date(now.getFullYear(), now.getMonth(), 1));
+      setSelectedDay(now.getDate());
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -36,8 +47,8 @@ function CalendarContent() {
   };
 
   const isToday = (day: number) => {
-    // Use a fixed date for SSR to avoid hydration mismatches
-    const today = new Date('2026-03-24T00:00:00Z');
+    if (!mounted) return false;
+    const today = new Date();
     return day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
   };
 

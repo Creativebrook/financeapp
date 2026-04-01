@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { FinanceProvider, useFinance } from '@/context/FinanceContext';
 import { useSidebar } from '@/context/SidebarContext';
@@ -23,13 +23,30 @@ function VariableExpensesContent() {
   const [editingExpense, setEditingExpense] = useState<VariableExpense | null>(null);
   const [filterCategory, setFilterCategory] = useState<string>('all');
   
+  const [today, setToday] = useState(new Date());
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setToday(new Date());
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
+
   const [formData, setFormData] = useState({
     nome: '',
     valor: 0,
-    data: '2026-03-24',
+    data: new Date().toISOString().split('T')[0],
     conta: 'Montepio',
     categoria: 'Supermercado' as string,
   });
+
+  useEffect(() => {
+    if (!editingExpense) {
+      const timer = setTimeout(() => {
+        setFormData(prev => ({ ...prev, data: new Date().toISOString().split('T')[0] }));
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [editingExpense]);
 
   const [categories, setCategories] = useState<string[]>(['Animais', 'Casa', 'Combustível', 'Diversos', 'Educação', 'Lazer', 'Pessoal', 'Restaurantes', 'Saúde', 'Supermercado', 'Shopping', 'Taxas', 'Transporte', 'Transferência', 'Investimento']);
   const [currentPage, setCurrentPage] = useState(1);
@@ -59,7 +76,6 @@ function VariableExpensesContent() {
     .reduce((sum, e) => sum + (e?.valor || 0), 0);
 
   // Use the same logic as Income page for received so far
-  const today = new Date();
   const currentMonthStr = today.toISOString().substring(0, 7);
   
   let effectiveDay = today.getDate();

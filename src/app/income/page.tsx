@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FinanceProvider, useFinance } from '@/context/FinanceContext';
 import { useSidebar } from '@/context/SidebarContext';
 import Sidebar from '@/components/Sidebar';
@@ -80,8 +80,14 @@ function IncomeContent() {
     return { month, currentYear: currentYearVal, prevYear: prevYearVal };
   });
 
-  // Calculate monthly income received so far this month
-  const today = new Date();
+  const [today, setToday] = useState(new Date());
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setToday(new Date());
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
+
   const currentMonthStr = today.toISOString().substring(0, 7);
   
   let effectiveDay = today.getDate();

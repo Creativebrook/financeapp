@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FinanceProvider, useFinance } from '@/context/FinanceContext';
 import { useSidebar } from '@/context/SidebarContext';
 import Sidebar from '@/components/Sidebar';
@@ -16,7 +16,14 @@ function DebtsContent() {
   const { isCollapsed } = useSidebar();
   const summary = getDashboardSummary();
   
-  const now = new Date();
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setNow(new Date());
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
+
   const currentDay = now.getDate();
   const currentMonthStr = now.toISOString().slice(0, 7); // YYYY-MM
   const currentFullDate = now.toISOString().slice(0, 10); // YYYY-MM-DD
@@ -104,7 +111,7 @@ function DebtsContent() {
     if (!debt) return '';
     const months = calculateMonthsRemaining(debt);
     // Use a fixed date for SSR to avoid hydration mismatches
-    const payoffDate = new Date('2026-03-20T00:00:00Z');
+    const payoffDate = new Date();
     payoffDate.setMonth(payoffDate.getMonth() + months);
     return formatDate(payoffDate.toISOString());
   };
@@ -140,7 +147,7 @@ function DebtsContent() {
   
   const maxMonths = debts.length > 0 ? Math.max(...debts.filter(d => d).map(d => calculateMonthsRemaining(d))) : 0;
   // Use a fixed date for SSR to avoid hydration mismatches
-  const latestPayoffDate = new Date('2026-03-20T00:00:00Z');
+  const latestPayoffDate = new Date();
   latestPayoffDate.setMonth(latestPayoffDate.getMonth() + maxMonths);
   const formattedPayoffDate = formatDate(latestPayoffDate.toISOString());
 

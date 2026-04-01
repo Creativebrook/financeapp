@@ -633,14 +633,14 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    // Safety timeout: ensure loading state is cleared after 5 seconds
+    // Safety timeout: ensure loading state is cleared after 3 seconds
     // This prevents the app from being stuck on the loading screen if Supabase hangs
     const timeout = setTimeout(() => {
       if (mounted) {
         console.warn('FinanceProvider: Auth initialization timed out, forcing loading to false');
         setAuthLoading(false);
       }
-    }, 5000);
+    }, 3000);
 
     return () => {
       mounted = false;
@@ -1287,7 +1287,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   // Computed values
   const getDashboardSummary = (): DashboardSummary => {
     // Calculate "Real-time" current balance based on day of month (matching /accounts page)
-    const now = new Date('2026-03-26T00:00:00Z');
+    const now = new Date();
     const currentMonthStr = now.toISOString().substring(0, 7);
     
     let currentDay = now.getDate();
