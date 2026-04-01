@@ -70,107 +70,134 @@ function AccountsContent() {
 
   // Calculate "Real-time" current balance based on day of month
   const calculateCurrentMonthProgress = () => {
-    const now = new Date();
-    const currentMonthStr = now.toISOString().substring(0, 7);
-    
-    let currentDay = now.getDate();
-    if (selectedMonth < currentMonthStr) {
-      // Past month: show full month
-      const [y, m] = selectedMonth.split('-');
-      currentDay = new Date(parseInt(y), parseInt(m), 0).getDate();
-    } else if (selectedMonth > currentMonthStr) {
-      // Future month: show start of month
-      currentDay = 0;
+    if (!selectedMonth || !selectedMonth.includes('-')) {
+      const initialSaldo = accounts.reduce((sum, a) => sum + a.saldo, 0);
+      return {
+        saldoInicialSoFar: initialSaldo,
+        saldoAtual: initialSaldo,
+        incomeSoFar: initialSaldo,
+        expensesSoFar: 0,
+        accountBalances: accounts.map(account => ({
+          ...account,
+          accountBase: account.saldo,
+          realTimeBalance: account.saldo
+        }))
+      };
     }
-    
-    // Calculate per-account balances
-    const accountBalances = accounts.map(account => {
-      // Find carry-over for this month
-      const carryOver = income.find(i => 
-        i.conta === account.nome && 
-        i.nome.toLowerCase().includes('transportado') && 
-        i.data_especifica?.startsWith(selectedMonth)
-      );
 
-      // Starting balance is the carry-over value if it exists
-      // If not, use account.saldo only if it's March 2026 (the base month for initial data)
-      const startingBalance = carryOver ? carryOver.valor : (selectedMonth === '2026-03' ? account.saldo : 0);
+    try {
+      const now = new Date();
+      const currentMonthStr = now.toISOString().substring(0, 7);
+      
+      let currentDay = now.getDate();
+      if (selectedMonth < currentMonthStr) {
+        // Past month: show full month
+        const [y, m] = selectedMonth.split('-');
+        currentDay = new Date(parseInt(y), parseInt(m), 0).getDate();
+      } else if (selectedMonth > currentMonthStr) {
+        // Future month: show start of month
+        currentDay = 0;
+      }
+      
+      // Calculate per-account balances
+      const accountBalances = accounts.map(account => {
+        // Find carry-over for this month
+        const carryOver = income.find(i => 
+          i && i.conta === account.nome && 
+          i.nome && i.nome.toLowerCase().includes('transportado') && 
+          i.data_especifica?.startsWith(selectedMonth)
+        );
 
-      // Income for this account in selected month (excluding carry-over)
-      const accIncome = income
-        .filter(inc => inc.conta === account.nome)
-        .filter(i => {
-          if (i.nome.toLowerCase().includes('transportado')) return false;
-          if (i.frequencia === 'mensal') {
-            if (i.data_inicio && i.data_inicio > `${selectedMonth}-31`) return false;
-            return i.data <= currentDay;
-          }
-          if (i.frequencia === 'unico' && i.data_especifica && i.data_especifica.startsWith(selectedMonth)) {
-            const day = parseInt(i.data_especifica.split('-')[2]);
+        // Starting balance is the carry-over value if it exists
+        // If not, use account.saldo only if it's March 2026 (the base month for initial data)
+        const startingBalance = carryOver ? carryOver.valor : (selectedMonth === '2026-03' ? account.saldo : 0);
+
+        // Income for this account in selected month (excluding carry-over)
+        const accIncome = income
+          .filter(inc => inc && inc.conta === account.nome)
+          .filter(i => {
+            if (!i || !i.nome) return false;
+            if (i.nome.toLowerCase().includes('transportado')) return false;
+            if (i.frequencia === 'mensal') {
+              if (i.data_inicio && i.data_inicio > `${selectedMonth}-31`) return false;
+              return i.data <= currentDay;
+            }
+            if (i.frequencia === 'unico' && i.data_especifica && i.data_especifica.startsWith(selectedMonth)) {
+              const day = parseInt(i.data_especifica.split('-')[2]);
+              return day <= currentDay;
+            }
+            return false;
+          })
+          .reduce((sum, inc) => sum + (inc?.valor || 0), 0);
+
+        // Variable expenses for this account in selected month
+        const accVariableSpent = variableExpenses
+          .filter(exp => exp && exp.conta === account.nome && exp.data && exp.data.startsWith(selectedMonth))
+          .filter(exp => {
+            const day = parseInt(exp.data.split('-')[2]);
             return day <= currentDay;
-          }
-          return false;
-        })
-        .reduce((sum, inc) => sum + inc.valor, 0);
+          })
+          .reduce((sum, exp) => sum + (exp?.valor || 0), 0);
 
-      // Variable expenses for this account in selected month
-      const accVariableSpent = variableExpenses
-        .filter(exp => exp && exp.conta === account.nome && exp.data && exp.data.startsWith(selectedMonth))
+        // Fixed expenses so far this month for this account
+        const accFixed = fixedExpenses
+          .filter(e => e && e.conta === account.nome && e.data_pagamento <= currentDay)
+          .reduce((sum, e) => sum + (e?.valor || 0), 0);
+
+        // Debts so far this month for this account
+        const accDebts = debts
+          .filter(d => d && d.conta === account.nome && d.data_pagamento <= currentDay)
+          .reduce((sum, d) => sum + (d?.prestacao_mensal || 0), 0);
+
+        // The real-time balance is based on the starting balance + income - expenses
+        const realTimeBalance = startingBalance + accIncome - accVariableSpent - accFixed - accDebts;
+
+        return {
+          ...account,
+          accountBase: startingBalance + accIncome,
+          realTimeBalance
+        };
+      });
+
+      const saldoInicialSoFar = accountBalances.reduce((sum, a) => sum + a.accountBase, 0);
+      
+      const totalVariableSoFar = variableExpenses
+        .filter(exp => exp && exp.data && exp.data.startsWith(selectedMonth))
         .filter(exp => {
           const day = parseInt(exp.data.split('-')[2]);
           return day <= currentDay;
         })
+        .reduce((sum, exp) => sum + (exp?.valor || 0), 0);
+
+      const totalFixedSoFar = fixedExpenses
+        .filter(exp => exp.frequencia === 'mensal' && exp.data_pagamento <= currentDay)
         .reduce((sum, exp) => sum + exp.valor, 0);
 
-      // Fixed expenses so far this month for this account
-      const accFixed = fixedExpenses
-        .filter(e => e.conta === account.nome && e.data_pagamento <= currentDay)
-        .reduce((sum, e) => sum + e.valor, 0);
-
-      // Debts so far this month for this account
-      const accDebts = debts
-        .filter(d => d.conta === account.nome && d.data_pagamento <= currentDay)
+      const totalDebtsSoFar = debts
+        .filter(d => d.data_pagamento <= currentDay)
         .reduce((sum, d) => sum + d.prestacao_mensal, 0);
 
-      // The real-time balance is based on the starting balance + income - expenses
-      const realTimeBalance = startingBalance + accIncome - accVariableSpent - accFixed - accDebts;
+      const totalExpensesSoFar = totalVariableSoFar + totalFixedSoFar + totalDebtsSoFar;
+      const saldoAtual = saldoInicialSoFar - totalExpensesSoFar;
 
       return {
-        ...account,
-        accountBase: startingBalance + accIncome,
-        realTimeBalance
+        saldoInicialSoFar,
+        saldoAtual,
+        incomeSoFar: saldoInicialSoFar,
+        expensesSoFar: totalExpensesSoFar,
+        accountBalances
       };
-    });
-
-
-    const saldoInicialSoFar = accountBalances.reduce((sum, a) => sum + a.accountBase, 0);
-    
-    const totalVariableSoFar = variableExpenses
-      .filter(exp => exp && exp.data && exp.data.startsWith(selectedMonth))
-      .filter(exp => {
-        const day = parseInt(exp.data.split('-')[2]);
-        return day <= currentDay;
-      })
-      .reduce((sum, exp) => sum + (exp?.valor || 0), 0);
-
-    const totalFixedSoFar = fixedExpenses
-      .filter(exp => exp.frequencia === 'mensal' && exp.data_pagamento <= currentDay)
-      .reduce((sum, exp) => sum + exp.valor, 0);
-
-    const totalDebtsSoFar = debts
-      .filter(d => d.data_pagamento <= currentDay)
-      .reduce((sum, d) => sum + d.prestacao_mensal, 0);
-
-    const totalExpensesSoFar = totalVariableSoFar + totalFixedSoFar + totalDebtsSoFar;
-    const saldoAtual = saldoInicialSoFar - totalExpensesSoFar;
-
-    return {
-      saldoInicialSoFar,
-      saldoAtual,
-      incomeSoFar: saldoInicialSoFar,
-      expensesSoFar: totalExpensesSoFar,
-      accountBalances
-    };
+    } catch (e) {
+      console.error('Error calculating current month progress:', e);
+      const initialSaldo = accounts.reduce((sum, a) => sum + a.saldo, 0);
+      return {
+        saldoInicialSoFar: initialSaldo,
+        saldoAtual: initialSaldo,
+        incomeSoFar: initialSaldo,
+        expensesSoFar: 0,
+        accountBalances: accounts.map(a => ({ ...a, accountBase: a.saldo, realTimeBalance: a.saldo }))
+      };
+    }
   };
 
   const { saldoInicialSoFar, saldoAtual, incomeSoFar, expensesSoFar, accountBalances } = calculateCurrentMonthProgress();

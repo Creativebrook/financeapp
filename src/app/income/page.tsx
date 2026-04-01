@@ -22,15 +22,27 @@ function IncomeContent() {
   const itemsPerPage = 10;
 
   const getOnlyMonthName = (monthStr: string) => {
-    const [year, month] = monthStr.split('-');
-    const date = new Date(parseInt(year), parseInt(month) - 1, 1);
-    return date.toLocaleString('pt-PT', { month: 'long' }).toUpperCase();
+    if (!monthStr || !monthStr.includes('-')) return 'MÊS';
+    try {
+      const [year, month] = monthStr.split('-');
+      const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+      return date.toLocaleString('pt-PT', { month: 'long' }).toUpperCase();
+    } catch (e) {
+      console.error('Error in getOnlyMonthName:', e);
+      return 'MÊS';
+    }
   };
 
   const getPrevMonthName = (monthStr: string) => {
-    const [year, month] = monthStr.split('-');
-    const date = new Date(parseInt(year), parseInt(month) - 2, 1);
-    return date.toLocaleString('pt-PT', { month: 'long' }).toUpperCase();
+    if (!monthStr || !monthStr.includes('-')) return 'MÊS ANTERIOR';
+    try {
+      const [year, month] = monthStr.split('-');
+      const date = new Date(parseInt(year), parseInt(month) - 2, 1);
+      return date.toLocaleString('pt-PT', { month: 'long' }).toUpperCase();
+    } catch (e) {
+      console.error('Error in getPrevMonthName:', e);
+      return 'MÊS ANTERIOR';
+    }
   };
 
   const [formData, setFormData] = useState({
@@ -196,7 +208,7 @@ function IncomeContent() {
         return new Date(item.data_especifica).getTime();
       }
       // For recurring, get the date in the selected month
-      const [year, month] = selectedMonth.split('-');
+      const [year, month] = (selectedMonth && selectedMonth.includes('-')) ? selectedMonth.split('-') : ['2026', '03'];
       const date = new Date(parseInt(year), parseInt(month) - 1, item.data);
       return date.getTime();
     };
@@ -478,7 +490,7 @@ function IncomeContent() {
               </thead>
               <tbody>
                 {paginatedIncome.map((incomeItem) => {
-                  const [year, month] = selectedMonth.split('-');
+                  const [year, month] = (selectedMonth && selectedMonth.includes('-')) ? selectedMonth.split('-') : ['2026', '03'];
                   const itemDate = incomeItem.frequencia === 'unico' && incomeItem.data_especifica 
                     ? new Date(incomeItem.data_especifica)
                     : new Date(parseInt(year), parseInt(month) - 1, incomeItem.data);
@@ -620,7 +632,7 @@ function IncomeContent() {
         {/* Mobile List */}
         <div className="md:hidden space-y-3">
           {paginatedIncome.map((incomeItem) => {
-            const [year, month] = selectedMonth.split('-');
+            const [year, month] = (selectedMonth && selectedMonth.includes('-')) ? selectedMonth.split('-') : ['2026', '03'];
             const itemDate = incomeItem.frequencia === 'unico' && incomeItem.data_especifica 
               ? new Date(incomeItem.data_especifica)
               : new Date(parseInt(year), parseInt(month) - 1, incomeItem.data);

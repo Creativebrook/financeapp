@@ -604,24 +604,33 @@ function DashboardContent() {
   // Filter variable expenses by selected month
   const getFilteredExpensesByCategory = () => {
     // Use the selected month from context
-    const [selectedYear, selectedMonthIdx] = selectedMonth.split('-').map(Number);
-    const currentYear = selectedYear;
-    const currentMonth = selectedMonthIdx - 1;
+    if (!selectedMonth || !selectedMonth.includes('-')) return {};
     
-    const filtered = variableExpenses.filter(expense => {
-      if (!expense || !expense.data) return false;
-      // Exclude transfers from expenses chart
-      if (expense.categoria === 'Transferência') return false;
+    try {
+      const [selectedYear, selectedMonthIdx] = selectedMonth.split('-').map(Number);
+      const currentYear = selectedYear;
+      const currentMonth = selectedMonthIdx - 1;
       
-      const expenseDate = new Date(expense.data);
-      return expenseDate.getFullYear() === currentYear && expenseDate.getMonth() === currentMonth;
-    });
-    
-    const categories: Record<string, number> = {};
-    filtered.forEach(e => {
-      categories[e.categoria] = (categories[e.categoria] || 0) + e.valor;
-    });
-    return categories;
+      const filtered = variableExpenses.filter(expense => {
+        if (!expense || !expense.data) return false;
+        // Exclude transfers from expenses chart
+        if (expense.categoria === 'Transferência') return false;
+        
+        const expenseDate = new Date(expense.data);
+        return expenseDate.getFullYear() === currentYear && expenseDate.getMonth() === currentMonth;
+      });
+      
+      const categories: Record<string, number> = {};
+      filtered.forEach(e => {
+        if (e && e.categoria) {
+          categories[e.categoria] = (categories[e.categoria] || 0) + (e.valor || 0);
+        }
+      });
+      return categories;
+    } catch (e) {
+      console.error('Error in getFilteredExpensesByCategory:', e);
+      return {};
+    }
   };
 
   const filteredExpensesByCategory = getFilteredExpensesByCategory();
@@ -999,17 +1008,19 @@ function DashboardContent() {
                 }}
               >
                 <div className="flex justify-between items-start relative z-10">
-                  <span className="text-white font-black italic text-2xl tracking-tighter opacity-90">{cardsData[activeCardIndex].name.split(' ')[0]}</span>
+                  <span className="text-white font-black italic text-2xl tracking-tighter opacity-90">
+                    {cardsData[activeCardIndex]?.name ? cardsData[activeCardIndex].name.split(' ')[0] : 'Cartão'}
+                  </span>
                 </div>
                 <div className="mt-4 relative z-10">
-                  <p className="text-[10px] text-white/50 font-bold uppercase tracking-[0.2em]">{cardsData[activeCardIndex].name}</p>
+                  <p className="text-[10px] text-white/50 font-bold uppercase tracking-[0.2em]">{cardsData[activeCardIndex]?.name || 'Conta'}</p>
                   <div className="flex items-center gap-3 mt-2">
-                    <h4 className="text-3xl font-bold text-white tracking-tight">{formatCurrency(cardsData[activeCardIndex].balance)}</h4>
+                    <h4 className="text-3xl font-bold text-white tracking-tight">{formatCurrency(cardsData[activeCardIndex]?.balance || 0)}</h4>
                     <Eye size={16} className="text-white/40 cursor-pointer hover:text-white/80 transition-colors" />
                   </div>
                 </div>
                 <div className="mt-auto pt-8 relative z-10">
-                  <p className="text-base text-white/90 font-mono tracking-[0.3em]">{cardsData[activeCardIndex].number}</p>
+                  <p className="text-base text-white/90 font-mono tracking-[0.3em]">{cardsData[activeCardIndex]?.number || '**** **** **** ****'}</p>
                 </div>
               </div>
 

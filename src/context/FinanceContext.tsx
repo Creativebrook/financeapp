@@ -1476,6 +1476,24 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   // Computed values
   const getDashboardSummary = (): DashboardSummary => {
     try {
+      if (!selectedMonth || !selectedMonth.includes('-')) {
+        return {
+          totalWealth: 0,
+          totalAccounts: 0,
+          totalBase: 0,
+          totalInvestments: 0,
+          totalDebts: 0,
+          monthlyCashflow: 0,
+          monthlyIncome: 0,
+          totalExpenses: 0,
+          savingsRate: 0,
+          monthlyFixedExpenses: 0,
+          averageVariableExpenses: 0,
+          totalDividends: 0,
+          accountBalances: accounts.map(a => ({ id: a.id, nome: a.nome, realTimeBalance: 0 }))
+        };
+      }
+
       const now = new Date();
       const currentMonthStr = now.toISOString().substring(0, 7);
       
@@ -1532,10 +1550,16 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           .filter(d => d && d.conta === account.nome && d.data_pagamento <= currentDay)
           .reduce((sum, d) => sum + (d?.prestacao_mensal || 0), 0);
 
-        return startingBalance + accIncome - accVariableSpent - accFixed - accDebts;
+        const realTimeBalance = startingBalance + accIncome - accVariableSpent - accFixed - accDebts;
+        
+        return {
+          id: account.id,
+          nome: account.nome,
+          realTimeBalance
+        };
       });
 
-      const totalAccounts = accountBalances.reduce((sum, b) => sum + b, 0);
+      const totalAccounts = accountBalances.reduce((sum, b) => sum + b.realTimeBalance, 0);
       const totalInvestments = investments.reduce((sum, i) => sum + (i?.valor_atual || 0), 0);
       const totalDividends = investments.reduce((sum, i) => sum + (i?.dividendos_ganhos || 0), 0);
       const totalDebts = debts.reduce((sum, d) => sum + (d?.valor_total || 0), 0);

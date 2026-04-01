@@ -38,9 +38,15 @@ export default function PremiumHeader({ pageName, style }: PremiumHeaderProps) {
   }, [variableExpenses]);
 
   const getMonthName = (monthYear: string) => {
-    const [y, m] = monthYear.split('-');
-    const date = new Date(parseInt(y), parseInt(m) - 1, 1);
-    return date.toLocaleString('pt-PT', { month: 'long', year: 'numeric' }).toUpperCase();
+    if (!monthYear || !monthYear.includes('-')) return 'MÊS';
+    try {
+      const [y, m] = monthYear.split('-');
+      const date = new Date(parseInt(y), parseInt(m) - 1, 1);
+      return date.toLocaleString('pt-PT', { month: 'long', year: 'numeric' }).toUpperCase();
+    } catch (e) {
+      console.error('Error in getMonthName:', e);
+      return 'MÊS';
+    }
   };
 
   return (
