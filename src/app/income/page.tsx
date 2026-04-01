@@ -137,13 +137,28 @@ function IncomeContent() {
 
   const pendingIncome = expectedIncomeNoCarry - receivedIncomeNoCarry;
 
-  const carriedOverEntries = monthIncomeEntries.filter(i => i.nome.toLowerCase().includes('valor transportado'));
-  const carriedOverValue = carriedOverEntries.reduce((sum, i) => sum + i.valor, 0);
-
-  const accumulatedValue = receivedIncomeNoCarry + carriedOverValue;
-
   const currentMonthName = getOnlyMonthName(selectedMonth);
   const prevMonthName = getPrevMonthName(selectedMonth);
+
+  const carriedOverEntries = monthIncomeEntries.filter(i => 
+    i.nome.toLowerCase().includes('valor transportado') && 
+    i.frequencia === 'unico'
+  );
+  
+  // If we have multiple entries for some reason, pick the one that matches the previous month name
+  // This is a safety measure against duplicated or mislabeled entries
+  let finalCarriedOverValue = 0;
+  if (carriedOverEntries.length > 1) {
+    const prevMonthShort = prevMonthName.substring(0, 3).toLowerCase();
+    const bestMatch = carriedOverEntries.find(i => i.nome.toLowerCase().includes(prevMonthShort));
+    finalCarriedOverValue = bestMatch ? bestMatch.valor : carriedOverEntries[0].valor;
+  } else if (carriedOverEntries.length === 1) {
+    finalCarriedOverValue = carriedOverEntries[0].valor;
+  }
+
+  const carriedOverValue = finalCarriedOverValue;
+
+  const accumulatedValue = receivedIncomeNoCarry + carriedOverValue;
 
   // Filter only received income (date <= today) and exclude carry over from the table
   const receivedIncome = income.filter(i => {

@@ -66,6 +66,11 @@ export default function AuthGuard({ children }: AuthGuardProps) {
     }
   }, [user, loading]); // Added loading to dependencies to ensure it runs when loading state changes
 
+  // Add a separate effect to log when loading changes
+  useEffect(() => {
+    console.log('AuthGuard: loading state changed to:', loading);
+  }, [loading]);
+
   const handleSimpleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (password === "finance360") {

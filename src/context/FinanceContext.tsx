@@ -466,8 +466,12 @@ function getInitialData() {
           variableExpenses: Array.isArray(parsed.variableExpenses) ? parsed.variableExpenses.filter((e: any) => e && e.id) : initialVariableExpenses,
           income: Array.isArray(parsed.income) 
             ? parsed.income.map((i: any) => {
-                // Patch for the incorrect February carry-over value
-                if (i && i.nome === 'Valor transportado Fev 2026' && i.valor === 3681) {
+                // Aggressive patch for the incorrect February carry-over value
+                // The user reports 3681€ but the real value is 832.29€
+                if (i && i.nome && i.nome.includes('Valor transportado Fev 2026')) {
+                  if (i.valor !== 832.29) {
+                    console.log('FinanceContext: Patching Valor transportado Fev 2026 from', i.valor, 'to 832.29');
+                  }
                   return { ...i, valor: 832.29 };
                 }
                 return i;
@@ -646,14 +650,14 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    // Safety timeout: ensure loading state is cleared after 2 seconds
+    // Safety timeout: ensure loading state is cleared after 5 seconds
     // This prevents the app from being stuck on the loading screen if Supabase hangs
     const timeout = setTimeout(() => {
       if (mounted) {
         console.warn('FinanceProvider: Auth initialization timed out, forcing loading to false');
         setAuthLoading(false);
       }
-    }, 2000);
+    }, 5000);
 
     return () => {
       console.log('FinanceProvider: Cleaning up auth listener');
@@ -740,9 +744,12 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         if (fxd) setFixedExpenses(fxd);
         if (vrb) setVariableExpenses(vrb);
         if (inc) {
-          // Patch for the incorrect February carry-over value in Supabase data
+          // Aggressive patch for the incorrect February carry-over value in Supabase data
           const patchedInc = inc.map((i: any) => {
-            if (i && i.nome === 'Valor transportado Fev 2026' && i.valor === 3681) {
+            if (i && i.nome && i.nome.includes('Valor transportado Fev 2026')) {
+              if (i.valor !== 832.29) {
+                console.log('FinanceContext: Patching Valor transportado Fev 2026 in Supabase data from', i.valor, 'to 832.29');
+              }
               return { ...i, valor: 832.29 };
             }
             return i;
