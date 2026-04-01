@@ -49,6 +49,7 @@ const expenseItems = [
 const otherItems = [
   { href: '/income', label: 'Rendimentos', icon: Coins },
   { href: '/calendar', label: 'Calendário', icon: CalendarClock },
+  { href: '/config', label: 'Configurações', icon: Settings },
 ];
 
 export default function Sidebar() {

@@ -93,6 +93,7 @@ function CalendarContent() {
     // Income
     income.forEach(inc => {
       if (!inc) return;
+      if (inc.nome.toLowerCase().includes('valor transportado')) return;
       if (inc.data === day) {
         events.push({
           type: 'income',

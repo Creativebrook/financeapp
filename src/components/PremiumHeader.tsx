@@ -107,12 +107,13 @@ export default function PremiumHeader({ pageName, style }: PremiumHeaderProps) {
             )}
           </div>
 
-          <button 
+          <Link 
+            href="/config"
             className="premium-header-btn"
-            title="Notificações"
+            title="Configurações"
           >
             <Bell size={16} />
-          </button>
+          </Link>
 
           {isUserLoggedIn && (
             <div className="flex items-center gap-4 ml-2 pl-4 border-l border-white/[0.05]">
@@ -208,12 +209,13 @@ export default function PremiumHeader({ pageName, style }: PremiumHeaderProps) {
               </>
             )}
           </div>
-          <button 
+          <Link 
+            href="/config"
             className="mobile-header-btn"
-            title="Notificações"
+            title="Configurações"
           >
             <Bell size={14} />
-          </button>
+          </Link>
 
           {isUserLoggedIn && (
             <button 

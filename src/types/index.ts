@@ -91,6 +91,22 @@ export interface Income {
   conta: string;
 }
 
+// Recurring Movement Type (Unified view for config)
+export interface RecurringMovement {
+  id: string;
+  user_id?: string;
+  nome: string;
+  valor: number;
+  tipo: 'receita' | 'despesa';
+  frequencia: Frequencia;
+  dia: number;
+  conta: string;
+  categoria: string;
+  data_inicio?: string;
+  data_fim?: string;
+  ativa: boolean;
+}
+
 // Calendar Event Types
 export interface CalendarEvent {
   id: string;

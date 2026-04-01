@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { Account, Investment, Debt, FixedExpense, VariableExpense, Income, DashboardSummary, PlatformSummary, Plataforma } from '@/types';
+import { Account, Investment, Debt, FixedExpense, VariableExpense, Income, DashboardSummary, PlatformSummary, Plataforma, RecurringMovement } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
 
@@ -9,9 +9,9 @@ console.log('FinanceContext: Module loaded');
 
 // Initial data
 const initialAccounts: Account[] = [
-  { id: '1', nome: 'Montepio', tipo: 'Conta à ordem', saldo: 832.29, data_atualizacao: '2026-03-25', notas: 'Conta principal' },
-  { id: '2', nome: 'N26', tipo: 'Conta à ordem', saldo: 0.00, data_atualizacao: '2026-03-23', notas: 'Conta digital' },
-  { id: '3', nome: 'Revolut', tipo: 'Conta à ordem', saldo: 2506.00, data_atualizacao: '2026-03-25', notas: 'Conta internacional' },
+  { id: '1', nome: 'Montepio', tipo: 'Conta à ordem', saldo: 832.29, data_atualizacao: '2026-03-01', notas: 'Conta principal' },
+  { id: '2', nome: 'N26', tipo: 'Conta à ordem', saldo: 0.00, data_atualizacao: '2026-03-01', notas: 'Conta digital' },
+  { id: '3', nome: 'Revolut', tipo: 'Conta à ordem', saldo: 2554.04, data_atualizacao: '2026-03-01', notas: 'Conta internacional' },
 ];
 
 const initialInvestments: Investment[] = [
@@ -169,83 +169,103 @@ const initialInvestments: Investment[] = [
 
 const initialDebts: Debt[] = [
   { id: '1', nome: 'Cartão de Crédito Cetelem', valor_total: 550.57, valor_inicial: 1250, prestacao_mensal: 62.50, data_pagamento: 2, conta: 'Montepio', categoria: 'Cartão de Crédito', taxa_juro: 12.53 },
-  { id: '2', nome: 'Crédito Cetelem', valor_total: 1548.40, valor_inicial: 1548.40, prestacao_mensal: 41.62, data_pagamento: 2, conta: 'Montepio', categoria: 'Empréstimo', taxa_juro: 12.75 },
-  { id: '3', nome: 'Cartão de Crédito Montepio', valor_total: 714.31, valor_inicial: 1000, prestacao_mensal: 41.92, data_pagamento: 7, conta: 'Montepio', categoria: 'Cartão de Crédito', taxa_juro: 8.00 },
+  { id: '2', nome: 'Crédito Cetelem', valor_total: 1548.40, valor_inicial: 1548.40, prestacao_mensal: 40.44, data_pagamento: 2, conta: 'Montepio', categoria: 'Empréstimo', taxa_juro: 12.75 },
+  { id: '3', nome: 'Cartão de Crédito Montepio', valor_total: 714.31, valor_inicial: 1000, prestacao_mensal: 42.78, data_pagamento: 7, conta: 'Montepio', categoria: 'Cartão de Crédito', taxa_juro: 8.00 },
   { id: '4', nome: 'Dívida Seg. Social', valor_total: 1669.24, valor_inicial: 1669.24, prestacao_mensal: 26.76, data_pagamento: 20, conta: 'Montepio', categoria: 'Impostos' },
-  { id: '5', nome: 'Credito Automóvel', valor_total: 15029.38, valor_inicial: 16897.30, prestacao_mensal: 224.99, data_pagamento: 24, conta: 'Montepio', categoria: 'Empréstimo' },
-  { id: '6', nome: 'Dívida Finanças', valor_total: 1258.24, valor_inicial: 1258.24, prestacao_mensal: 58.92, data_pagamento: 2, conta: 'Montepio', categoria: 'Impostos' },
+  { id: '5', nome: 'Crédito Automóvel', valor_total: 15029.38, valor_inicial: 16897.30, prestacao_mensal: 224.99, data_pagamento: 24, conta: 'Montepio', categoria: 'Empréstimo' },
+  { id: '6', nome: 'Dívida Finanças', valor_total: 1258.24, valor_inicial: 1258.24, prestacao_mensal: 59.58, data_pagamento: 2, conta: 'Montepio', categoria: 'Impostos' },
 ];
 
 const initialFixedExpenses: FixedExpense[] = [
   { id: '1', nome: 'Telemóvel Gonçalo', valor: 10, frequencia: 'mensal', data_pagamento: 1, conta: 'Montepio', categoria: 'Serviços' },
-  { id: '2', nome: 'Telemóvel', valor: 13, frequencia: 'mensal', data_pagamento: 4, conta: 'Montepio', categoria: 'Serviços' },
+  { id: '2', nome: 'Telemóvel', valor: 13, frequencia: 'mensal', data_pagamento: 5, conta: 'Montepio', categoria: 'Serviços' },
   { id: '3', nome: 'Seguro Auto', valor: 215.15, frequencia: 'trimestral', data_pagamento: 8, conta: 'Montepio', categoria: 'Seguros' },
   { id: '4', nome: 'Clube ACP', valor: 9.80, frequencia: 'mensal', data_pagamento: 9, conta: 'Montepio', categoria: 'Subscrição' },
   { id: '5', nome: 'Subs. ChatGPT', valor: 23, frequencia: 'mensal', data_pagamento: 14, conta: 'Montepio', categoria: 'Subscrição' },
-  { id: '6', nome: 'Crossfit Valverde', valor: 59, frequencia: 'mensal', data_pagamento: 15, conta: 'Montepio', categoria: 'Saúde' },
-  { id: '7', nome: 'Pensão Alimentos', valor: 160.06, frequencia: 'mensal', data_pagamento: 27, conta: 'Montepio', categoria: 'Família' },
-  { id: '8', nome: 'Semanada Gonçalo', valor: 5, frequencia: 'semanal', data_pagamento: 29, conta: 'Revolut', categoria: 'Pessoal' },
+  { id: '6', nome: 'Crossfit Valverde', valor: 59, frequencia: 'mensal', data_pagamento: 18, conta: 'Revolut', categoria: 'Lazer' },
+  { id: '7', nome: 'Pensão de Alimentos', valor: 180.06, frequencia: 'mensal', data_pagamento: 27, conta: 'Montepio', categoria: 'Familia' },
+  { id: '8', nome: 'Semanada Gonçalo', valor: 5, frequencia: 'semanal', data_pagamento: 1, conta: 'Revolut', categoria: 'Pessoal' },
   { id: '9', nome: 'Robo Advisor', valor: 100, frequencia: 'mensal', data_pagamento: 2, conta: 'Revolut', categoria: 'Investimento' },
-  { id: '10', nome: 'XTB', valor: 100, frequencia: 'mensal', data_pagamento: 4, conta: 'Revolut', categoria: 'Investimento' },
+  { id: '10', nome: 'IUC', valor: 158.29, frequencia: 'unico', data_pagamento: 25, conta: 'Montepio', categoria: 'Impostos' },
 ];
 
 const initialVariableExpenses: VariableExpense[] = [
-  // Montepio Fixed Expenses - Março 2026
-  { id: 'f-mar-1', nome: 'Telemóvel Gonçalo', valor: 10, data: '2026-03-01', conta: 'Montepio', categoria: 'Fixa' },
-  { id: 'f-mar-2', nome: 'Telemóvel', valor: 13, data: '2026-03-05', conta: 'Montepio', categoria: 'Fixa' },
-  { id: 'f-mar-3', nome: 'Clube ACP', valor: 9.80, data: '2026-03-09', conta: 'Montepio', categoria: 'Fixa' },
-  { id: 'f-mar-4', nome: 'Subs. ChatGPT', valor: 23, data: '2026-03-14', conta: 'Montepio', categoria: 'Fixa' },
-  { id: 'f-mar-5', nome: 'Pensão Alimentos', valor: 160.06, data: '2026-03-28', conta: 'Montepio', categoria: 'Fixa' },
-
-  // Montepio Fixed Expenses - Fevereiro 2026
-  { id: 'f-feb-1', nome: 'Telemóvel Gonçalo', valor: 10, data: '2026-02-01', conta: 'Montepio', categoria: 'Fixa' },
-  { id: 'f-feb-2', nome: 'Clube ACP', valor: 9.80, data: '2026-02-06', conta: 'Montepio', categoria: 'Fixa' },
-  { id: 'f-feb-3', nome: 'Telemóvel', valor: 13, data: '2026-02-06', conta: 'Montepio', categoria: 'Fixa' },
-  { id: 'f-feb-4', nome: 'Subs. ChatGPT', valor: 23, data: '2026-02-14', conta: 'Montepio', categoria: 'Fixa' },
-  { id: 'f-feb-5', nome: 'Pensão Alimentos', valor: 240.09, data: '2026-02-27', conta: 'Montepio', categoria: 'Fixa' },
-
-  // Montepio Fixed Expenses - Janeiro 2026
-  { id: 'f-jan-1', nome: 'Telemóvel Gonçalo', valor: 10, data: '2026-01-01', conta: 'Montepio', categoria: 'Fixa' },
-  { id: 'f-jan-2', nome: 'Telemóvel', valor: 13, data: '2026-01-04', conta: 'Montepio', categoria: 'Fixa' },
-  { id: 'f-jan-3', nome: 'Seguro Auto', valor: 215.15, data: '2026-01-08', conta: 'Montepio', categoria: 'Fixa' },
-  { id: 'f-jan-4', nome: 'Clube ACP', valor: 9.80, data: '2026-01-13', conta: 'Montepio', categoria: 'Fixa' },
-  { id: 'f-jan-5', nome: 'Subs. ChatGPT', valor: 23, data: '2026-01-14', conta: 'Montepio', categoria: 'Fixa' },
-  { id: 'f-jan-6', nome: 'Crossfit Valverde', valor: 59, data: '2026-01-19', conta: 'Montepio', categoria: 'Fixa' },
-  { id: 'f-jan-7', nome: 'Pensão Alimentos', valor: 240.09, data: '2026-01-28', conta: 'Montepio', categoria: 'Fixa' },
-
-  // Montepio Transactions - Março 2026
-  { id: 'm-mar-1', nome: 'Dívida Finanças', valor: 59.24, data: '2026-03-02', conta: 'Montepio', categoria: 'Dívida' },
-  { id: 'm-mar-2', nome: 'CC Cetelem', valor: 62.50, data: '2026-03-02', conta: 'Montepio', categoria: 'Dívida' },
-  { id: 'm-mar-3', nome: 'Crédito Cetelem', valor: 40.44, data: '2026-03-02', conta: 'Montepio', categoria: 'Dívida' },
-  { id: 'm-mar-4', nome: 'CC Montepio', valor: 42.78, data: '2026-03-07', conta: 'Montepio', categoria: 'Dívida' },
-  { id: 'm-mar-5', nome: 'Dívida Seg. Social', valor: 26.76, data: '2026-03-20', conta: 'Montepio', categoria: 'Dívida' },
-  { id: 'm-mar-6', nome: 'Crédito Automóvel', valor: 224.99, data: '2026-03-24', conta: 'Montepio', categoria: 'Dívida' },
-
   // Montepio Variable Expenses - Março 2026
-  { id: 'v-mar-1', nome: 'Pastelaria', valor: 6.29, data: '2026-03-01', conta: 'Montepio', categoria: 'Diversos' },
-  { id: 'v-mar-2', nome: 'Pastelaria', valor: 20.60, data: '2026-03-01', conta: 'Montepio', categoria: 'Diversos' },
-  { id: 'v-mar-3', nome: 'Via Verde', valor: 1.20, data: '2026-03-02', conta: 'Montepio', categoria: 'Transporte' },
-  { id: 'v-mar-4', nome: 'UCI Cinemas', valor: 19.32, data: '2026-03-02', conta: 'Montepio', categoria: 'Lazer' },
-  { id: 'v-mar-5', nome: 'SMEAS Água', valor: 37.09, data: '2026-03-02', conta: 'Montepio', categoria: 'Casa' },
-  { id: 'v-mar-6', nome: 'Auchan Energy', valor: 25.00, data: '2026-03-03', conta: 'Montepio', categoria: 'Combustivel' },
-  { id: 'v-mar-7', nome: 'Compra Mercadona', valor: 49.18, data: '2026-03-03', conta: 'Montepio', categoria: 'Supermercado' },
-  { id: 'v-mar-8', nome: 'Transf. Montepio > Revolut', valor: 500.00, data: '2026-03-04', conta: 'Montepio', categoria: 'Transferência' },
-  { id: 'v-mar-9', nome: 'Pastelaria', valor: 1.70, data: '2026-03-06', conta: 'Montepio', categoria: 'Diversos' },
-  { id: 'v-mar-10', nome: 'Padel Lovers', valor: 6.00, data: '2026-03-07', conta: 'Montepio', categoria: 'Lazer' },
-  { id: 'v-mar-11', nome: 'Lavagem Carro', valor: 4.80, data: '2026-03-08', conta: 'Montepio', categoria: 'Transporte' },
-  { id: 'v-mar-12', nome: 'Via Verde', valor: 4.75, data: '2026-03-09', conta: 'Montepio', categoria: 'Transporte' },
-  { id: 'v-mar-13', nome: 'Confeitaria Duquesa', valor: 5.75, data: '2026-03-09', conta: 'Montepio', categoria: 'Diversos' },
-  { id: 'v-mar-14', nome: 'Compra Mercadona', valor: 63.67, data: '2026-03-09', conta: 'Montepio', categoria: 'Supermercado' },
-  { id: 'v-mar-15', nome: 'SU eletricidade', valor: 59.27, data: '2026-03-10', conta: 'Montepio', categoria: 'Casa' },
-  { id: 'v-mar-16', nome: 'Transferência', valor: 120.00, data: '2026-03-10', conta: 'Montepio', categoria: 'Diversos' },
-  { id: 'v-mar-17', nome: 'Compra Mercadona', valor: 13.21, data: '2026-03-10', conta: 'Montepio', categoria: 'Supermercado' },
-  { id: 'v-mar-18', nome: 'Auchan Energy', valor: 25.00, data: '2026-03-12', conta: 'Montepio', categoria: 'Combustivel' },
-  { id: 'v-mar-19', nome: 'Compra Mercadona', valor: 49.23, data: '2026-03-13', conta: 'Montepio', categoria: 'Supermercado' },
-  { id: 'v-mar-20', nome: 'AS Parque Real', valor: 4.95, data: '2026-03-14', conta: 'Montepio', categoria: 'Transporte' },
-  { id: 'v-mar-21', nome: 'Compra Continente', valor: 34.69, data: '2026-03-14', conta: 'Montepio', categoria: 'Supermercado' },
-  { id: 'v-mar-22', nome: 'Via Verde', valor: 1.05, data: '2026-03-16', conta: 'Montepio', categoria: 'Transporte' },
-  { id: 'v-mar-23', nome: 'Canva Software', valor: 6.00, data: '2026-03-16', conta: 'Montepio', categoria: 'Pessoal' },
-  { id: 'v-mar-24', nome: 'City Wok 2', valor: 23.06, data: '2026-03-16', conta: 'Montepio', categoria: 'Restaurantes' },
+  { id: 'mv-mar-1', nome: 'Auchan Energy', valor: 25.00, data: '2026-03-01', conta: 'Montepio', categoria: 'Combustivel' },
+  { id: 'mv-mar-2', nome: 'Via Verde', valor: 2.35, data: '2026-03-02', conta: 'Montepio', categoria: 'Transporte' },
+  { id: 'mv-mar-3', nome: 'Compra Mercadona', valor: 12.99, data: '2026-03-02', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'mv-mar-4', nome: 'Água SMEAS', valor: 35.38, data: '2026-03-03', conta: 'Montepio', categoria: 'Casa' },
+  { id: 'mv-mar-5', nome: 'Compra Mercadona', valor: 12.85, data: '2026-03-04', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'mv-mar-6', nome: 'Resultados com Charme', valor: 7.10, data: '2026-03-05', conta: 'Montepio', categoria: 'Restaurantes' },
+  { id: 'mv-mar-7', nome: 'Via Verde', valor: 2.20, data: '2026-03-06', conta: 'Montepio', categoria: 'Transporte' },
+  { id: 'mv-mar-8', nome: 'Jogos Santa Casa', valor: 10.00, data: '2026-03-06', conta: 'Montepio', categoria: 'Diversos' },
+  { id: 'mv-mar-9', nome: 'Compra Mercadona', valor: 49.04, data: '2026-03-06', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'mv-mar-10', nome: 'Solução MS', valor: 3.00, data: '2026-03-07', conta: 'Montepio', categoria: 'Taxas' },
+  { id: 'mv-mar-11', nome: 'Comissão Manutenção', valor: 0.12, data: '2026-03-07', conta: 'Montepio', categoria: 'Taxas' },
+  { id: 'mv-mar-12', nome: 'Compra Aldi', valor: 33.53, data: '2026-03-07', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'mv-mar-13', nome: 'Via Verde', valor: 1.20, data: '2026-03-09', conta: 'Montepio', categoria: 'Transporte' },
+  { id: 'mv-mar-14', nome: 'Compra Zumub', valor: 31.64, data: '2026-03-09', conta: 'Montepio', categoria: 'Diversos' },
+  { id: 'mv-mar-15', nome: 'Compra Repsol', valor: 25.00, data: '2026-03-09', conta: 'Montepio', categoria: 'Combustivel' },
+  { id: 'mv-mar-16', nome: 'Compra Wells', valor: 7.54, data: '2026-03-09', conta: 'Montepio', categoria: 'Shopping' },
+  { id: 'mv-mar-17', nome: 'Compra Continente', valor: 12.64, data: '2026-03-09', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'mv-mar-18', nome: 'Levantamento', valor: 20.00, data: '2026-03-10', conta: 'Montepio', categoria: 'Diversos' },
+  { id: 'mv-mar-19', nome: 'Compra Mercadona', valor: 32.81, data: '2026-03-11', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'mv-mar-20', nome: 'Compra Continente', valor: 4.85, data: '2026-03-12', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'mv-mar-21', nome: 'Compra Continente', valor: 6.54, data: '2026-03-12', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'mv-mar-22', nome: 'SU Eletricidade', valor: 56.07, data: '2026-03-14', conta: 'Montepio', categoria: 'Casa' },
+  { id: 'mv-mar-23', nome: 'Auchan Energy', valor: 25.00, data: '2026-03-14', conta: 'Montepio', categoria: 'Combustivel' },
+  { id: 'mv-mar-24', nome: 'Loja Chinês', valor: 6.78, data: '2026-03-15', conta: 'Montepio', categoria: 'Shopping' },
+  { id: 'mv-mar-25', nome: 'Via Verde', valor: 1.20, data: '2026-03-16', conta: 'Montepio', categoria: 'Transporte' },
+  { id: 'mv-mar-26', nome: 'Transferência', valor: 300.00, data: '2026-03-16', conta: 'Montepio', categoria: 'Transferência' },
+  { id: 'mv-mar-27', nome: 'Resultados com Charme', valor: 21.90, data: '2026-03-17', conta: 'Montepio', categoria: 'Restaurantes' },
+  { id: 'mv-mar-28', nome: 'Compra Repsol', valor: 12.00, data: '2026-03-17', conta: 'Montepio', categoria: 'Combustivel' },
+  { id: 'mv-mar-29', nome: 'Compra Continente', valor: 28.92, data: '2026-03-17', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'mv-mar-30', nome: 'Levantamento', valor: 50.00, data: '2026-03-18', conta: 'Montepio', categoria: 'Diversos' },
+  { id: 'mv-mar-31', nome: 'Compra Mercadona', valor: 41.92, data: '2026-03-18', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'mv-mar-32', nome: 'Compra Aliexpress', valor: 9.15, data: '2026-03-18', conta: 'Montepio', categoria: 'Shopping' },
+  { id: 'mv-mar-33', nome: 'Compra Mercadona', valor: 10.02, data: '2026-03-19', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'mv-mar-34', nome: 'Canva Software', valor: 1.89, data: '2026-03-21', conta: 'Montepio', categoria: 'Diversos' },
+  { id: 'mv-mar-35', nome: 'Comissão', valor: 0.07, data: '2026-03-21', conta: 'Montepio', categoria: 'Taxas' },
+  { id: 'mv-mar-36', nome: 'Compra Aliexpress', valor: 22.23, data: '2026-03-21', conta: 'Montepio', categoria: 'Shopping' },
+  { id: 'mv-mar-37', nome: 'AS Parque Real', valor: 10.14, data: '2026-03-21', conta: 'Montepio', categoria: 'Transporte' },
+  { id: 'mv-mar-38', nome: 'Auchan Energy', valor: 35.00, data: '2026-03-21', conta: 'Montepio', categoria: 'Combustivel' },
+  { id: 'mv-mar-39', nome: 'Compra Continente', valor: 12.97, data: '2026-03-21', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'mv-mar-40', nome: 'Água SMEAS', valor: 36.86, data: '2026-03-22', conta: 'Montepio', categoria: 'Casa' },
+  { id: 'mv-mar-41', nome: 'Compra lanche', valor: 4.00, data: '2026-03-22', conta: 'Montepio', categoria: 'Diversos' },
+  { id: 'mv-mar-42', nome: 'Compra Auchan', valor: 34.06, data: '2026-03-22', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'mv-mar-43', nome: 'Via Verde', valor: 2.65, data: '2026-03-23', conta: 'Montepio', categoria: 'Transporte' },
+  { id: 'mv-mar-44', nome: 'Compra Mercadona', valor: 18.40, data: '2026-03-23', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'mv-mar-45', nome: 'Estacionamento', valor: 0.20, data: '2026-03-24', conta: 'Montepio', categoria: 'Transporte' },
+  { id: 'mv-mar-46', nome: 'Estacionamento', valor: 0.80, data: '2026-03-24', conta: 'Montepio', categoria: 'Transporte' },
+  { id: 'mv-mar-47', nome: 'Lanche', valor: 4.80, data: '2026-03-24', conta: 'Montepio', categoria: 'Diversos' },
+  { id: 'mv-mar-48', nome: 'Compra Mercadona', valor: 36.16, data: '2026-03-25', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'mv-mar-49', nome: 'Auchan Energy', valor: 25.00, data: '2026-03-25', conta: 'Montepio', categoria: 'Combustivel' },
+  { id: 'mv-mar-50', nome: 'Compra online', valor: 7.50, data: '2026-03-26', conta: 'Montepio', categoria: 'Shopping' },
+  { id: 'mv-mar-51', nome: 'Compra Mercadona', valor: 13.19, data: '2026-03-26', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'mv-mar-52', nome: 'Compra AMRAP', valor: 5.00, data: '2026-03-28', conta: 'Montepio', categoria: 'Diversos' },
+  { id: 'mv-mar-53', nome: 'Café', valor: 1.00, data: '2026-03-28', conta: 'Montepio', categoria: 'Diversos' },
+  { id: 'mv-mar-54', nome: 'Resultados com Charme', valor: 12.50, data: '2026-03-28', conta: 'Montepio', categoria: 'Restaurantes' },
+  { id: 'mv-mar-55', nome: 'Resultados com Charme', valor: 10.00, data: '2026-03-28', conta: 'Montepio', categoria: 'Restaurantes' },
+  { id: 'mv-mar-56', nome: 'Compra Continente', valor: 86.47, data: '2026-03-29', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'mv-mar-57', nome: 'Pagamento Liliana', valor: 35.00, data: '2026-03-30', conta: 'Montepio', categoria: 'Pessoal' },
+  { id: 'mv-mar-58', nome: 'Taxas', valor: 0.07, data: '2026-03-30', conta: 'Montepio', categoria: 'Taxas' },
+  { id: 'mv-mar-59', nome: 'Compra Café', valor: 12.49, data: '2026-03-30', conta: 'Montepio', categoria: 'Supermercado' },
+  { id: 'mv-mar-60', nome: 'Estacionamento', valor: 5.00, data: '2026-03-30', conta: 'Montepio', categoria: 'Transporte' },
+  { id: 'mv-mar-61', nome: 'Repsol', valor: 25.00, data: '2026-03-31', conta: 'Montepio', categoria: 'Combustivel' },
+  { id: 'mv-mar-62', nome: 'Lanche', valor: 4.10, data: '2026-03-31', conta: 'Montepio', categoria: 'Diversos' },
+
+  // Revolut Variable Expenses - Março 2026
+  { id: 'rv-mar-1', nome: 'Semanada Gonçalo', valor: 5, data: '2026-03-29', conta: 'Revolut', categoria: 'Pessoal' },
+  { id: 'rv-mar-2', nome: 'Sorteio Valverde', valor: 12, data: '2026-03-25', conta: 'Revolut', categoria: 'Pessoal' },
+  { id: 'rv-mar-3', nome: 'Semanada Gonçalo', valor: 5, data: '2026-03-22', conta: 'Revolut', categoria: 'Pessoal' },
+  { id: 'rv-mar-4', nome: 'Crossfit Valverde', valor: 59, data: '2026-03-18', conta: 'Revolut', categoria: 'Lazer' },
+  { id: 'rv-mar-5', nome: 'Transferência', valor: -300, data: '2026-03-16', conta: 'Revolut', categoria: 'Transferência' },
+  { id: 'rv-mar-6', nome: 'Trading212', valor: 200, data: '2026-03-16', conta: 'Revolut', categoria: 'Investimento' },
+  { id: 'rv-mar-7', nome: 'Semanada Gonçalo', valor: 5, data: '2026-03-15', conta: 'Revolut', categoria: 'Pessoal' },
+  { id: 'rv-mar-8', nome: 'Semanada Gonçalo', valor: 5, data: '2026-03-08', conta: 'Revolut', categoria: 'Pessoal' },
+  { id: 'rv-mar-9', nome: 'Investimento', valor: 43.40, data: '2026-03-03', conta: 'Revolut', categoria: 'Investimento' },
+  { id: 'rv-mar-10', nome: 'Robo Advisor', valor: 100, data: '2026-03-02', conta: 'Revolut', categoria: 'Investimento' },
+  { id: 'rv-mar-11', nome: 'Semanada Gonçalo', valor: 5, data: '2026-03-01', conta: 'Revolut', categoria: 'Pessoal' },
 
   // Montepio Transactions - Fevereiro 2026
   { id: 'm-feb-1', nome: 'Dívida Finanças', valor: 58.92, data: '2026-02-02', conta: 'Montepio', categoria: 'Dívida' },
@@ -439,16 +459,33 @@ const initialIncome: Income[] = [
 
   // Março 2026
   { id: 'inc-mar-0', nome: 'Valor transportado Fev 2026', valor: 832.29, frequencia: 'unico', data: 1, data_especifica: '2026-03-01', conta: 'Montepio' },
+  { id: 'inc-mar-0-rev', nome: 'Valor transportado Fev 2026', valor: 2554.04, frequencia: 'unico', data: 1, data_especifica: '2026-03-01', conta: 'Revolut' },
   { id: 'inc-mar-1', nome: 'Clínica [CSA]', valor: 700, frequencia: 'unico', data: 4, data_especifica: '2026-03-04', conta: 'Montepio' },
   { id: 'inc-mar-2', nome: 'Transferência', valor: 10, frequencia: 'unico', data: 5, data_especifica: '2026-03-05', conta: 'Montepio' },
   { id: 'inc-mar-3', nome: 'amo.CLINICS', valor: 300, frequencia: 'unico', data: 7, data_especifica: '2026-03-07', conta: 'Montepio' },
-  { id: 'inc-mar-4', nome: 'Las Muns', valor: 600, frequencia: 'unico', data: 23, data_especifica: '2026-03-23', conta: 'Montepio' },
+  { id: 'inc-mar-4', nome: 'Las Muns', valor: 500, frequencia: 'unico', data: 24, data_especifica: '2026-03-24', conta: 'Montepio' },
+  { id: 'inc-mar-5', nome: 'Pagamento Sérgio [Hoodie]', valor: 30, frequencia: 'unico', data: 26, data_especifica: '2026-03-26', conta: 'Montepio' },
+  { id: 'inc-mar-6', nome: 'Subsidio Desemprego', valor: 1173.51, frequencia: 'unico', data: 27, data_especifica: '2026-03-27', conta: 'Montepio' },
+  { id: 'inc-mar-7-rev', nome: 'Transferência', valor: 300, frequencia: 'unico', data: 16, data_especifica: '2026-03-16', conta: 'Revolut' },
+
+  // Abril 2026 (Transportado de Março)
+  { id: 'inc-apr-0', nome: 'Valor transportado Mar 2026', valor: 1274.07, frequencia: 'unico', data: 1, data_especifica: '2026-04-01', conta: 'Montepio' },
+  { id: 'inc-apr-0-rev', nome: 'Valor transportado Mar 2026', valor: 2414.64, frequencia: 'unico', data: 1, data_especifica: '2026-04-01', conta: 'Revolut' },
 
   // Recurring (for future)
-  { id: '1', nome: 'Clínica [CSA]', valor: 700, frequencia: 'mensal', data: 4, conta: 'Montepio', data_inicio: '2026-04-01' },
-  { id: '2', nome: 'amo.CLINICS', valor: 300, frequencia: 'mensal', data: 10, conta: 'Montepio', data_inicio: '2026-04-01' },
-  { id: '3', nome: 'Las Muns', valor: 600, frequencia: 'mensal', data: 23, conta: 'Montepio', data_inicio: '2026-04-01' },
-  { id: '4', nome: 'Subsídio Desemprego', valor: 1173.51, frequencia: 'mensal', data: 27, conta: 'Montepio', data_inicio: '2026-03-01' },
+  { id: 'rec-1', nome: 'Clínica [CSA]', valor: 700, frequencia: 'mensal', data: 4, conta: 'Montepio', data_inicio: '2026-04-01' },
+  { id: 'rec-2', nome: 'amo.CLINICS', valor: 300, frequencia: 'mensal', data: 10, conta: 'Montepio', data_inicio: '2026-04-01' },
+  { id: 'rec-3', nome: 'Las Muns', valor: 500, frequencia: 'mensal', data: 23, conta: 'Montepio', data_inicio: '2026-04-01' },
+  { id: 'rec-4', nome: 'Subsídio Desemprego', valor: 1173.51, frequencia: 'mensal', data: 27, conta: 'Montepio', data_inicio: '2026-04-01' },
+];
+
+const initialRecurringMovements: RecurringMovement[] = [
+  { id: 'rec-1', nome: 'Semanada Gonçalo', valor: 5, tipo: 'despesa', frequencia: 'semanal', dia: 0, conta: 'Revolut', categoria: 'Pessoal', ativa: true },
+  { id: 'rec-2', nome: 'Crossfit Valverde', valor: 59, tipo: 'despesa', frequencia: 'mensal', dia: 18, conta: 'Revolut', categoria: 'Lazer', ativa: true },
+  { id: 'rec-3', nome: 'Sorteio Valverde', valor: 12, tipo: 'despesa', frequencia: 'mensal', dia: 25, conta: 'Revolut', categoria: 'Pessoal', ativa: true },
+  { id: 'rec-4', nome: 'Robo Advisor', valor: 100, tipo: 'despesa', frequencia: 'mensal', dia: 2, conta: 'Revolut', categoria: 'Investimento', ativa: true },
+  { id: 'rec-5', nome: 'Trading212', valor: 200, tipo: 'despesa', frequencia: 'mensal', dia: 16, conta: 'Revolut', categoria: 'Investimento', ativa: true },
+  { id: 'rec-6', nome: 'Transferência Revolut', valor: 300, tipo: 'receita', frequencia: 'mensal', dia: 16, conta: 'Revolut', categoria: 'Transferência', ativa: true },
 ];
 
 // Initial data loader function
@@ -478,6 +515,7 @@ function getInitialData() {
               }).filter((i: any) => i && i.id) 
             : initialIncome,
           customWallets: Array.isArray(parsed.customWallets) ? parsed.customWallets : [],
+          recurringMovements: Array.isArray(parsed.recurringMovements) ? parsed.recurringMovements : initialRecurringMovements,
         };
       } catch (e) {
         console.error('Error parsing saved finance data:', e);
@@ -493,6 +531,7 @@ function getInitialData() {
     variableExpenses: initialVariableExpenses,
     income: initialIncome,
     customWallets: [],
+    recurringMovements: initialRecurringMovements,
   };
 }
 
@@ -505,6 +544,7 @@ interface FinanceContextType {
   variableExpenses: VariableExpense[];
   income: Income[];
   customWallets: string[];
+  recurringMovements: RecurringMovement[];
   
   addAccount: (account: Omit<Account, 'id' | 'data_atualizacao'>) => void;
   updateAccount: (id: string, account: Partial<Account>) => void;
@@ -551,6 +591,10 @@ interface FinanceContextType {
   signOut: () => Promise<void>;
   updatePassword: (password: string) => Promise<{ error: any }>;
   seedDatabase: () => Promise<void>;
+  
+  addRecurringMovement: (movement: Omit<RecurringMovement, 'id'>) => void;
+  updateRecurringMovement: (movement: RecurringMovement) => void;
+  deleteRecurringMovement: (id: string) => void;
 }
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
@@ -567,7 +611,12 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [variableExpenses, setVariableExpenses] = useState<VariableExpense[]>(() => getInitialData().variableExpenses);
   const [income, setIncome] = useState<Income[]>(() => getInitialData().income);
   const [customWallets, setCustomWallets] = useState<string[]>(() => getInitialData().customWallets);
-  const [selectedMonth, setSelectedMonth] = useState('2026-03');
+  const [recurringMovements, setRecurringMovements] = useState<RecurringMovement[]>(() => getInitialData().recurringMovements);
+  
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date();
+    return now.toISOString().substring(0, 7);
+  });
 
   // Save to localStorage whenever data changes
   useEffect(() => {
@@ -1101,6 +1150,19 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     setCustomWallets(prev => prev.filter(w => w !== name));
   };
 
+  const addRecurringMovement = (movement: Omit<RecurringMovement, 'id'>) => {
+    const newMovement = { ...movement, id: Math.random().toString(36).substr(2, 9) };
+    setRecurringMovements(prev => [...prev, newMovement]);
+  };
+
+  const updateRecurringMovement = (movement: RecurringMovement) => {
+    setRecurringMovements(prev => prev.map(m => m.id === movement.id ? movement : m));
+  };
+
+  const deleteRecurringMovement = (id: string) => {
+    setRecurringMovements(prev => prev.filter(m => m.id !== id));
+  };
+
   // Server API - Fetch current price via Next.js API route
   const fetchCurrentPrice = async (ticker: string): Promise<number | null> => {
     try {
@@ -1495,6 +1557,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       customWallets,
       addCustomWallet,
       deleteCustomWallet,
+      recurringMovements,
+      addRecurringMovement,
+      updateRecurringMovement,
+      deleteRecurringMovement,
       selectedMonth,
       setSelectedMonth,
       user,
