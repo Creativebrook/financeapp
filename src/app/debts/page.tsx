@@ -28,6 +28,16 @@ function DebtsContent() {
   const currentMonthStr = now.toISOString().slice(0, 7); // YYYY-MM
   const currentFullDate = now.toISOString().slice(0, 10); // YYYY-MM-DD
 
+  // Calculate debts that have "happened" this month (reached their payment day)
+  const debtsDueThisMonthSoFar = debts.reduce((sum, d) => {
+    if (selectedMonth === currentMonthStr && currentDay >= d.data_pagamento) {
+      return sum + d.prestacao_mensal;
+    } else if (selectedMonth < currentMonthStr) {
+      return sum + d.prestacao_mensal;
+    }
+    return sum;
+  }, 0);
+
   const monthIncomeEntries = income.filter(i => {
     if (!i) return false;
     if (i.frequencia === 'unico' && i.data_especifica) {
@@ -133,18 +143,26 @@ function DebtsContent() {
     data_fim: '',
   });
 
-  const totalDebt = debts.reduce((sum, d) => sum + d.valor_total, 0);
+  const totalDebtRaw = debts.reduce((sum, d) => sum + d.valor_total, 0);
+  const totalDebt = totalDebtRaw - debtsDueThisMonthSoFar;
   const totalInitialDebt = debts.reduce((sum, d) => sum + (d.valor_inicial || d.valor_total), 0);
   const debtPercentage = totalInitialDebt > 0 ? (totalDebt / totalInitialDebt) * 100 : 0;
   const totalMonthly = debts.reduce((sum, d) => sum + d.prestacao_mensal, 0);
-  const taxaEsforco = receivedIncomeNoCarry > 0 ? (paidDebtsSoFar / receivedIncomeNoCarry) * 100 : 0;
+  const taxaEsforco = receivedIncomeNoCarry > 0 ? (debtsDueThisMonthSoFar / receivedIncomeNoCarry) * 100 : 0;
   
   const debtDistributionData = debts
     .filter(d => d)
-    .map(d => ({
-      name: d.nome,
-      value: d.valor_total
-    })).sort((a, b) => b.value - a.value);
+    .map(d => {
+      const currentDebtValue = d.valor_total - (
+        (selectedMonth === currentMonthStr && currentDay >= d.data_pagamento) || selectedMonth < currentMonthStr
+        ? d.prestacao_mensal 
+        : 0
+      );
+      return {
+        name: d.nome,
+        value: Math.max(0, currentDebtValue)
+      };
+    }).sort((a, b) => b.value - a.value);
   
   const maxMonths = debts.length > 0 ? Math.max(...debts.filter(d => d).map(d => calculateMonthsRemaining(d))) : 0;
   // Use a fixed date for SSR to avoid hydration mismatches
@@ -327,7 +345,7 @@ function DebtsContent() {
             <div className="space-y-4 pt-4 border-t border-white/[0.05]">
               <div>
                 <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] mb-1">PRESTAÇÕES MENSAIS</p>
-                <p className="text-lg font-bold text-white">{formatCurrency(paidDebtsSoFar)}</p>
+                <p className="text-lg font-bold text-white">{formatCurrency(debtsDueThisMonthSoFar)}</p>
               </div>
               
               <div className="flex justify-between items-end">
@@ -492,6 +510,8 @@ function DebtsContent() {
                 </thead>
                 <tbody>
                   {paginatedDebts.map((debt) => {
+                    const isPaid = (selectedMonth === currentMonthStr && currentDay >= debt.data_pagamento) || selectedMonth < currentMonthStr;
+                    const displayTotal = Math.max(0, debt.valor_total - (isPaid ? debt.prestacao_mensal : 0));
                     const peso = expectedIncomeNoCarry > 0 ? (debt.prestacao_mensal / expectedIncomeNoCarry) * 100 : 0;
                     return (
                       <tr key={debt.id}>
@@ -505,7 +525,7 @@ function DebtsContent() {
                         </td>
                         <td>
                           <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'white' }}>
-                            {formatCurrency(debt.valor_total)}
+                            {formatCurrency(displayTotal)}
                           </span>
                         </td>
                         <td>
@@ -606,6 +626,8 @@ function DebtsContent() {
           {/* Mobile List */}
           <div className="md:hidden space-y-4">
             {paginatedDebts.map((debt) => {
+              const isPaid = (selectedMonth === currentMonthStr && currentDay >= debt.data_pagamento) || selectedMonth < currentMonthStr;
+              const displayTotal = Math.max(0, debt.valor_total - (isPaid ? debt.prestacao_mensal : 0));
               const peso = expectedIncomeNoCarry > 0 ? (debt.prestacao_mensal / expectedIncomeNoCarry) * 100 : 0;
               return (
                 <div key={debt.id} className="card p-4 space-y-4" style={{ backgroundColor: 'var(--card-bg)', borderRadius: '16px', border: '1px solid var(--card-border)' }}>
@@ -618,7 +640,7 @@ function DebtsContent() {
                     </div>
                     <div className="text-right">
                       <p className="font-bold text-lg text-red-500">-{formatCurrency(debt.prestacao_mensal)}</p>
-                      <p className="text-[10px] text-slate-500 uppercase">TOTAL: {formatCurrency(debt.valor_total)}</p>
+                      <p className="text-[10px] text-slate-500 uppercase">TOTAL: {formatCurrency(displayTotal)}</p>
                     </div>
                   </div>
 

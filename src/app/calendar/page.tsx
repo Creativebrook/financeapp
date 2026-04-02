@@ -94,12 +94,41 @@ function CalendarContent() {
     income.forEach(inc => {
       if (!inc) return;
       if (inc.nome.toLowerCase().includes('valor transportado')) return;
-      if (inc.data === day) {
-        events.push({
-          type: 'income',
-          name: inc.nome,
-          amount: inc.valor,
-        });
+      
+      const incDate = inc.data_especifica ? new Date(inc.data_especifica) : null;
+      const isSameMonth = incDate ? (incDate.getMonth() === month && incDate.getFullYear() === year) : false;
+      
+      if (inc.frequencia === 'unico') {
+        if (isSameMonth && inc.data === day) {
+          events.push({
+            type: 'income',
+            name: inc.nome,
+            amount: inc.valor,
+          });
+        }
+      } else if (inc.frequencia === 'mensal') {
+        // Check if it's within the active range
+        const start = inc.data_inicio ? new Date(inc.data_inicio) : null;
+        const end = inc.data_fim ? new Date(inc.data_fim) : null;
+        
+        // Normalize dates to start of month for comparison
+        const startMonth = start ? new Date(start.getFullYear(), start.getMonth(), 1) : null;
+        const endMonth = end ? new Date(end.getFullYear(), end.getMonth(), 1) : null;
+        const currentMonthFirstDay = new Date(year, month, 1);
+        
+        const isStarted = !startMonth || currentMonthFirstDay >= startMonth;
+        const isNotEnded = !endMonth || currentMonthFirstDay <= endMonth;
+        
+        if (isStarted && isNotEnded && inc.data === day) {
+          // Deduplicate recurring income (only one per day)
+          if (!events.find(e => e.type === 'income' && e.name === inc.nome)) {
+            events.push({
+              type: 'income',
+              name: inc.nome,
+              amount: inc.valor,
+            });
+          }
+        }
       }
     });
 
